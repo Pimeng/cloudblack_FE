@@ -66,8 +66,15 @@ export function useTurnstile(options: UseTurnstileOptions) {
         setToken(token);
         onSuccess?.(token);
       },
-      'error-callback': () => {
-        setError('验证失败，请重试');
+      'error-callback': (code: string) => {
+        console.error('[Turnstile] Error code:', code);
+        const errorMessages: Record<string, string> = {
+          '110200': '配置错误：域名未授权或 Site Key 无效',
+          '110201': '密钥类型不匹配',
+          '110210': 'Widget 已过期',
+          '300030': '请求频率过高，请稍后重试',
+        };
+        setError(errorMessages[code] || `验证失败 (${code})，请重试`);
         onError?.();
       },
       'expired-callback': () => {

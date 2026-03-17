@@ -85,8 +85,15 @@ export function AppealSection() {
         setTurnstileToken(token);
         setTurnstileError('');
       },
-      'error-callback': () => {
-        setTurnstileError('验证失败，请刷新页面重试');
+      'error-callback': (code: string) => {
+        console.error('[Turnstile] Error code:', code);
+        const errorMessages: Record<string, string> = {
+          '110200': '配置错误：域名未授权或 Site Key 无效，请检查 Cloudflare Turnstile 设置',
+          '110201': '密钥类型不匹配',
+          '110210': 'Widget 已过期',
+          '300030': '请求频率过高，请稍后重试',
+        };
+        setTurnstileError(errorMessages[code] || `验证失败 (${code})，请刷新页面重试`);
       },
       'expired-callback': () => {
         setTurnstileToken('');
