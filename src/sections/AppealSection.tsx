@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, X, Image as ImageIcon, CheckCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,9 +7,18 @@ import { Label } from '@/components/ui/label';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-gsap.registerPlugin(ScrollTrigger);
-
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
+
+// 声明 Turnstile 全局变量
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: any) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 export function AppealSection() {
   const [formData, setFormData] = useState({
@@ -22,6 +31,13 @@ export function AppealSection() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  
+  // Turnstile 相关状态
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileLoading, setTurnstileLoading] = useState(true);
+  const [turnstileError, setTurnstileError] = useState('');
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
   
   const sectionRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -49,6 +65,57 @@ export function AppealSection() {
       ctx.revert();
     };
   }, []);
+
+  // 渲染 Turnstile Widget
+  const renderTurnstile = useCallback(() => {
+    if (!turnstileRef.current || !(window as any).turnstile) {
+      return;
+    }
+
+    // 如果已经渲染过，先移除
+    if (widgetIdRef.current) {
+      (window as any).turnstile.remove(widgetIdRef.current);
+      widgetIdRef.current = null;
+    }
+
+    // 渲染新的 widget - 使用 Site Key: 0x4AAAAAACruupvqw7h1JtFH
+    widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
+      sitekey: '0x4AAAAAACruupvqw7h1JtFH',
+      callback: (token: string) => {
+        setTurnstileToken(token);
+        setTurnstileError('');
+      },
+      'error-callback': () => {
+        setTurnstileError('验证失败，请刷新页面重试');
+      },
+      'expired-callback': () => {
+        setTurnstileToken('');
+      },
+    });
+  }, []);
+
+  // 加载 Turnstile
+  useEffect(() => {
+    setTurnstileLoading(true);
+    
+    const initTurnstile = () => {
+      if ((window as any).turnstile) {
+        renderTurnstile();
+        setTurnstileLoading(false);
+      } else {
+        setTimeout(initTurnstile, 100);
+      }
+    };
+
+    initTurnstile();
+
+    return () => {
+      if (widgetIdRef.current && (window as any).turnstile) {
+        (window as any).turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+    };
+  }, [renderTurnstile]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -119,6 +186,10 @@ export function AppealSection() {
       setError('申诉内容不能超过2000字');
       return;
     }
+    if (!turnstileToken) {
+      setError('请完成人机验证');
+      return;
+    }
 
     setSubmitting(true);
     setError('');
@@ -134,6 +205,7 @@ export function AppealSection() {
           content: formData.content,
           contact_email: formData.contact_email,
           images: images,
+          turnstile_token: turnstileToken,
         }),
       });
       
@@ -141,6 +213,11 @@ export function AppealSection() {
       
       if (!data.success) {
         setError(data.message || '提交失败');
+        // 重置 Turnstile
+        if (widgetIdRef.current && (window as any).turnstile) {
+          (window as any).turnstile.reset(widgetIdRef.current);
+        }
+        setTurnstileToken('');
         setSubmitting(false);
         return;
       }
@@ -152,7 +229,6 @@ export function AppealSection() {
       );
     } catch (err) {
       setError('提交失败，请稍后重试');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -174,6 +250,11 @@ export function AppealSection() {
                 setSubmitted(false);
                 setFormData({ user_id: '', content: '', contact_email: '' });
                 setImages([]);
+                // 重置 Turnstile
+                if (widgetIdRef.current && (window as any).turnstile) {
+                  (window as any).turnstile.reset(widgetIdRef.current);
+                }
+                setTurnstileToken('');
               }}
               className="bg-brand hover:bg-brand-dark"
             >
@@ -289,6 +370,34 @@ export function AppealSection() {
               </p>
             </div>
 
+            {/* Turnstile Verification */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Shield className="w-4 h-4" />
+                <span>人机验证</span>
+                {turnstileToken && (
+                  <span className="text-green-500 text-xs">(已完成)</span>
+                )}
+              </div>
+              <div className="relative">
+                {turnstileLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                    <span>加载验证组件...</span>
+                  </div>
+                )}
+                <div 
+                  ref={turnstileRef} 
+                  className={turnstileLoading ? 'hidden' : ''}
+                />
+                {turnstileError && (
+                  <div className="text-sm text-destructive mt-2">
+                    {turnstileError}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Error */}
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
@@ -299,7 +408,7 @@ export function AppealSection() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !turnstileToken}
               className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow"
             >
               {submitting ? (

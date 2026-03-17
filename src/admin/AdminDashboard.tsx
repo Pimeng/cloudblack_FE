@@ -16,7 +16,8 @@ import {
   UserX,
   UserCheck,
   Ban,
-  Trash2
+  Trash2,
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,9 @@ interface Stats {
   pending_appeals: number;
   total_appeals: number;
   blacklist_count: number;
+  processed_appeals: number;
+  success_rate: number;
+  avg_processing_hours: number;
 }
 
 interface Appeal {
@@ -114,6 +118,7 @@ export function AdminDashboard() {
 
   const fetchStats = async (authToken: string) => {
     try {
+      // 获取管理员统计数据
       const response = await fetch(`${API_BASE}/api/admin/stats`, {
         headers: { 'Authorization': authToken },
       });
@@ -383,7 +388,7 @@ export function AdminDashboard() {
             </div>
 
             {stats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 <div className="glass rounded-2xl p-6">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
@@ -404,6 +409,42 @@ export function AdminDashboard() {
                     <div>
                       <p className="text-muted-foreground text-sm">总申诉数</p>
                       <p className="text-3xl font-bold text-white">{stats.total_appeals}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">已处理申诉</p>
+                      <p className="text-3xl font-bold text-white">{stats.processed_appeals ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">申诉成功率</p>
+                      <p className="text-3xl font-bold text-white">{stats.success_rate ?? 0}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                      <Clock className="w-6 h-6 text-orange-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">平均处理时间</p>
+                      <p className="text-3xl font-bold text-white">{stats.avg_processing_hours ?? 0}h</p>
                     </div>
                   </div>
                 </div>

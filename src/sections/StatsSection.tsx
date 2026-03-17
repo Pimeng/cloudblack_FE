@@ -5,38 +5,16 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const stats = [
-  {
-    icon: FileCheck,
-    label: '已处理申诉',
-    value: 1234,
-    suffix: '',
-    color: 'from-blue-500/20 to-cyan-500/20',
-  },
-  {
-    icon: Users,
-    label: '黑名单用户',
-    value: 567,
-    suffix: '',
-    color: 'from-purple-500/20 to-pink-500/20',
-  },
-  {
-    icon: TrendingUp,
-    label: '申诉成功率',
-    value: 85,
-    suffix: '%',
-    color: 'from-green-500/20 to-emerald-500/20',
-  },
-  {
-    icon: Clock,
-    label: '平均处理时间',
-    value: 24,
-    suffix: 'h',
-    color: 'from-orange-500/20 to-yellow-500/20',
-  },
-];
+const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
-function AnimatedNumber({ value, suffix }: { value: number; suffix: string }) {
+interface StatisticsData {
+  processed_appeals: number;
+  blacklist_count: number;
+  success_rate: number;
+  avg_processing_hours: number;
+}
+
+function AnimatedNumber({ value, suffix, decimals = 0 }: { value: number; suffix: string; decimals?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
   const numberRef = useRef<HTMLSpanElement>(null);
 
@@ -50,7 +28,7 @@ function AnimatedNumber({ value, suffix }: { value: number; suffix: string }) {
           duration: 2,
           ease: 'expo.out',
           onUpdate: function() {
-            setDisplayValue(Math.floor(this.targets()[0].val));
+            setDisplayValue(this.targets()[0].val);
           }
         });
       },
@@ -60,9 +38,16 @@ function AnimatedNumber({ value, suffix }: { value: number; suffix: string }) {
     return () => trigger.kill();
   }, [value]);
 
+  const formatValue = (val: number) => {
+    if (decimals > 0) {
+      return val.toFixed(decimals);
+    }
+    return Math.floor(val).toLocaleString();
+  };
+
   return (
     <span ref={numberRef} className="tabular-nums">
-      {displayValue.toLocaleString()}{suffix}
+      {formatValue(displayValue)}{suffix}
     </span>
   );
 }
@@ -71,6 +56,60 @@ export function StatsSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const triggersRef = useRef<ScrollTrigger[]>([]);
+  const [statistics, setStatistics] = useState<StatisticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 获取统计数据
+    const fetchStatistics = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/statistics`);
+        const data = await response.json();
+        if (data.success) {
+          setStatistics(data.data);
+        }
+      } catch (err) {
+        console.error('获取统计数据失败:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, []);
+
+  const stats = [
+    {
+      icon: FileCheck,
+      label: '已处理申诉',
+      value: statistics?.processed_appeals ?? 0,
+      suffix: '',
+      color: 'from-blue-500/20 to-cyan-500/20',
+    },
+    {
+      icon: Users,
+      label: '黑名单用户',
+      value: statistics?.blacklist_count ?? 0,
+      suffix: '',
+      color: 'from-purple-500/20 to-pink-500/20',
+    },
+    {
+      icon: TrendingUp,
+      label: '申诉成功率',
+      value: statistics?.success_rate ?? 0,
+      suffix: '%',
+      decimals: 1,
+      color: 'from-green-500/20 to-emerald-500/20',
+    },
+    {
+      icon: Clock,
+      label: '平均处理时间',
+      value: statistics?.avg_processing_hours ?? 0,
+      suffix: 'h',
+      decimals: 1,
+      color: 'from-orange-500/20 to-yellow-500/20',
+    },
+  ];
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -131,7 +170,11 @@ export function StatsSection() {
                 
                 {/* Value */}
                 <div className="text-3xl md:text-4xl font-bold text-white mb-2">
-                  <AnimatedNumber value={stat.value} suffix={stat.suffix} />
+                  {loading ? (
+                    <span className="text-white/40">--</span>
+                  ) : (
+                    <AnimatedNumber value={stat.value} suffix={stat.suffix} decimals={(stat as any).decimals} />
+                  )}
                 </div>
                 
                 {/* Label */}
