@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, Image as ImageIcon, CheckCircle, Shield } from 'lucide-react';
+import { Send, X, Image as ImageIcon, CheckCircle, Shield, Search, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,9 +20,26 @@ declare global {
   }
 }
 
+interface AppealItem {
+  appeal_id: string;
+  user_id: string;
+  user_type: 'user' | 'group';
+  content: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  review?: {
+    action: string;
+    reason: string;
+    admin_name: string;
+    reviewed_at: string;
+  };
+}
+
 export function AppealSection() {
+  const [activeTab, setActiveTab] = useState<'submit' | 'query'>('submit');
   const [formData, setFormData] = useState({
     user_id: '',
+    user_type: 'user' as 'user' | 'group',
     content: '',
     contact_email: '',
   });
@@ -31,6 +48,12 @@ export function AppealSection() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  
+  // Query appeal states
+  const [queryUserId, setQueryUserId] = useState('');
+  const [queryUserType, setQueryUserType] = useState<'user' | 'group'>('user');
+  const [queryLoading, setQueryLoading] = useState(false);
+  const [queryResult, setQueryResult] = useState<AppealItem[] | null>(null);
   
   // Turnstile 相关状态
   const [turnstileToken, setTurnstileToken] = useState('');
@@ -174,6 +197,48 @@ export function AppealSection() {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const queryAppeals = async () => {
+    if (!queryUserId.trim()) {
+      setError('请输入QQ号或群号');
+      return;
+    }
+
+    setQueryLoading(true);
+    setError('');
+    setQueryResult(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.append('user_type', queryUserType);
+      
+      const response = await fetch(`${API_BASE}/api/appeals/user/${queryUserId}?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setQueryResult(data.data);
+      } else {
+        setError(data.message || '查询失败');
+      }
+    } catch (err) {
+      setError('查询失败，请稍后重试');
+    } finally {
+      setQueryLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <span className="text-yellow-500 flex items-center gap-1"><Clock className="w-4 h-4" />待审核</span>;
+      case 'approved':
+        return <span className="text-green-500 flex items-center gap-1"><CheckCircle className="w-4 h-4" />已通过</span>;
+      case 'rejected':
+        return <span className="text-red-500 flex items-center gap-1"><X className="w-4 h-4" />已拒绝</span>;
+      default:
+        return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -237,6 +302,7 @@ export function AppealSection() {
         },
         body: JSON.stringify({
           user_id: formData.user_id,
+          user_type: formData.user_type,
           content: formData.content,
           contact_email: formData.contact_email,
           images: images,
@@ -283,7 +349,7 @@ export function AppealSection() {
             <Button
               onClick={() => {
                 setSubmitted(false);
-                setFormData({ user_id: '', content: '', contact_email: '' });
+                setFormData({ user_id: '', user_type: 'user', content: '', contact_email: '' });
                 setImages([]);
                 // 重置 Turnstile
                 if (widgetIdRef.current && (window as any).turnstile) {
@@ -306,11 +372,49 @@ export function AppealSection() {
       {/* Section title */}
       <div className="text-center mb-16">
         <h2 className="text-3xl md:text-4xl font-bold text-gradient mb-4">
-          提交申诉
+          申诉中心
         </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          如果您认为被封禁有误，请填写以下表单提交申诉
+          提交申诉或查询您的申诉记录
         </p>
+      </div>
+
+      {/* Tab Switch */}
+      <div className="max-w-lg mx-auto mb-8">
+        <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('submit');
+              setError('');
+              setQueryResult(null);
+            }}
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'submit'
+                ? 'bg-brand text-white'
+                : 'text-muted-foreground hover:text-white'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            提交申诉
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('query');
+              setError('');
+              setSubmitted(false);
+            }}
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'query'
+                ? 'bg-brand text-white'
+                : 'text-muted-foreground hover:text-white'
+            }`}
+          >
+            <Search className="w-4 h-4" />
+            查询申诉
+          </button>
+        </div>
       </div>
 
       {/* Form */}
@@ -318,17 +422,47 @@ export function AppealSection() {
         ref={formRef}
         className="max-w-lg mx-auto"
       >
+        {activeTab === 'submit' ? (
         <div className="glass-strong rounded-3xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* QQ Number */}
+            {/* User Type Selection */}
             <div className="space-y-2">
-              <Label htmlFor="user_id">QQ号</Label>
+              <Label>申诉类型</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, user_type: 'user' })}
+                  className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                    formData.user_type === 'user'
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-border/50 text-muted-foreground hover:border-brand/50'
+                  }`}
+                >
+                  个人QQ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, user_type: 'group' })}
+                  className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                    formData.user_type === 'group'
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-border/50 text-muted-foreground hover:border-brand/50'
+                  }`}
+                >
+                  群号
+                </button>
+              </div>
+            </div>
+
+            {/* QQ Number / Group Number */}
+            <div className="space-y-2">
+              <Label htmlFor="user_id">{formData.user_type === 'user' ? 'QQ号' : '群号'}</Label>
               <Input
                 id="user_id"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="请输入您的QQ号"
+                placeholder={`请输入您的${formData.user_type === 'user' ? 'QQ号' : '群号'}`}
                 value={formData.user_id}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, '');
@@ -469,6 +603,120 @@ export function AppealSection() {
             </Button>
           </form>
         </div>
+        ) : (
+        /* Query Appeal Form */
+        <div className="glass-strong rounded-3xl p-8">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>查询类型</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQueryUserType('user')}
+                  className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                    queryUserType === 'user'
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-border/50 text-muted-foreground hover:border-brand/50'
+                  }`}
+                >
+                  个人QQ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueryUserType('group')}
+                  className={`flex-1 py-3 px-4 rounded-xl border transition-all ${
+                    queryUserType === 'group'
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-border/50 text-muted-foreground hover:border-brand/50'
+                  }`}
+                >
+                  群号
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="query_user_id">{queryUserType === 'user' ? 'QQ号' : '群号'}</Label>
+              <Input
+                id="query_user_id"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder={`请输入您的${queryUserType === 'user' ? 'QQ号' : '群号'}`}
+                value={queryUserId}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setQueryUserId(value);
+                }}
+                className="bg-background/50 border-border/50 focus:border-brand"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+
+            <Button
+              onClick={queryAppeals}
+              disabled={queryLoading}
+              className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow"
+            >
+              {queryLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  查询中...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  查询申诉记录
+                </span>
+              )}
+            </Button>
+
+            {/* Query Results */}
+            {queryResult && (
+              <div className="mt-6 space-y-4">
+                {queryResult.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    未找到申诉记录
+                  </div>
+                ) : (
+                  queryResult.map((appeal) => (
+                    <div key={appeal.appeal_id} className="bg-slate-800/50 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-mono text-sm text-muted-foreground">
+                          {appeal.appeal_id}
+                        </span>
+                        {getStatusBadge(appeal.status)}
+                      </div>
+                      <p className="text-sm text-slate-300 mb-2 line-clamp-2">{appeal.content}</p>
+                      <p className="text-xs text-muted-foreground">
+                        提交时间: {new Date(appeal.created_at).toLocaleString()}
+                      </p>
+                      {appeal.review && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <p className="text-xs text-muted-foreground">
+                            审核人: {appeal.review.admin_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            审核时间: {new Date(appeal.review.reviewed_at).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-slate-300 mt-1">
+                            审核理由: {appeal.review.reason}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        )}
       </div>
     </section>
   );

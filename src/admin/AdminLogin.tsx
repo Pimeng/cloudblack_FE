@@ -19,8 +19,9 @@ declare global {
 }
 
 export function AdminLogin() {
-  const [token, setToken] = useState('');
-  const [showToken, setShowToken] = useState(false);
+  const [adminId, setAdminId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -85,8 +86,13 @@ export function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!token.trim()) {
-      setError('请输入管理员Token');
+    if (!adminId.trim()) {
+      setError('请输入管理员ID');
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError('请输入密码');
       return;
     }
     
@@ -99,14 +105,15 @@ export function AdminLogin() {
     setError('');
 
     try {
-      // 使用新的登录接口，带上 turnstile_token
+      // 使用 admin_id + password 登录，带上 turnstile_token
       const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: token.trim(),
+          admin_id: adminId.trim(),
+          password: password.trim(),
           turnstile_token: turnstileToken,
         }),
       });
@@ -114,7 +121,7 @@ export function AdminLogin() {
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.message || '登录失败，请检查Token');
+        setError(data.message || '登录失败，请检查账号密码');
         // 重置 Turnstile
         if (widgetIdRef.current && (window as any).turnstile) {
           (window as any).turnstile.reset(widgetIdRef.current);
@@ -124,8 +131,13 @@ export function AdminLogin() {
         return;
       }
 
-      // 登录成功，存储 token 并跳转
-      localStorage.setItem('admin_token', token.trim());
+      // 登录成功，存储 temp_token 并跳转
+      // data.data.temp_token 是临时 token
+      localStorage.setItem('admin_token', data.data.temp_token);
+      localStorage.setItem('admin_info', JSON.stringify({
+        admin_id: data.data.admin_id,
+        name: data.data.name,
+      }));
       navigate('/admin/dashboard');
     } catch (err) {
       setError('连接失败，请检查网络');
@@ -156,23 +168,38 @@ export function AdminLogin() {
         <div className="glass-strong rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="token">管理员 Token</Label>
+              <Label htmlFor="admin_id">管理员 ID</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="admin_id"
+                  type="text"
+                  placeholder="请输入管理员ID"
+                  value={adminId}
+                  onChange={(e) => setAdminId(e.target.value)}
+                  className="pl-10 py-6 bg-background/50 border-border/50 focus:border-brand"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">密码</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="token"
-                  type={showToken ? 'text' : 'password'}
-                  placeholder="请输入管理员Token"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="请输入密码"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 py-6 bg-background/50 border-border/50 focus:border-brand"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowToken(!showToken)}
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
@@ -218,7 +245,7 @@ export function AdminLogin() {
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
+                  <Shield className="w-5 h-5" />
                   登录
                 </span>
               )}
