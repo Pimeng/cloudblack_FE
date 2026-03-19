@@ -28,7 +28,8 @@ import {
   Eye,
   EyeOff,
   ScrollText,
-  Mail
+  Mail,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,7 @@ interface Appeal {
     admin_name: string;
     reviewed_at: string;
   };
+  ai_analysis?: AIAnalysisResult;
 }
 
 interface BlacklistItem {
@@ -99,6 +101,30 @@ interface TurnstileConfig {
   secret_key: string;
 }
 
+interface AIAnalysisConfig {
+  enabled: boolean;
+  api_key: string;
+  base_url: string;
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  timeout: number;
+  cache_file: string;
+}
+
+interface AIAnalysisResult {
+  status: string;
+  result?: {
+    summary: string;
+    reason_analysis: string;
+    recommendation: string;
+    confidence: number;
+    suggestions: string;
+    risk_factors: string[];
+  };
+  updated_at?: string;
+}
+
 interface SystemConfig {
   host: string;
   port: number;
@@ -106,6 +132,7 @@ interface SystemConfig {
   temp_token_ttl: number;
   smtp?: SMTPConfig;
   turnstile?: TurnstileConfig;
+  ai_analysis?: AIAnalysisConfig;
   [key: string]: any;
 }
 
@@ -1880,6 +1907,140 @@ export function AdminDashboard() {
                       </div>
                     )}
 
+                    {/* AI 分析配置 - 仅等级4管理员可见 */}
+                    {adminLevel >= 4 && (
+                      <div className="glass rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-purple-500" />
+                            AI 智能分析配置
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="aiAnalysisEnabled"
+                              checked={editConfig.ai_analysis?.enabled || false}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                ai_analysis: { ...editConfig.ai_analysis, enabled: e.target.checked } as AIAnalysisConfig 
+                              })}
+                              className="rounded border-slate-700 bg-slate-800"
+                            />
+                            <Label htmlFor="aiAnalysisEnabled" className="cursor-pointer text-sm">
+                              启用 AI 分析
+                            </Label>
+                          </div>
+                        </div>
+                        
+                        {editConfig.ai_analysis?.enabled && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>API Key</Label>
+                                <div className="relative">
+                                  <Input
+                                    type={showSensitiveInfo ? 'text' : 'password'}
+                                    value={editConfig.ai_analysis?.api_key || ''}
+                                    onChange={(e) => setEditConfig({ 
+                                      ...editConfig, 
+                                      ai_analysis: { ...editConfig.ai_analysis, api_key: e.target.value } as AIAnalysisConfig 
+                                    })}
+                                    placeholder="your-api-key"
+                                    className="bg-slate-800 border-slate-700 pr-10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                  >
+                                    {showSensitiveInfo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Base URL</Label>
+                                <Input
+                                  value={editConfig.ai_analysis?.base_url || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, base_url: e.target.value } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="https://api.kimi.com/coding/v1"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>模型名称</Label>
+                                <Input
+                                  value={editConfig.ai_analysis?.model || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, model: e.target.value } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="kimi-for-coding"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>缓存文件名</Label>
+                                <Input
+                                  value={editConfig.ai_analysis?.cache_file || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, cache_file: e.target.value } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="ai_analysis_cache.json"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>最大 Tokens</Label>
+                                <Input
+                                  type="number"
+                                  value={editConfig.ai_analysis?.max_tokens || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, max_tokens: parseInt(e.target.value) } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="4096"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Temperature</Label>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  max="1"
+                                  value={editConfig.ai_analysis?.temperature || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, temperature: parseFloat(e.target.value) } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="0.7"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>超时时间（秒）</Label>
+                                <Input
+                                  type="number"
+                                  value={editConfig.ai_analysis?.timeout || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    ai_analysis: { ...editConfig.ai_analysis, timeout: parseInt(e.target.value) } as AIAnalysisConfig 
+                                  })}
+                                  placeholder="60"
+                                  className="bg-slate-800 border-slate-700"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* 保存按钮 */}
                     <div className="flex gap-2 pt-4">
                       <Button onClick={updateConfig} disabled={updatingConfig} className="bg-brand hover:bg-brand-dark">
@@ -2146,6 +2307,96 @@ export function AdminDashboard() {
                       <span className="text-muted-foreground">审核理由:</span>{' '}
                       {viewingAppeal.review.reason}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* AI 分析结果 */}
+              {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'completed' && viewingAppeal.ai_analysis.result && (
+                <div>
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    AI 智能分析:
+                    <span className="text-xs text-slate-500">
+                      ({new Date(viewingAppeal.ai_analysis.updated_at!).toLocaleString()})
+                    </span>
+                  </span>
+                  <div className="mt-2 bg-gradient-to-br from-purple-900/30 to-slate-800 rounded-lg p-4 space-y-3 border border-purple-500/20">
+                    {/* 推荐结果 */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground text-sm">AI 建议:</span>
+                      <Badge className={
+                        viewingAppeal.ai_analysis.result.recommendation.includes('通过') 
+                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                          : viewingAppeal.ai_analysis.result.recommendation.includes('拒绝')
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }>
+                        {viewingAppeal.ai_analysis.result.recommendation}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        置信度: {viewingAppeal.ai_analysis.result.confidence}%
+                      </span>
+                    </div>
+
+                    {/* 申诉要点总结 */}
+                    <div className="space-y-1">
+                      <p className="text-sm text-purple-400 font-medium">申诉要点</p>
+                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.summary}</p>
+                    </div>
+
+                    {/* 理由合理性分析 */}
+                    <div className="space-y-1">
+                      <p className="text-sm text-purple-400 font-medium">理由分析</p>
+                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.reason_analysis}</p>
+                    </div>
+
+                    {/* 具体建议 */}
+                    <div className="space-y-1">
+                      <p className="text-sm text-purple-400 font-medium">处理建议</p>
+                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.suggestions}</p>
+                    </div>
+
+                    {/* 风险因素 */}
+                    {viewingAppeal.ai_analysis.result.risk_factors && viewingAppeal.ai_analysis.result.risk_factors.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-purple-400 font-medium">风险提示</p>
+                        <div className="flex flex-wrap gap-2">
+                          {viewingAppeal.ai_analysis.result.risk_factors.map((risk, idx) => (
+                            <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">
+                              {risk}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* AI 分析中状态 */}
+              {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'processing' && (
+                <div>
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    AI 分析状态
+                  </span>
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4 flex items-center gap-3">
+                    <span className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                    <span className="text-sm text-slate-300">AI 正在分析申诉内容，请稍候...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* AI 分析失败状态 */}
+              {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'failed' && (
+                <div>
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    AI 分析状态
+                  </span>
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4">
+                    <span className="text-sm text-slate-400">AI 分析失败，请手动审核</span>
                   </div>
                 </div>
               )}
