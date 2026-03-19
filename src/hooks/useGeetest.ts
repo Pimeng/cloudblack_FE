@@ -37,6 +37,10 @@ export function useGeetest(options: UseGeetestOptions = {}) {
   const [isEnabled, setIsEnabled] = useState(true);
   const captchaRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 使用 ref 保存回调函数，避免依赖变化导致重新初始化
+  const callbacksRef = useRef({ onSuccess, onError, onClose });
+  callbacksRef.current = { onSuccess, onError, onClose };
 
   // 获取极验配置
   useEffect(() => {
@@ -140,7 +144,7 @@ export function useGeetest(options: UseGeetestOptions = {}) {
               gen_time: validate.gen_time,
             };
             setResult(resultData);
-            onSuccess?.(resultData);
+            callbacksRef.current.onSuccess?.(resultData);
           }
         });
 
@@ -148,7 +152,7 @@ export function useGeetest(options: UseGeetestOptions = {}) {
         captcha.onFail(() => {
           const errorMsg = '验证失败，请重试';
           setError(errorMsg);
-          onError?.(errorMsg);
+          callbacksRef.current.onError?.(errorMsg);
         });
 
         // 验证错误回调
@@ -156,16 +160,16 @@ export function useGeetest(options: UseGeetestOptions = {}) {
           const errorMsg = err?.msg || err?.desc?.detail || '验证加载失败，请刷新页面重试';
           setError(errorMsg);
           setIsLoading(false);
-          onError?.(errorMsg);
+          callbacksRef.current.onError?.(errorMsg);
         });
 
         // 验证关闭回调（仅 popup/bind 模式）
         captcha.onClose(() => {
-          onClose?.();
+          callbacksRef.current.onClose?.();
         });
       }
     );
-  }, [isReady, isEnabled, config, product, language, onSuccess, onError, onClose]);
+  }, [isReady, isEnabled, config, product, language]);
 
   // 当准备就绪且有配置时初始化
   useEffect(() => {
