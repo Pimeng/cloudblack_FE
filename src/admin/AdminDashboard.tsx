@@ -3004,7 +3004,12 @@ export function AdminDashboard() {
 
       {/* Appeal Detail Dialog */}
       <Dialog open={appealDetailOpen} onOpenChange={setAppealDetailOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl w-[calc(100%-2rem)] mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white 
+          w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] md:w-[90%] lg:w-[85%] xl:w-[80%] 
+          max-w-[1400px] 
+          mx-2 sm:mx-4 
+          max-h-[95vh] sm:max-h-[90vh] 
+          overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>申诉详情</DialogTitle>
