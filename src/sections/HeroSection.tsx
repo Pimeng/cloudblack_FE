@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, UserX, UserCheck, AlertCircle, Shield, Clock, User } from 'lucide-react';
+import { Search, AlertCircle, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { gsap } from 'gsap';
@@ -19,6 +19,7 @@ export function HeroSection() {
   const [searchedUserId, setSearchedUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BlacklistResult | null>(null);
+  const [queryTime, setQueryTime] = useState<string>('');
   const [error, setError] = useState('');
   
   const cardRef = useRef<HTMLDivElement>(null);
@@ -62,8 +63,9 @@ export function HeroSection() {
       return;
     }
     
-    // 保存查询的QQ号，防止输入框修改时结果跟着变
+    // 保存查询的QQ号和时间，防止输入框修改时结果跟着变
     setSearchedUserId(userId.trim());
+    setQueryTime(new Date().toLocaleString());
     
     // 防止重复查询
     if (isQueryingRef.current) return;
@@ -210,50 +212,53 @@ export function HeroSection() {
               ref={resultRef} 
               className="mt-6 overflow-hidden animate-fade-in-up"
             >
-              <div className={`rounded-xl p-4 min-h-[100px] flex flex-col justify-center ${result.in_blacklist ? 'bg-destructive/10 border border-destructive/30' : 'bg-green-500/10 border border-green-500/30'}`}>
-                <div className="flex items-center gap-3">
-                  {result.in_blacklist ? (
-                    <>
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
-                        <UserX className="w-6 h-6 md:w-7 md:h-7 text-destructive" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-destructive text-[clamp(1rem,4vw,1.5rem)] leading-tight">该用户在黑名单中</h3>
-                        <p className="text-muted-foreground text-[clamp(0.75rem,3vw,1rem)] mt-1">QQ: {searchedUserId}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                        <UserCheck className="w-6 h-6 md:w-7 md:h-7 text-green-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-green-500 text-[clamp(1rem,4vw,1.5rem)] leading-tight">该用户不在黑名单中</h3>
-                        <p className="text-muted-foreground text-[clamp(0.75rem,3vw,1rem)] mt-1">QQ: {searchedUserId}</p>
-                      </div>
-                    </>
+              <div className={`relative rounded-2xl p-6 md:p-8 min-h-[180px] md:min-h-[200px] overflow-hidden flex flex-col ${result.in_blacklist ? 'bg-red-600/70' : 'bg-green-600/70'}`}>
+                {/* 内容 */}
+                <div className="relative z-10 flex-1">
+                  <h3 className="font-bold text-2xl md:text-3xl text-white">
+                    {result.in_blacklist ? '该用户在黑名单中' : '该用户不在黑名单中'}
+                  </h3>
+                  <p className="text-white/80 text-base md:text-lg mt-2">QQ: {searchedUserId}</p>
+                  
+                  {result.in_blacklist && result.data && (
+                    <div className="mt-6 space-y-2 text-base">
+                      <p className="text-white/90">
+                        <span className="text-white/60">封禁原因:</span> {result.data.reason}
+                      </p>
+                      <p className="text-white/90">
+                        <span className="text-white/60">添加时间:</span> {result.data.added_at}
+                      </p>
+                      <p className="text-white/90">
+                        <span className="text-white/60">操作者:</span> {result.data.added_by}
+                      </p>
+                    </div>
                   )}
                 </div>
                 
-                {result.in_blacklist && result.data && (
-                  <div className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">封禁原因:</span>
-                        <p className="text-[clamp(0.75rem,3vw,1rem)] break-words">{result.data.reason}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">添加时间: {result.data.added_at}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">操作者: {result.data.added_by}</span>
-                    </div>
-                  </div>
+                {/* 不在黑名单时显示查询时间 - 放在底部 */}
+                {!result.in_blacklist && queryTime && (
+                  <p className="relative z-10 mt-auto pt-4 text-white/50 text-sm">查询时间: {queryTime}</p>
                 )}
+                
+                {/* 右下角同心圆装饰 - 更大更靠右下 */}
+                <div className="absolute -right-16 -bottom-16 md:-right-20 md:-bottom-20 z-0 w-56 h-56 md:w-72 md:h-72 flex items-center justify-center">
+                  {/* 外层大圆 */}
+                  <div className={`absolute w-full h-full rounded-full ${result.in_blacklist ? 'bg-red-500/40' : 'bg-green-500/30'}`} />
+                  {/* 中层圆 */}
+                  <div className={`absolute w-44 h-44 md:w-56 md:h-56 rounded-full ${result.in_blacklist ? 'bg-red-400/30' : 'bg-green-400/25'}`} />
+                  {/* 状态图标 - 空心圆+对勾/叉号 */}
+                  <div className="relative z-10 w-28 h-28 md:w-36 md:h-36 rounded-full border-[3px] border-white/80 flex items-center justify-center">
+                    {result.in_blacklist ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="text-white">
+                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" className="text-white">
+                        <path d="M20 6 9 17l-5-5"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

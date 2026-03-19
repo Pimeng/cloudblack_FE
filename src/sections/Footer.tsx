@@ -76,7 +76,7 @@ export function Footer() {
             服务条款
           </a>
           <a 
-            href="#" 
+            href="mailto:i@pmya.xyz" 
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-brand transition-colors"
           >
             <Mail className="w-4 h-4" />
