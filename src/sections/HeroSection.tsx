@@ -218,7 +218,7 @@ export function HeroSection() {
                   <h3 className="font-bold text-2xl md:text-3xl text-white">
                     {result.in_blacklist ? '该用户在黑名单中' : '该用户不在黑名单中'}
                   </h3>
-                  <p className="text-white/80 text-base md:text-lg mt-2">QQ: {searchedUserId}</p>
+                  <p className="text-white/80 text-base md:text-lg mt-2">{searchedUserId}</p>
                   
                   {result.in_blacklist && result.data && (
                     <div className="mt-6 space-y-2 text-base">
