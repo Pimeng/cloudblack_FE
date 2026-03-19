@@ -143,6 +143,7 @@ export function AdminLogin() {
         admin_id: data.data.admin_id,
         name: data.data.name,
         level: adminLevel,
+        avatar: data.data.avatar || '',
       }));
       
       // 尝试获取管理员列表来确认等级（如果后端登录响应没有返回level）
@@ -158,6 +159,7 @@ export function AdminLogin() {
               admin_id: currentAdmin.admin_id,
               name: currentAdmin.name,
               level: currentAdmin.level,
+              avatar: currentAdmin.avatar || data.data.avatar || '',
             }));
           }
         }

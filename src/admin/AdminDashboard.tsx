@@ -31,7 +31,10 @@ import {
   Mail,
   Sparkles,
   Menu,
-  X
+  X,
+  Bot,
+  Key,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
-type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'logs' | 'settings';
+type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings';
 
 interface Stats {
   pending_appeals: number;
@@ -88,6 +91,15 @@ interface Admin {
   name: string;
   level: number;
   created_at: string;
+  avatar?: string;
+}
+
+interface BotToken {
+  bot_name: string;
+  owner: string;
+  description: string;
+  created_at: string;
+  token?: string;
 }
 
 interface SMTPConfig {
@@ -232,6 +244,31 @@ export function AdminDashboard() {
   const [deletingAdmin, setDeletingAdmin] = useState<Admin | null>(null);
   const [deletingAdminLoading, setDeletingAdminLoading] = useState(false);
 
+  // Bot Token management
+  const [bots, setBots] = useState<BotToken[]>([]);
+  const [botsLoading, setBotsLoading] = useState(false);
+  const [addBotDialogOpen, setAddBotDialogOpen] = useState(false);
+  const [newBotName, setNewBotName] = useState('');
+  const [newBotOwner, setNewBotOwner] = useState('');
+  const [newBotDescription, setNewBotDescription] = useState('');
+  const [newBotToken, setNewBotToken] = useState('');
+  const [addingBot, setAddingBot] = useState(false);
+  const [createdBotToken, setCreatedBotToken] = useState('');
+  const [showCreatedTokenDialog, setShowCreatedTokenDialog] = useState(false);
+  
+  // Edit bot dialog
+  const [editBotDialogOpen, setEditBotDialogOpen] = useState(false);
+  const [editingBot, setEditingBot] = useState<BotToken | null>(null);
+  const [editBotDescription, setEditBotDescription] = useState('');
+  const [editBotOwner, setEditBotOwner] = useState('');
+  const [editBotToken, setEditBotToken] = useState('');
+  const [updatingBot, setUpdatingBot] = useState(false);
+  
+  // Delete bot dialog
+  const [deleteBotDialogOpen, setDeleteBotDialogOpen] = useState(false);
+  const [deletingBot, setDeletingBot] = useState<BotToken | null>(null);
+  const [deletingBotLoading, setDeletingBotLoading] = useState(false);
+
   // Audit Logs
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -252,6 +289,14 @@ export function AdminDashboard() {
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [updatingConfig, setUpdatingConfig] = useState(false);
 
+  // Profile (Edit own info)
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profileAvatar, setProfileAvatar] = useState('');
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [adminInfo, setAdminInfo] = useState<Admin | null>(null);
+
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token');
     const storedAdminInfo = localStorage.getItem('admin_info');
@@ -265,6 +310,7 @@ export function AdminDashboard() {
         const info = JSON.parse(storedAdminInfo);
         // 从admin_info中获取等级，如果没有则默认为0
         setAdminLevel(info.level || 0);
+        setAdminInfo(info);
       } catch {
         setAdminLevel(0);
       }
@@ -287,6 +333,12 @@ export function AdminDashboard() {
   useEffect(() => {
     if (token && activeTab === 'admins') {
       fetchAdmins(token);
+    }
+  }, [token, activeTab]);
+
+  useEffect(() => {
+    if (token && activeTab === 'bots') {
+      fetchBots(token);
     }
   }, [token, activeTab]);
 
@@ -421,6 +473,32 @@ export function AdminDashboard() {
       toast.error('获取管理员列表失败');
     } finally {
       setAdminLoading(false);
+    }
+  };
+
+  const fetchBots = async (authToken: string) => {
+    setBotsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/bots`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBots(data.data);
+      }
+    } catch (err) {
+      toast.error('获取 Bot Token 列表失败');
+    } finally {
+      setBotsLoading(false);
     }
   };
 
@@ -994,6 +1072,205 @@ export function AdminDashboard() {
     }
   };
 
+  const openProfileDialog = () => {
+    if (adminInfo) {
+      setProfileName(adminInfo.name || '');
+      setProfileAvatar(adminInfo.avatar || '');
+      setProfilePassword('');
+      setProfileDialogOpen(true);
+    }
+  };
+
+  const updateProfile = async () => {
+    if (!adminInfo) return;
+    
+    setUpdatingProfile(true);
+    try {
+      const body: any = {};
+      if (profileName !== adminInfo.name) {
+        body.name = profileName;
+      }
+      if (profileAvatar !== adminInfo.avatar) {
+        body.avatar = profileAvatar;
+      }
+      if (profilePassword) {
+        if (profilePassword.length < 6) {
+          toast.error('密码至少6位');
+          setUpdatingProfile(false);
+          return;
+        }
+        body.password = profilePassword;
+      }
+      
+      if (Object.keys(body).length === 0) {
+        toast.info('没有修改内容');
+        setUpdatingProfile(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/admins/${adminInfo.admin_id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('个人信息已更新');
+        setProfileDialogOpen(false);
+        // 更新本地存储的 admin_info
+        const updatedInfo = { ...adminInfo, name: profileName, avatar: profileAvatar };
+        localStorage.setItem('admin_info', JSON.stringify(updatedInfo));
+        setAdminInfo(updatedInfo);
+        // 刷新管理员列表
+        fetchAdmins(token);
+      } else {
+        toast.error(data.message || '更新失败');
+      }
+    } catch (err) {
+      toast.error('更新失败');
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
+  const addBot = async () => {
+    if (!newBotName.trim() || !newBotOwner.trim()) {
+      toast.error('请填写 Bot 名称和所有者');
+      return;
+    }
+    
+    setAddingBot(true);
+    try {
+      const body: any = {
+        bot_name: newBotName.trim(),
+        owner: newBotOwner.trim(),
+        description: newBotDescription.trim(),
+      };
+      if (newBotToken.trim()) {
+        body.token = newBotToken.trim();
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/bots`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Bot Token 创建成功');
+        setAddBotDialogOpen(false);
+        setNewBotName('');
+        setNewBotOwner('');
+        setNewBotDescription('');
+        setNewBotToken('');
+        // 如果后端返回了生成的 token，显示给用户
+        if (data.data.token) {
+          setCreatedBotToken(data.data.token);
+          setShowCreatedTokenDialog(true);
+        }
+        fetchBots(token);
+      } else {
+        toast.error(data.message || '创建失败');
+      }
+    } catch (err) {
+      toast.error('创建失败');
+    } finally {
+      setAddingBot(false);
+    }
+  };
+
+  const openEditBotDialog = (bot: BotToken) => {
+    setEditingBot(bot);
+    setEditBotDescription(bot.description);
+    setEditBotOwner(bot.owner);
+    setEditBotToken('');
+    setEditBotDialogOpen(true);
+  };
+
+  const updateBot = async () => {
+    if (!editingBot) return;
+    
+    setUpdatingBot(true);
+    try {
+      const body: any = {};
+      if (editBotDescription !== editingBot.description) {
+        body.description = editBotDescription;
+      }
+      if (editBotOwner !== editingBot.owner && adminLevel >= 4) {
+        body.owner = editBotOwner;
+      }
+      if (editBotToken.trim()) {
+        body.token = editBotToken.trim();
+      }
+      
+      if (Object.keys(body).length === 0) {
+        toast.info('没有修改内容');
+        setUpdatingBot(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/bots/${editingBot.bot_name}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Bot Token 更新成功');
+        setEditBotDialogOpen(false);
+        fetchBots(token);
+      } else {
+        toast.error(data.message || '更新失败');
+      }
+    } catch (err) {
+      toast.error('更新失败');
+    } finally {
+      setUpdatingBot(false);
+    }
+  };
+
+  const openDeleteBotDialog = (bot: BotToken) => {
+    setDeletingBot(bot);
+    setDeleteBotDialogOpen(true);
+  };
+
+  const deleteBotFn = async () => {
+    if (!deletingBot) return;
+    
+    setDeletingBotLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/bots/${deletingBot.bot_name}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Bot Token 已删除');
+        setDeleteBotDialogOpen(false);
+        fetchBots(token);
+      } else {
+        toast.error(data.message || '删除失败');
+      }
+    } catch (err) {
+      toast.error('删除失败');
+    } finally {
+      setDeletingBotLoading(false);
+    }
+  };
+
   const updateConfig = async () => {
     if (!config) return;
     
@@ -1199,6 +1476,19 @@ export function AdminDashboard() {
             )}
             {adminLevel >= 2 && (
               <button
+                onClick={() => { setActiveTab('bots'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                  activeTab === 'bots' 
+                    ? 'bg-brand/20 text-brand' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Bot className="w-5 h-5" />
+                Bot Token
+              </button>
+            )}
+            {adminLevel >= 2 && (
+              <button
                 onClick={() => { setActiveTab('logs'); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === 'logs' 
@@ -1226,7 +1516,14 @@ export function AdminDashboard() {
           </nav>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-800">
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-800 space-y-2">
+          <button
+            onClick={() => { openProfileDialog(); setMobileMenuOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <User className="w-5 h-5" />
+            个人设置
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
@@ -1842,6 +2139,85 @@ export function AdminDashboard() {
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'bots' && adminLevel >= 2 && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Bot Token 管理</h2>
+                <p className="text-sm text-muted-foreground">管理 Bot Token，用于 Bot 自动化操作</p>
+              </div>
+              {adminLevel >= 4 && (
+                <Button onClick={() => setAddBotDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
+                  <Bot className="w-4 h-4 mr-2" />
+                  创建 Bot Token
+                </Button>
+              )}
+            </div>
+
+            {botsLoading ? (
+              <div className="text-center py-20">
+                <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
+                <p className="text-muted-foreground mt-4">加载中...</p>
+              </div>
+            ) : bots.length === 0 ? (
+              <div className="glass rounded-2xl p-12 text-center">
+                <Bot className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                <p className="text-muted-foreground">暂无 Bot Token</p>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl overflow-x-auto">
+                <table className="w-full min-w-[600px]">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">Bot 名称</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">所有者</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">描述</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">创建时间</th>
+                      <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400 whitespace-nowrap">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {bots.map((bot) => (
+                      <tr key={bot.bot_name} className="hover:bg-slate-800/30">
+                        <td className="px-4 md:px-6 py-4 text-white font-mono whitespace-nowrap">{bot.bot_name}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">{bot.owner}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 max-w-[200px] truncate" title={bot.description}>{bot.description || '-'}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">
+                          {new Date(bot.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            {(adminLevel >= 4 || bot.owner === JSON.parse(localStorage.getItem('admin_info') || '{}').admin_id) && (
+                              <>
+                                <Button
+                                  onClick={() => openEditBotDialog(bot)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  onClick={() => openDeleteBotDialog(bot)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -3075,6 +3451,310 @@ export function AdminDashboard() {
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <><Trash2 className="w-4 h-4 mr-2" />确认删除</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Bot Token Dialog */}
+      <Dialog open={addBotDialogOpen} onOpenChange={setAddBotDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>创建 Bot Token</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              创建新的 Bot Token 用于 Bot 自动化操作
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Bot 名称</Label>
+              <Input
+                value={newBotName}
+                onChange={(e) => setNewBotName(e.target.value)}
+                placeholder="请输入 Bot 名称"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>所有者</Label>
+              <Input
+                value={newBotOwner}
+                onChange={(e) => setNewBotOwner(e.target.value)}
+                placeholder="请输入所有者管理员ID"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>描述</Label>
+              <Textarea
+                value={newBotDescription}
+                onChange={(e) => setNewBotDescription(e.target.value)}
+                placeholder="请输入 Bot 描述..."
+                className="bg-slate-800 border-slate-700 min-h-[80px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>自定义 Token（可选，留空则自动生成）</Label>
+              <Input
+                value={newBotToken}
+                onChange={(e) => setNewBotToken(e.target.value)}
+                placeholder="请输入自定义 Token"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddBotDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={addBot}
+              disabled={!newBotName.trim() || !newBotOwner.trim() || addingBot}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {addingBot ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Bot className="w-4 h-4 mr-2" />创建</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Show Created Token Dialog */}
+      <Dialog open={showCreatedTokenDialog} onOpenChange={setShowCreatedTokenDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-yellow-500" />
+              Bot Token 创建成功
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              请妥善保存以下 Token，此信息仅显示一次
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-slate-800 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-2">Token:</p>
+              <code className="block bg-slate-950 rounded p-3 text-green-400 font-mono text-sm break-all">
+                {createdBotToken}
+              </code>
+            </div>
+            <p className="text-xs text-yellow-500 mt-3">
+              警告：请立即复制保存此 Token，关闭后将无法再次查看！
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              onClick={() => {
+                setShowCreatedTokenDialog(false);
+                setCreatedBotToken('');
+              }}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              我已保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Bot Token Dialog */}
+      <Dialog open={editBotDialogOpen} onOpenChange={setEditBotDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>修改 Bot Token</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {editingBot && `修改 ${editingBot.bot_name} 的信息`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Bot 名称</Label>
+              <Input
+                value={editingBot?.bot_name || ''}
+                disabled
+                className="bg-slate-800/50 border-slate-700 text-muted-foreground"
+              />
+            </div>
+
+            {adminLevel >= 4 && (
+              <div className="space-y-2">
+                <Label>所有者</Label>
+                <Input
+                  value={editBotOwner}
+                  onChange={(e) => setEditBotOwner(e.target.value)}
+                  placeholder="请输入所有者管理员ID"
+                  className="bg-slate-800 border-slate-700"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>描述</Label>
+              <Textarea
+                value={editBotDescription}
+                onChange={(e) => setEditBotDescription(e.target.value)}
+                placeholder="请输入 Bot 描述..."
+                className="bg-slate-800 border-slate-700 min-h-[80px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>新 Token（留空则不修改）</Label>
+              <Input
+                value={editBotToken}
+                onChange={(e) => setEditBotToken(e.target.value)}
+                placeholder="请输入新 Token"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBotDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={updateBot}
+              disabled={updatingBot}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {updatingBot ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Edit3 className="w-4 h-4 mr-2" />保存修改</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Bot Token Dialog */}
+      <Dialog open={deleteBotDialogOpen} onOpenChange={setDeleteBotDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>删除 Bot Token</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {deletingBot && `确定要删除 Bot ${deletingBot.bot_name} 吗？此操作不可恢复。`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteBotDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={deleteBotFn}
+              disabled={deletingBotLoading}
+              variant="destructive"
+            >
+              {deletingBotLoading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Trash2 className="w-4 h-4 mr-2" />确认删除</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Profile Dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>个人设置</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {adminInfo && `修改 ${adminInfo.admin_id} 的个人信息`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>管理员ID</Label>
+              <Input
+                value={adminInfo?.admin_id || ''}
+                disabled
+                className="bg-slate-800/50 border-slate-700 text-muted-foreground"
+              />
+              <p className="text-xs text-muted-foreground">管理员ID不可修改</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>显示名称</Label>
+              <Input
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="请输入显示名称"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>头像 URL</Label>
+              <Input
+                value={profileAvatar}
+                onChange={(e) => setProfileAvatar(e.target.value)}
+                placeholder="请输入头像图片 URL"
+                className="bg-slate-800 border-slate-700"
+              />
+              {profileAvatar && (
+                <div className="mt-2">
+                  <img 
+                    src={profileAvatar} 
+                    alt="头像预览" 
+                    className="w-16 h-16 rounded-full object-cover border border-slate-700"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>新密码（留空则不修改）</Label>
+              <Input
+                type="password"
+                value={profilePassword}
+                onChange={(e) => setProfilePassword(e.target.value)}
+                placeholder="请输入新密码（至少6位）"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>权限等级</Label>
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-muted-foreground">
+                {adminInfo?.level === 4 ? '超级管理员 (等级4)' :
+                 adminInfo?.level === 3 ? '普通管理员 (等级3)' :
+                 adminInfo?.level === 2 ? '申诉审核员 (等级2)' :
+                 adminInfo?.level === 1 ? 'Bot持有者 (等级1)' : '未知'}
+              </div>
+              <p className="text-xs text-muted-foreground">权限等级只能由超级管理员修改</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={updateProfile}
+              disabled={updatingProfile}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {updatingProfile ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Edit3 className="w-4 h-4 mr-2" />保存修改</>
               )}
             </Button>
           </DialogFooter>
