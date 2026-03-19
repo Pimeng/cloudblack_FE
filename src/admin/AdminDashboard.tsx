@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -188,6 +188,8 @@ export function AdminDashboard() {
   const [appealDetailOpen, setAppealDetailOpen] = useState(false);
   const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
   const [requestingAIAnalysis, setRequestingAIAnalysis] = useState(false);
+  const [deletingAIAnalysis, setDeletingAIAnalysis] = useState(false);
+  const aiAnalysisRef = useRef<HTMLDivElement>(null);
   
   // Add to blacklist dialog
   const [addBlacklistDialogOpen, setAddBlacklistDialogOpen] = useState(false);
@@ -552,11 +554,12 @@ export function AdminDashboard() {
     setReviewDialogOpen(true);
   };
 
-  const openAppealDetail = async (appeal: Appeal) => {
+  const openAppealDetail = async (appeal: Appeal, scrollToAI = false) => {
     setViewingAppeal(appeal);
     setAppealDetailOpen(true);
-    // 如果列表中没有AI分析数据，尝试从详情API获取
-    if (!appeal.ai_analysis) {
+    // 如果没有AI分析数据，或者只有简化数据（没有result详情），则请求详情API
+    const needsDetail = !appeal.ai_analysis || (appeal.ai_analysis.status === 'completed' && !appeal.ai_analysis.result);
+    if (needsDetail) {
       try {
         const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
           headers: { 'Authorization': token },
@@ -570,6 +573,12 @@ export function AdminDashboard() {
       } catch (err) {
         console.error('获取AI分析详情失败:', err);
       }
+    }
+    // 如果需要滚动到AI分析部分，在对话框打开后执行滚动
+    if (scrollToAI && appeal.ai_analysis) {
+      setTimeout(() => {
+        aiAnalysisRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     }
   };
 
@@ -603,6 +612,43 @@ export function AdminDashboard() {
       toast.error('请求 AI 分析失败');
     } finally {
       setRequestingAIAnalysis(false);
+    }
+  };
+
+  const deleteAIAnalysis = async () => {
+    if (!viewingAppeal || !token) return;
+    
+    setDeletingAIAnalysis(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${viewingAppeal.appeal_id}/ai-analysis`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('AI 分析缓存已删除');
+        // 更新本地状态，移除 AI 分析
+        setViewingAppeal({
+          ...viewingAppeal,
+          ai_analysis: undefined
+        });
+        // 同时更新申诉列表中的数据
+        setAppeals(prev => prev.map(a => 
+          a.appeal_id === viewingAppeal.appeal_id 
+            ? { ...a, ai_analysis: undefined }
+            : a
+        ));
+      } else {
+        toast.error(data.message || '删除 AI 分析缓存失败');
+      }
+    } catch (err) {
+      toast.error('删除 AI 分析缓存失败');
+    } finally {
+      setDeletingAIAnalysis(false);
     }
   };
 
@@ -1370,7 +1416,7 @@ export function AdminDashboard() {
                       </div>
 
                       <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                        <p className="text-sm text-slate-300 whitespace-pre-wrap">{appeal.content}</p>
+                        <p className="text-sm text-slate-300 whitespace-pre-wrap break-words">{appeal.content}</p>
                       </div>
 
                       {appeal.images && appeal.images.length > 0 && (
@@ -1447,7 +1493,7 @@ export function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => openAppealDetail(appeal)}
+                                onClick={() => openAppealDetail(appeal, true)}
                                 className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2"
                               >
                                 <Eye className="w-3.5 h-3.5 mr-1" />
@@ -2520,7 +2566,7 @@ export function AdminDashboard() {
               <div>
                 <span className="text-muted-foreground text-sm">申诉内容:</span>
                 <div className="mt-2 bg-slate-800 rounded-lg p-4">
-                  <p className="text-white whitespace-pre-wrap">{viewingAppeal.content}</p>
+                  <p className="text-white whitespace-pre-wrap break-words">{viewingAppeal.content}</p>
                 </div>
               </div>
 
@@ -2573,7 +2619,7 @@ export function AdminDashboard() {
 
               {/* AI 分析结果 */}
               {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'completed' && viewingAppeal.ai_analysis.result && (
-                <div>
+                <div ref={aiAnalysisRef}>
                   <span className="text-muted-foreground text-sm flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-500" />
                     AI 智能分析:
@@ -2602,19 +2648,19 @@ export function AdminDashboard() {
                     {/* 申诉要点总结 */}
                     <div className="space-y-1">
                       <p className="text-sm text-purple-400 font-medium">申诉要点</p>
-                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.summary}</p>
+                      <p className="text-sm text-slate-300 break-words whitespace-pre-wrap">{viewingAppeal.ai_analysis.result.summary}</p>
                     </div>
 
                     {/* 理由合理性分析 */}
                     <div className="space-y-1">
                       <p className="text-sm text-purple-400 font-medium">理由分析</p>
-                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.reason_analysis}</p>
+                      <p className="text-sm text-slate-300 break-words whitespace-pre-wrap">{viewingAppeal.ai_analysis.result.reason_analysis}</p>
                     </div>
 
                     {/* 具体建议 */}
                     <div className="space-y-1">
                       <p className="text-sm text-purple-400 font-medium">处理建议</p>
-                      <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result.suggestions}</p>
+                      <p className="text-sm text-slate-300 break-words whitespace-pre-wrap">{viewingAppeal.ai_analysis.result.suggestions}</p>
                     </div>
 
                     {/* 风险因素 */}
@@ -2628,6 +2674,26 @@ export function AdminDashboard() {
                             </Badge>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* 删除缓存按钮 */}
+                    {adminLevel >= 3 && (
+                      <div className="pt-3 border-t border-purple-500/20 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={deleteAIAnalysis}
+                          disabled={deletingAIAnalysis}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          {deletingAIAnalysis ? (
+                            <span className="w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin mr-2" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 mr-2" />
+                          )}
+                          删除分析缓存
+                        </Button>
                       </div>
                     )}
                   </div>

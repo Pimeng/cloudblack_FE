@@ -138,15 +138,15 @@ export function ProcessSection() {
         <svg 
           className="absolute left-1/2 top-0 h-full w-4 -translate-x-1/2 hidden md:block"
           preserveAspectRatio="none"
+          viewBox="0 0 16 100"
         >
           <path
             ref={lineRef}
-            d="M 8 0 L 8 100%"
+            d="M 8 0 L 8 100"
             stroke="url(#lineGradient)"
             strokeWidth="2"
             fill="none"
             strokeLinecap="round"
-            style={{ height: '100%' }}
           />
           <defs>
             <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">

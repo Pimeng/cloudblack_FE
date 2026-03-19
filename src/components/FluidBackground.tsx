@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 
 export function FluidBackground() {
@@ -9,6 +9,7 @@ export function FluidBackground() {
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
   const rafRef = useRef<number>(0);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
+  const [webglSupported, setWebglSupported] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -16,6 +17,19 @@ export function FluidBackground() {
     const container = containerRef.current;
     const width = window.innerWidth;
     const height = window.innerHeight;
+
+    // Check WebGL support
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        setWebglSupported(false);
+        return;
+      }
+    } catch {
+      setWebglSupported(false);
+      return;
+    }
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -26,15 +40,21 @@ export function FluidBackground() {
     cameraRef.current = camera;
 
     // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ 
-      alpha: true, 
-      antialias: true,
-      powerPreference: 'high-performance'
-    });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ 
+        alpha: true, 
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
+    } catch {
+      setWebglSupported(false);
+      return;
+    }
 
     // Shader material
     const vertexShader = `
@@ -187,20 +207,31 @@ export function FluidBackground() {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
-      renderer.dispose();
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        if (container.contains(rendererRef.current.domElement)) {
+          container.removeChild(rendererRef.current.domElement);
+        }
+      }
       geometry.dispose();
       material.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
     };
   }, []);
+
+  // Fallback gradient when WebGL is not supported
+  const fallbackGradient = {
+    background: `
+      radial-gradient(ellipse at 30% 20%, rgba(56, 130, 246, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+      linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)
+    `,
+  };
 
   return (
     <div 
       ref={containerRef} 
       className="fixed inset-0 -z-10"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}
+      style={webglSupported ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' } : fallbackGradient}
     />
   );
 }
