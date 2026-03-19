@@ -26,6 +26,7 @@ import {
   Shield,
   Power,
   Eye,
+  EyeOff,
   ScrollText,
   Mail
 } from 'lucide-react';
@@ -212,6 +213,7 @@ export function AdminDashboard() {
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [editConfig, setEditConfig] = useState<Partial<SystemConfig>>({});
+  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [updatingConfig, setUpdatingConfig] = useState(false);
 
   useEffect(() => {
@@ -1733,10 +1735,24 @@ export function AdminDashboard() {
                     {/* SMTP 配置 - 仅等级4管理员可见 */}
                     {adminLevel >= 4 && (
                       <div className="glass rounded-2xl p-6 space-y-4">
-                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                          <Mail className="w-5 h-5 text-blue-500" />
-                          SMTP 邮件配置
-                        </h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Mail className="w-5 h-5 text-blue-500" />
+                            SMTP 邮件配置
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+                            className="text-slate-400 hover:text-white"
+                          >
+                            {showSensitiveInfo ? (
+                              <><EyeOff className="w-4 h-4 mr-1" />隐藏敏感信息</>
+                            ) : (
+                              <><Eye className="w-4 h-4 mr-1" />显示敏感信息</>
+                            )}
+                          </Button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>SMTP 服务器地址</Label>
@@ -1777,16 +1793,25 @@ export function AdminDashboard() {
                           </div>
                           <div className="space-y-2">
                             <Label>SMTP 密码</Label>
-                            <Input
-                              type="password"
-                              value={editConfig.smtp?.password || ''}
-                              onChange={(e) => setEditConfig({ 
-                                ...editConfig, 
-                                smtp: { ...editConfig.smtp, password: e.target.value } as SMTPConfig 
-                              })}
-                              placeholder="留空则不修改"
-                              className="bg-slate-800 border-slate-700"
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showSensitiveInfo ? 'text' : 'password'}
+                                value={editConfig.smtp?.password || ''}
+                                onChange={(e) => setEditConfig({ 
+                                  ...editConfig, 
+                                  smtp: { ...editConfig.smtp, password: e.target.value } as SMTPConfig 
+                                })}
+                                placeholder="留空则不修改"
+                                className="bg-slate-800 border-slate-700 pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                              >
+                                {showSensitiveInfo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1830,16 +1855,25 @@ export function AdminDashboard() {
                             </div>
                             <div className="space-y-2">
                               <Label>Secret Key</Label>
-                              <Input
-                                type="password"
-                                value={editConfig.turnstile?.secret_key || ''}
-                                onChange={(e) => setEditConfig({ 
-                                  ...editConfig, 
-                                  turnstile: { ...editConfig.turnstile, secret_key: e.target.value } as TurnstileConfig 
-                                })}
-                                placeholder="0x4AAAAA..."
-                                className="bg-slate-800 border-slate-700"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={showSensitiveInfo ? 'text' : 'password'}
+                                  value={editConfig.turnstile?.secret_key || ''}
+                                  onChange={(e) => setEditConfig({ 
+                                    ...editConfig, 
+                                    turnstile: { ...editConfig.turnstile, secret_key: e.target.value } as TurnstileConfig 
+                                  })}
+                                  placeholder="0x4AAAAA..."
+                                  className="bg-slate-800 border-slate-700 pr-10"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                >
+                                  {showSensitiveInfo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
