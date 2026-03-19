@@ -181,6 +181,7 @@ export function AdminDashboard() {
   // Appeal detail dialog
   const [appealDetailOpen, setAppealDetailOpen] = useState(false);
   const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
+  const [requestingAIAnalysis, setRequestingAIAnalysis] = useState(false);
   
   // Add to blacklist dialog
   const [addBlacklistDialogOpen, setAddBlacklistDialogOpen] = useState(false);
@@ -548,6 +549,67 @@ export function AdminDashboard() {
   const openAppealDetail = (appeal: Appeal) => {
     setViewingAppeal(appeal);
     setAppealDetailOpen(true);
+  };
+
+  const requestAIAnalysis = async () => {
+    if (!viewingAppeal || !token) return;
+    
+    setRequestingAIAnalysis(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${viewingAppeal.appeal_id}/ai-analysis`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('AI 分析已启动，请稍后刷新查看结果');
+        // 更新本地状态为分析中
+        setViewingAppeal({
+          ...viewingAppeal,
+          ai_analysis: {
+            status: 'processing',
+          }
+        });
+      } else {
+        toast.error(data.message || '启动 AI 分析失败');
+      }
+    } catch (err) {
+      toast.error('请求 AI 分析失败');
+    } finally {
+      setRequestingAIAnalysis(false);
+    }
+  };
+
+  const refreshAppealDetail = async () => {
+    if (!viewingAppeal || !token) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${viewingAppeal.appeal_id}`, {
+        headers: { 'Authorization': token },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setViewingAppeal(data.data);
+        toast.success('申诉详情已刷新');
+      } else {
+        toast.error(data.message || '刷新失败');
+      }
+    } catch (err) {
+      toast.error('刷新申诉详情失败');
+    }
   };
 
   const submitReview = async () => {
@@ -2226,7 +2288,18 @@ export function AdminDashboard() {
       <Dialog open={appealDetailOpen} onOpenChange={setAppealDetailOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>申诉详情</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>申诉详情</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshAppealDetail}
+                className="text-slate-400 hover:text-white"
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                刷新
+              </Button>
+            </div>
           </DialogHeader>
           {viewingAppeal && (
             <div className="space-y-6 py-4">
@@ -2395,8 +2468,51 @@ export function AdminDashboard() {
                     <Sparkles className="w-4 h-4 text-purple-500" />
                     AI 分析状态
                   </span>
-                  <div className="mt-2 bg-slate-800 rounded-lg p-4">
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4 space-y-3">
                     <span className="text-sm text-slate-400">AI 分析失败，请手动审核</span>
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={requestAIAnalysis}
+                        disabled={requestingAIAnalysis}
+                        className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                      >
+                        {requestingAIAnalysis ? (
+                          <span className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mr-2" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 mr-2" />
+                        )}
+                        重新分析
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 无 AI 分析结果时显示请求按钮 */}
+              {!viewingAppeal.ai_analysis && (
+                <div>
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    AI 智能分析
+                  </span>
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4 space-y-3">
+                    <p className="text-sm text-slate-400">尚未进行 AI 分析，可点击下方按钮启动智能分析辅助审核</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={requestAIAnalysis}
+                      disabled={requestingAIAnalysis}
+                      className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      {requestingAIAnalysis ? (
+                        <span className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mr-2" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 mr-2" />
+                      )}
+                      启动 AI 分析
+                    </Button>
                   </div>
                 </div>
               )}
