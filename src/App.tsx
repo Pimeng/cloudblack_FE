@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
 import { HeroSection } from './sections/HeroSection';
@@ -12,6 +12,15 @@ import { AdminDashboard } from './admin/AdminDashboard';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Toaster } from '@/components/ui/sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -61,9 +70,48 @@ function HomePage() {
   );
 }
 
+function WelcomeAlert() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    // 检查是否首次访问
+    const hasVisited = localStorage.getItem('hasVisited');
+    if (!hasVisited) {
+      setOpen(true);
+    }
+  }, []);
+
+  const handleClose = () => {
+    localStorage.setItem('hasVisited', 'true');
+    setOpen(false);
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-xl font-bold text-white">重要提示</AlertDialogTitle>
+          <AlertDialogDescription className="text-slate-300 text-base leading-relaxed">
+            云黑正在开发，如遇Token/API不可用属正常现象，有问题请联系QQ：1470458485（注明：云黑API）
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="mt-4">
+          <AlertDialogAction 
+            onClick={handleClose}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            我知道了
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <WelcomeAlert />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminLogin />} />
