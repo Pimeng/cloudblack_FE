@@ -109,7 +109,7 @@ interface SMTPConfig {
   password: string;
 }
 
-interface TurnstileConfig {
+interface RecaptchaConfig {
   enabled: boolean;
   site_key: string;
   secret_key: string;
@@ -148,7 +148,7 @@ interface SystemConfig {
   debug: boolean;
   temp_token_ttl: number;
   smtp?: SMTPConfig;
-  turnstile?: TurnstileConfig;
+  recaptcha?: RecaptchaConfig;
   ai_analysis?: AIAnalysisConfig;
   [key: string]: any;
 }
@@ -1283,7 +1283,7 @@ export function AdminDashboard() {
         configToUpdate = editConfig;
       } else {
         // 非等级4管理员：过滤掉敏感字段
-        const { smtp, turnstile, ...allowedConfig } = editConfig;
+        const { smtp, recaptcha, ...allowedConfig } = editConfig;
         configToUpdate = allowedConfig;
       }
       
@@ -2515,39 +2515,39 @@ export function AdminDashboard() {
                       </div>
                     )}
 
-                    {/* Turnstile 配置 - 仅等级4管理员可见 */}
+                    {/* reCaptcha 配置 - 仅等级4管理员可见 */}
                     {adminLevel >= 4 && (
                       <div className="glass rounded-2xl p-6 space-y-4">
                         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                           <Shield className="w-5 h-5 text-green-500" />
-                          Turnstile 验证码配置
+                          Google reCaptcha Enterprise 配置
                         </h3>
                         <div className="space-y-4">
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
-                              id="turnstileEnabled"
-                              checked={editConfig.turnstile?.enabled || false}
+                              id="recaptchaEnabled"
+                              checked={editConfig.recaptcha?.enabled || false}
                               onChange={(e) => setEditConfig({ 
                                 ...editConfig, 
-                                turnstile: { ...editConfig.turnstile, enabled: e.target.checked } as TurnstileConfig 
+                                recaptcha: { ...editConfig.recaptcha, enabled: e.target.checked } as RecaptchaConfig 
                               })}
                               className="rounded border-slate-700 bg-slate-800"
                             />
-                            <Label htmlFor="turnstileEnabled" className="cursor-pointer">
-                              启用 Turnstile 验证码
+                            <Label htmlFor="recaptchaEnabled" className="cursor-pointer">
+                              启用 reCaptcha 验证码
                             </Label>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label>Site Key</Label>
                               <Input
-                                value={editConfig.turnstile?.site_key || ''}
+                                value={editConfig.recaptcha?.site_key || ''}
                                 onChange={(e) => setEditConfig({ 
                                   ...editConfig, 
-                                  turnstile: { ...editConfig.turnstile, site_key: e.target.value } as TurnstileConfig 
+                                  recaptcha: { ...editConfig.recaptcha, site_key: e.target.value } as RecaptchaConfig 
                                 })}
-                                placeholder="0x4AAAAA..."
+                                placeholder="6Lfo4Y8sAAAA..."
                                 className="bg-slate-800 border-slate-700"
                               />
                             </div>
@@ -2556,12 +2556,12 @@ export function AdminDashboard() {
                               <div className="relative">
                                 <Input
                                   type={showSensitiveInfo ? 'text' : 'password'}
-                                  value={editConfig.turnstile?.secret_key || ''}
+                                  value={editConfig.recaptcha?.secret_key || ''}
                                   onChange={(e) => setEditConfig({ 
                                     ...editConfig, 
-                                    turnstile: { ...editConfig.turnstile, secret_key: e.target.value } as TurnstileConfig 
+                                    recaptcha: { ...editConfig.recaptcha, secret_key: e.target.value } as RecaptchaConfig 
                                   })}
-                                  placeholder="0x4AAAAA..."
+                                  placeholder="6Lfo4Y8sAAAA..."
                                   className="bg-slate-800 border-slate-700 pr-10"
                                 />
                                 <button

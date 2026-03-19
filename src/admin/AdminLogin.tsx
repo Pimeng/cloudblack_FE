@@ -1,22 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
-
-// 声明 Turnstile 全局变量
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: HTMLElement, options: any) => string;
-      reset: (widgetId: string) => void;
-      remove: (widgetId: string) => void;
-    };
-  }
-}
 
 export function AdminLogin() {
   const [adminId, setAdminId] = useState('');
@@ -25,63 +15,12 @@ export function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Turnstile 相关状态
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileLoading, setTurnstileLoading] = useState(true);
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
+  // reCaptcha
+  const { execute: executeRecaptcha, isLoading: recaptchaLoading, isReady } = useRecaptcha({
+    action: 'ADMIN_LOGIN',
+  });
   
   const navigate = useNavigate();
-
-  // 渲染 Turnstile Widget
-  const renderTurnstile = useCallback(() => {
-    if (!turnstileRef.current || !(window as any).turnstile) {
-      return;
-    }
-
-    // 如果已经渲染过，先移除
-    if (widgetIdRef.current) {
-      (window as any).turnstile.remove(widgetIdRef.current);
-      widgetIdRef.current = null;
-    }
-
-    // 渲染新的 widget - 使用 Site Key: 0x4AAAAAACruupvqw7h1JtFH
-    widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
-      sitekey: '0x4AAAAAACruupvqw7h1JtFH',
-      callback: (token: string) => {
-        setTurnstileToken(token);
-      },
-      'error-callback': () => {
-        setError('验证失败，请刷新页面重试');
-      },
-      'expired-callback': () => {
-        setTurnstileToken('');
-      },
-    });
-  }, []);
-
-  // 加载 Turnstile
-  useEffect(() => {
-    setTurnstileLoading(true);
-    
-    const initTurnstile = () => {
-      if ((window as any).turnstile) {
-        renderTurnstile();
-        setTurnstileLoading(false);
-      } else {
-        setTimeout(initTurnstile, 100);
-      }
-    };
-
-    initTurnstile();
-
-    return () => {
-      if (widgetIdRef.current && (window as any).turnstile) {
-        (window as any).turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [renderTurnstile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,17 +34,20 @@ export function AdminLogin() {
       setError('请输入密码');
       return;
     }
-    
-    if (!turnstileToken) {
-      setError('请完成人机验证');
-      return;
-    }
 
     setLoading(true);
     setError('');
 
     try {
-      // 使用 admin_id + password 登录，带上 turnstile_token
+      // 执行 reCaptcha 验证
+      const recaptchaToken = await executeRecaptcha();
+      if (!recaptchaToken) {
+        setError('人机验证失败，请重试');
+        setLoading(false);
+        return;
+      }
+
+      // 使用 admin_id + password 登录，带上 recaptcha_token
       const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: 'POST',
         headers: {
@@ -114,7 +56,7 @@ export function AdminLogin() {
         body: JSON.stringify({
           admin_id: adminId.trim(),
           password: password.trim(),
-          turnstile_token: turnstileToken,
+          recaptcha_token: recaptchaToken,
         }),
       });
 
@@ -122,11 +64,6 @@ export function AdminLogin() {
 
       if (!data.success) {
         setError(data.message || '登录失败，请检查账号密码');
-        // 重置 Turnstile
-        if (widgetIdRef.current && (window as any).turnstile) {
-          (window as any).turnstile.reset(widgetIdRef.current);
-        }
-        setTurnstileToken('');
         setLoading(false);
         return;
       }
@@ -233,26 +170,27 @@ export function AdminLogin() {
               </div>
             </div>
 
-            {/* Turnstile Verification */}
+            {/* reCaptcha Verification Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Shield className="w-4 h-4" />
                 <span>人机验证</span>
-                {turnstileToken && (
-                  <span className="text-green-500 text-xs">(已完成)</span>
+                {isReady && (
+                  <span className="text-green-500 text-xs">(已启用)</span>
                 )}
               </div>
               <div className="relative">
-                {turnstileLoading && (
+                {recaptchaLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
                     <span>加载验证组件...</span>
                   </div>
                 )}
-                <div 
-                  ref={turnstileRef} 
-                  className={turnstileLoading ? 'hidden' : ''}
-                />
+                {!recaptchaLoading && (
+                  <p className="text-xs text-muted-foreground">
+                    此站点受 reCaptcha 保护
+                  </p>
+                )}
               </div>
             </div>
 
@@ -264,7 +202,7 @@ export function AdminLogin() {
 
             <Button
               type="submit"
-              disabled={loading || !turnstileToken}
+              disabled={loading || recaptchaLoading}
               className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl"
             >
               {loading ? (

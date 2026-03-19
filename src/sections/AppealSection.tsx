@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, X, Image as ImageIcon, CheckCircle, Shield, Search, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,19 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
-
-// 声明 Turnstile 全局变量
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: HTMLElement, options: any) => string;
-      reset: (widgetId: string) => void;
-      remove: (widgetId: string) => void;
-    };
-  }
-}
 
 interface AppealItem {
   appeal_id: string;
@@ -55,12 +45,18 @@ export function AppealSection() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<AppealItem[] | null>(null);
   
-  // Turnstile 相关状态
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileLoading, setTurnstileLoading] = useState(true);
-  const [turnstileError, setTurnstileError] = useState('');
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
+  // Geetest 相关状态
+  const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
+  const { containerRef, isLoading: geetestLoading, reset: resetGeetest, isEnabled } = useGeetest({
+    product: 'float',
+    onSuccess: (result) => {
+      setGeetestResult(result);
+      setError('');
+    },
+    onError: (err) => {
+      setError('人机验证失败：' + err);
+    },
+  });
   
   const sectionRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -88,64 +84,6 @@ export function AppealSection() {
       ctx.revert();
     };
   }, []);
-
-  // 渲染 Turnstile Widget
-  const renderTurnstile = useCallback(() => {
-    if (!turnstileRef.current || !(window as any).turnstile) {
-      return;
-    }
-
-    // 如果已经渲染过，先移除
-    if (widgetIdRef.current) {
-      (window as any).turnstile.remove(widgetIdRef.current);
-      widgetIdRef.current = null;
-    }
-
-    // 渲染新的 widget - 使用 Site Key: 0x4AAAAAACruupvqw7h1JtFH
-    widgetIdRef.current = (window as any).turnstile.render(turnstileRef.current, {
-      sitekey: '0x4AAAAAACruupvqw7h1JtFH',
-      callback: (token: string) => {
-        setTurnstileToken(token);
-        setTurnstileError('');
-      },
-      'error-callback': (code: string) => {
-        console.error('[Turnstile] Error code:', code);
-        const errorMessages: Record<string, string> = {
-          '110200': '配置错误：域名未授权或 Site Key 无效，请检查 Cloudflare Turnstile 设置',
-          '110201': '密钥类型不匹配',
-          '110210': 'Widget 已过期',
-          '300030': '请求频率过高，请稍后重试',
-        };
-        setTurnstileError(errorMessages[code] || `验证失败 (${code})，请刷新页面重试`);
-      },
-      'expired-callback': () => {
-        setTurnstileToken('');
-      },
-    });
-  }, []);
-
-  // 加载 Turnstile
-  useEffect(() => {
-    setTurnstileLoading(true);
-    
-    const initTurnstile = () => {
-      if ((window as any).turnstile) {
-        renderTurnstile();
-        setTurnstileLoading(false);
-      } else {
-        setTimeout(initTurnstile, 100);
-      }
-    };
-
-    initTurnstile();
-
-    return () => {
-      if (widgetIdRef.current && (window as any).turnstile) {
-        (window as any).turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [renderTurnstile]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -276,7 +214,8 @@ export function AppealSection() {
       setError('申诉内容不能超过2000字');
       return;
     }
-    if (!turnstileToken) {
+    // 如果启用了极验，需要完成验证
+    if (isEnabled && !geetestResult) {
       setError('请完成人机验证');
       return;
     }
@@ -306,7 +245,7 @@ export function AppealSection() {
           content: formData.content,
           contact_email: formData.contact_email,
           images: images,
-          turnstile_token: turnstileToken,
+          geetest: geetestResult,
         }),
       });
       
@@ -314,11 +253,9 @@ export function AppealSection() {
       
       if (!data.success) {
         setError(data.message || '提交失败');
-        // 重置 Turnstile
-        if (widgetIdRef.current && (window as any).turnstile) {
-          (window as any).turnstile.reset(widgetIdRef.current);
-        }
-        setTurnstileToken('');
+        // 重置 Geetest
+        resetGeetest();
+        setGeetestResult(null);
         setSubmitting(false);
         return;
       }
@@ -351,11 +288,8 @@ export function AppealSection() {
                 setSubmitted(false);
                 setFormData({ user_id: '', user_type: 'user', content: '', contact_email: '' });
                 setImages([]);
-                // 重置 Turnstile
-                if (widgetIdRef.current && (window as any).turnstile) {
-                  (window as any).turnstile.reset(widgetIdRef.current);
-                }
-                setTurnstileToken('');
+                resetGeetest();
+                setGeetestResult(null);
               }}
               className="bg-brand hover:bg-brand-dark"
             >
@@ -548,33 +482,30 @@ export function AppealSection() {
               </p>
             </div>
 
-            {/* Turnstile Verification */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Shield className="w-4 h-4" />
-                <span>人机验证</span>
-                {turnstileToken && (
-                  <span className="text-green-500 text-xs">(已完成)</span>
-                )}
+            {/* Geetest Verification - 仅在启用时显示 */}
+            {isEnabled && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span>人机验证</span>
+                  {geetestResult && (
+                    <span className="text-green-500 text-xs">(已完成)</span>
+                  )}
+                </div>
+                <div className="relative">
+                  {geetestLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                      <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                      <span>加载验证组件...</span>
+                    </div>
+                  )}
+                  <div 
+                    ref={containerRef} 
+                    className={geetestLoading ? 'hidden' : ''}
+                  />
+                </div>
               </div>
-              <div className="relative">
-                {turnstileLoading && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                    <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                    <span>加载验证组件...</span>
-                  </div>
-                )}
-                <div 
-                  ref={turnstileRef} 
-                  className={turnstileLoading ? 'hidden' : ''}
-                />
-                {turnstileError && (
-                  <div className="text-sm text-destructive mt-2">
-                    {turnstileError}
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -586,7 +517,7 @@ export function AppealSection() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={submitting || !turnstileToken}
+              disabled={submitting || (isEnabled && !geetestResult)}
               className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow"
             >
               {submitting ? (
