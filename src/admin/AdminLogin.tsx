@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
@@ -14,40 +14,43 @@ export function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // reCaptcha
-  const { execute: executeRecaptcha, isLoading: recaptchaLoading, isReady } = useRecaptcha({
-    action: 'ADMIN_LOGIN',
-  });
+  const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
   
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!adminId.trim()) {
-      setError('请输入管理员ID');
-      return;
-    }
-    
-    if (!password.trim()) {
-      setError('请输入密码');
-      return;
-    }
+  // 使用 bind 模式的极验验证
+  const { 
+    isLoading: geetestLoading, 
+    isReady, 
+    isEnabled,
+    verify,
+    reset: resetGeetest 
+  } = useGeetest({
+    product: 'bind',
+    onSuccess: (result) => {
+      setGeetestResult(result);
+      setError('');
+      // 验证成功后自动提交登录
+      handleLogin(result);
+    },
+    onError: (err) => {
+      setError('人机验证失败：' + err);
+      setLoading(false);
+    },
+    onClose: () => {
+      // 用户关闭验证框，恢复登录按钮状态
+      setLoading(false);
+    },
+  });
 
-    setLoading(true);
-    setError('');
+  // 实际登录逻辑
+  const handleLogin = useCallback(async (geetestData: GeetestResult | null) => {
+    // 如果启用了极验但没有验证结果，不提交
+    if (isEnabled && !geetestData) {
+      return;
+    }
 
     try {
-      // 执行 reCaptcha 验证
-      const recaptchaToken = await executeRecaptcha();
-      if (!recaptchaToken) {
-        setError('人机验证失败，请重试');
-        setLoading(false);
-        return;
-      }
-
-      // 使用 admin_id + password 登录，带上 recaptcha_token
       const response = await fetch(`${API_BASE}/api/admin/login`, {
         method: 'POST',
         headers: {
@@ -56,7 +59,7 @@ export function AdminLogin() {
         body: JSON.stringify({
           admin_id: adminId.trim(),
           password: password.trim(),
-          recaptcha_token: recaptchaToken,
+          geetest: geetestData,
         }),
       });
 
@@ -65,15 +68,15 @@ export function AdminLogin() {
       if (!data.success) {
         setError(data.message || '登录失败，请检查账号密码');
         setLoading(false);
+        // 登录失败，重置极验
+        resetGeetest();
+        setGeetestResult(null);
         return;
       }
 
       // 登录成功，存储 temp_token 并跳转
-      // data.data.temp_token 是临时 token
       localStorage.setItem('admin_token', data.data.temp_token);
       
-      // 如果后端返回了 level，使用返回的值
-      // 建议后端在登录响应中添加 level 字段
       const adminLevel = data.data.level ?? 3;
       
       localStorage.setItem('admin_info', JSON.stringify({
@@ -83,7 +86,7 @@ export function AdminLogin() {
         avatar: data.data.avatar || '',
       }));
       
-      // 尝试获取管理员列表来确认等级（如果后端登录响应没有返回level）
+      // 尝试获取管理员列表来确认等级
       try {
         const adminsResponse = await fetch(`${API_BASE}/api/admin/admins`, {
           headers: { 'Authorization': data.data.temp_token },
@@ -108,6 +111,41 @@ export function AdminLogin() {
     } catch (err) {
       setError('连接失败，请检查网络');
       setLoading(false);
+      // 出错时重置极验
+      resetGeetest();
+      setGeetestResult(null);
+    }
+  }, [adminId, password, isEnabled, navigate, resetGeetest]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!adminId.trim()) {
+      setError('请输入管理员ID');
+      return;
+    }
+    
+    if (!password.trim()) {
+      setError('请输入密码');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    // 如果启用了极验，先触发验证
+    if (isEnabled) {
+      if (!geetestResult) {
+        // 触发极验验证
+        verify();
+        // 等待 onSuccess 回调中继续登录流程
+        return;
+      }
+      // 已有验证结果，直接登录
+      await handleLogin(geetestResult);
+    } else {
+      // 极验未启用，直接登录
+      await handleLogin(null);
     }
   };
 
@@ -170,29 +208,29 @@ export function AdminLogin() {
               </div>
             </div>
 
-            {/* reCaptcha Verification Info */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Shield className="w-4 h-4" />
-                <span>人机验证</span>
-                {isReady && (
-                  <span className="text-green-500 text-xs">(已启用)</span>
-                )}
+            {/* Geetest Verification Status */}
+            {isEnabled && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span>人机验证</span>
+                  {geetestLoading ? (
+                    <span className="text-yellow-500 text-xs flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      加载中...
+                    </span>
+                  ) : isReady ? (
+                    geetestResult ? (
+                      <span className="text-green-500 text-xs">(已完成)</span>
+                    ) : (
+                      <span className="text-blue-500 text-xs">(点击登录进行验证)</span>
+                    )
+                  ) : (
+                    <span className="text-yellow-500 text-xs">(初始化中...)</span>
+                  )}
+                </div>
               </div>
-              <div className="relative">
-                {recaptchaLoading && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                    <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                    <span>加载验证组件...</span>
-                  </div>
-                )}
-                {!recaptchaLoading && (
-                  <p className="text-xs text-muted-foreground">
-                    此站点受 reCaptcha 保护
-                  </p>
-                )}
-              </div>
-            </div>
+            )}
 
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
@@ -202,7 +240,7 @@ export function AdminLogin() {
 
             <Button
               type="submit"
-              disabled={loading || recaptchaLoading}
+              disabled={loading || geetestLoading || (isEnabled && !isReady)}
               className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl"
             >
               {loading ? (
