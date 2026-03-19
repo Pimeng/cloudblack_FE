@@ -177,16 +177,34 @@ export function AppealSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // QQ号校验：不能为空且必须为数字
     if (!formData.user_id.trim()) {
       setError('请输入QQ号');
       return;
     }
+    if (!/^\d+$/.test(formData.user_id.trim())) {
+      setError('QQ号必须为数字');
+      return;
+    }
+    
+    // 邮箱校验：不能为空且必须符合邮箱格式
+    if (!formData.contact_email.trim()) {
+      setError('请输入联系邮箱');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.contact_email.trim())) {
+      setError('请输入有效的邮箱地址');
+      return;
+    }
+    
+    // 申诉内容校验：至少20个字符
     if (!formData.content.trim()) {
       setError('请输入申诉内容');
       return;
     }
-    if (!formData.contact_email.trim()) {
-      setError('请输入联系邮箱');
+    if (formData.content.trim().length < 20) {
+      setError('申诉内容至少需要20个字符');
       return;
     }
     if (formData.content.length > 2000) {
@@ -202,6 +220,16 @@ export function AppealSection() {
     setError('');
 
     try {
+      // 先检查用户是否在黑名单中
+      const checkResponse = await fetch(`${API_BASE}/api/check?user_id=${formData.user_id.trim()}`);
+      const checkData = await checkResponse.json();
+      
+      if (!checkData.success || !checkData.in_blacklist) {
+        setError('该用户不在黑名单中，无需提交申诉');
+        setSubmitting(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/api/appeals`, {
         method: 'POST',
         headers: {
@@ -298,9 +326,14 @@ export function AppealSection() {
               <Input
                 id="user_id"
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="请输入您的QQ号"
                 value={formData.user_id}
-                onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, user_id: value });
+                }}
                 className="bg-background/50 border-border/50 focus:border-brand"
               />
             </div>
@@ -340,7 +373,11 @@ export function AppealSection() {
               <div className="flex flex-wrap gap-3">
                 {images.map((url, index) => (
                   <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden group">
-                    <img src={url} alt={`上传图片 ${index + 1}`} className="w-full h-full object-cover" />
+                    <img 
+                      src={url.startsWith('http') ? url : `${API_BASE}${url}`} 
+                      alt={`上传图片 ${index + 1}`} 
+                      className="w-full h-full object-cover" 
+                    />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
