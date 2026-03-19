@@ -29,7 +29,9 @@ import {
   EyeOff,
   ScrollText,
   Mail,
-  Sparkles
+  Sparkles,
+  Menu,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,6 +116,9 @@ interface AIAnalysisConfig {
 
 interface AIAnalysisResult {
   status: string;
+  // 列表接口返回的简化字段
+  recommendation?: string;
+  // 详情接口返回的完整结果
   result?: {
     summary: string;
     reason_analysis: string;
@@ -159,6 +164,7 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [token, setToken] = useState('');
   const [adminLevel, setAdminLevel] = useState<number>(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
@@ -546,9 +552,25 @@ export function AdminDashboard() {
     setReviewDialogOpen(true);
   };
 
-  const openAppealDetail = (appeal: Appeal) => {
+  const openAppealDetail = async (appeal: Appeal) => {
     setViewingAppeal(appeal);
     setAppealDetailOpen(true);
+    // 如果列表中没有AI分析数据，尝试从详情API获取
+    if (!appeal.ai_analysis) {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
+          headers: { 'Authorization': token },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.ai_analysis) {
+            setViewingAppeal(prev => prev ? { ...prev, ai_analysis: data.data.ai_analysis } : null);
+          }
+        }
+      } catch (err) {
+        console.error('获取AI分析详情失败:', err);
+      }
+    }
   };
 
   const requestAIAnalysis = async () => {
@@ -1040,8 +1062,32 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Mobile Header */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 z-50 flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center">
+            <LayoutDashboard className="w-4 h-4 text-brand" />
+          </div>
+          <h1 className="font-bold text-white">管理后台</h1>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50">
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
@@ -1055,7 +1101,7 @@ export function AdminDashboard() {
 
           <nav className="space-y-2">
             <button
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                 activeTab === 'dashboard' 
                   ? 'bg-brand/20 text-brand' 
@@ -1066,7 +1112,7 @@ export function AdminDashboard() {
               仪表盘
             </button>
             <button
-              onClick={() => setActiveTab('appeals')}
+              onClick={() => { setActiveTab('appeals'); setMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                 activeTab === 'appeals' 
                   ? 'bg-brand/20 text-brand' 
@@ -1082,7 +1128,7 @@ export function AdminDashboard() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('blacklist')}
+              onClick={() => { setActiveTab('blacklist'); setMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                 activeTab === 'blacklist' 
                   ? 'bg-brand/20 text-brand' 
@@ -1094,7 +1140,7 @@ export function AdminDashboard() {
             </button>
             {canManageAdmins && (
               <button
-                onClick={() => setActiveTab('admins')}
+                onClick={() => { setActiveTab('admins'); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === 'admins' 
                     ? 'bg-brand/20 text-brand' 
@@ -1107,7 +1153,7 @@ export function AdminDashboard() {
             )}
             {adminLevel >= 2 && (
               <button
-                onClick={() => setActiveTab('logs')}
+                onClick={() => { setActiveTab('logs'); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === 'logs' 
                     ? 'bg-brand/20 text-brand' 
@@ -1120,7 +1166,7 @@ export function AdminDashboard() {
             )}
             {canManageSettings && (
               <button
-                onClick={() => setActiveTab('settings')}
+                onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   activeTab === 'settings' 
                     ? 'bg-brand/20 text-brand' 
@@ -1146,16 +1192,16 @@ export function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main className="ml-64 p-8">
+      <main className="ml-0 md:ml-64 p-4 md:p-8 pt-20 md:pt-8">
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">仪表盘</h2>
-              <p className="text-muted-foreground">系统概览与统计数据</p>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">仪表盘</h2>
+              <p className="text-sm text-muted-foreground">系统概览与统计数据</p>
             </div>
 
             {stats && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
                 <div className="glass rounded-2xl p-6">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
@@ -1250,12 +1296,12 @@ export function AdminDashboard() {
 
         {activeTab === 'appeals' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">申诉管理</h2>
-                <p className="text-muted-foreground">审核用户申诉请求</p>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">申诉管理</h2>
+                <p className="text-sm text-muted-foreground">审核用户申诉请求</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <select
                   value={appealFilter}
                   onChange={(e) => {
@@ -1380,6 +1426,147 @@ export function AdminDashboard() {
                         )}
                       </div>
 
+                      {/* AI 分析概览 - 列表接口返回简化数据 */}
+                      {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.recommendation && (
+                        <div className="mt-4 bg-gradient-to-br from-purple-900/30 to-slate-800 rounded-lg p-4 border border-purple-500/20">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-purple-500" />
+                              <span className="text-sm font-medium text-purple-400">AI 建议</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={
+                                appeal.ai_analysis.recommendation.includes('通过') 
+                                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                  : appeal.ai_analysis.recommendation.includes('拒绝')
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                  : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                              }>
+                                {appeal.ai_analysis.recommendation}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openAppealDetail(appeal)}
+                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2"
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                详情
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI 分析中状态 - pending 状态 */}
+                      {appeal.ai_analysis && appeal.ai_analysis.status === 'pending' && (
+                        <div className="mt-4 bg-slate-800/50 rounded-lg p-4 border border-purple-500/20">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-500" />
+                            <span className="text-sm text-purple-400">AI 正在分析中...</span>
+                            <span className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin ml-auto" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI 分析失败 */}
+                      {appeal.ai_analysis && appeal.ai_analysis.status === 'failed' && (
+                        <div className="mt-4 bg-slate-800/50 rounded-lg p-4 border border-red-500/20">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-red-500" />
+                              <span className="text-sm text-red-400">AI 分析失败</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                setViewingAppeal(appeal);
+                                // 临时更新本地状态为分析中
+                                const updatedAppeals = appeals.map(a => 
+                                  a.appeal_id === appeal.appeal_id 
+                                    ? { ...a, ai_analysis: { status: 'pending' } }
+                                    : a
+                                );
+                                setAppeals(updatedAppeals);
+                                // 请求重新分析
+                                try {
+                                  const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Authorization': token,
+                                      'Content-Type': 'application/json',
+                                    },
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    toast.success('AI 分析已重新启动');
+                                  } else {
+                                    toast.error(data.message || '启动 AI 分析失败');
+                                    fetchAppeals(token);
+                                  }
+                                } catch (err) {
+                                  toast.error('请求 AI 分析失败');
+                                  fetchAppeals(token);
+                                }
+                              }}
+                              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                            >
+                              重新分析
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 无 AI 分析 - 显示启动按钮 */}
+                      {!appeal.ai_analysis && appeal.status === 'pending' && (
+                        <div className="mt-4 bg-slate-800/30 rounded-lg p-4 border border-dashed border-slate-700">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <Sparkles className="w-4 h-4" />
+                              <span className="text-sm">尚未进行 AI 分析</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                // 临时更新本地状态为分析中
+                                const updatedAppeals = appeals.map(a => 
+                                  a.appeal_id === appeal.appeal_id 
+                                    ? { ...a, ai_analysis: { status: 'pending' } }
+                                    : a
+                                );
+                                setAppeals(updatedAppeals);
+                                // 请求分析
+                                try {
+                                  const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Authorization': token,
+                                      'Content-Type': 'application/json',
+                                    },
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    toast.success('AI 分析已启动');
+                                  } else {
+                                    toast.error(data.message || '启动 AI 分析失败');
+                                    fetchAppeals(token);
+                                  }
+                                } catch (err) {
+                                  toast.error('请求 AI 分析失败');
+                                  fetchAppeals(token);
+                                }
+                              }}
+                              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                            >
+                              <Sparkles className="w-4 h-4 mr-1" />
+                              启动 AI 分析
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
                       {appeal.review && (
                         <div className="bg-slate-800/50 rounded-lg p-4 mt-4">
                           <p className="text-sm text-muted-foreground mb-1">
@@ -1427,13 +1614,13 @@ export function AdminDashboard() {
 
         {activeTab === 'blacklist' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">黑名单管理</h2>
-                <p className="text-muted-foreground">查看和管理黑名单用户</p>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">黑名单管理</h2>
+                <p className="text-sm text-muted-foreground">查看和管理黑名单用户</p>
               </div>
-              <div className="flex gap-2">
-                <div className="relative">
+              <div className="flex flex-wrap gap-2">
+                <div className="relative flex-1 md:flex-none">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="搜索用户ID或原因..."
@@ -1442,11 +1629,11 @@ export function AdminDashboard() {
                       setBlacklistSearch(e.target.value);
                       setBlacklistPage(1);
                     }}
-                    className="pl-10 w-64 bg-slate-800 border-slate-700"
+                    className="pl-10 w-full md:w-64 bg-slate-800 border-slate-700"
                   />
                 </div>
                 {canManageBlacklist && (
-                  <Button onClick={() => setAddBlacklistDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
+                  <Button onClick={() => setAddBlacklistDialogOpen(true)} className="bg-brand hover:bg-brand-dark whitespace-nowrap">
                     <Ban className="w-4 h-4 mr-2" />
                     添加黑名单
                   </Button>
@@ -1469,27 +1656,27 @@ export function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="glass rounded-2xl overflow-hidden">
-                  <table className="w-full">
+                <div className="glass rounded-2xl overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
                     <thead className="bg-slate-800/50">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">用户ID</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">封禁原因</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">添加时间</th>
-                        <th className="px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">用户ID</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">封禁原因</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">操作者</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">添加时间</th>
+                        <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400 whitespace-nowrap">操作</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                       {blacklist.map((item) => (
                         <tr key={item.user_id} className="hover:bg-slate-800/30">
-                          <td className="px-6 py-4 text-white font-mono">{item.user_id}</td>
-                          <td className="px-6 py-4 text-slate-300">{item.reason}</td>
-                          <td className="px-6 py-4 text-slate-400">{item.added_by}</td>
-                          <td className="px-6 py-4 text-slate-400 text-sm">
+                          <td className="px-4 md:px-6 py-4 text-white font-mono whitespace-nowrap">{item.user_id}</td>
+                          <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
+                          <td className="px-4 md:px-6 py-4 text-slate-400 whitespace-nowrap">{item.added_by}</td>
+                          <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">
                             {new Date(item.added_at).toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-4 md:px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                               {canManageBlacklist && (
                                 <>
@@ -1549,10 +1736,10 @@ export function AdminDashboard() {
 
         {activeTab === 'admins' && canManageAdmins && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">管理员管理</h2>
-                <p className="text-muted-foreground">管理系统管理员账号</p>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">管理员管理</h2>
+                <p className="text-sm text-muted-foreground">管理系统管理员账号</p>
               </div>
               <Button onClick={() => setAddAdminDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
                 <UserCog className="w-4 h-4 mr-2" />
@@ -1571,27 +1758,27 @@ export function AdminDashboard() {
                 <p className="text-muted-foreground">暂无管理员</p>
               </div>
             ) : (
-              <div className="glass rounded-2xl overflow-hidden">
-                <table className="w-full">
+              <div className="glass rounded-2xl overflow-x-auto">
+                <table className="w-full min-w-[500px]">
                   <thead className="bg-slate-800/50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">管理员ID</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">名称</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">等级</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">创建时间</th>
-                      <th className="px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">管理员ID</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">名称</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">等级</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">创建时间</th>
+                      <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400 whitespace-nowrap">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {admins.map((admin) => (
                       <tr key={admin.admin_id} className="hover:bg-slate-800/30">
-                        <td className="px-6 py-4 text-white font-mono">{admin.admin_id}</td>
-                        <td className="px-6 py-4 text-slate-300">{admin.name}</td>
-                        <td className="px-6 py-4">{getLevelBadge(admin.level)}</td>
-                        <td className="px-6 py-4 text-slate-400 text-sm">
+                        <td className="px-4 md:px-6 py-4 text-white font-mono whitespace-nowrap">{admin.admin_id}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">{admin.name}</td>
+                        <td className="px-4 md:px-6 py-4 whitespace-nowrap">{getLevelBadge(admin.level)}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">
                           {new Date(admin.created_at).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 md:px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <Button
                               onClick={() => openEditAdminDialog(admin)}
@@ -1622,12 +1809,12 @@ export function AdminDashboard() {
 
         {activeTab === 'logs' && adminLevel >= 2 && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">审计日志</h2>
-                <p className="text-muted-foreground">查看系统操作记录</p>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">审计日志</h2>
+                <p className="text-sm text-muted-foreground">查看系统操作记录</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <select
                   value={logFilterAction}
                   onChange={(e) => {
@@ -1685,34 +1872,34 @@ export function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="glass rounded-2xl overflow-hidden">
-                  <table className="w-full">
+                <div className="glass rounded-2xl overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
                     <thead className="bg-slate-800/50">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">时间</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">操作类型</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">IP地址</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">状态</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">时间</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">操作类型</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">操作者</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">IP地址</th>
+                        <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">状态</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                       {logs.map((log, index) => (
                         <tr key={index} className="hover:bg-slate-800/30">
-                          <td className="px-6 py-4 text-slate-400 text-sm whitespace-nowrap">
+                          <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">
                             {log.timestamp}
                           </td>
-                          <td className="px-6 py-4 text-white">
+                          <td className="px-4 md:px-6 py-4 text-white whitespace-nowrap">
                             {actionTypes[log.action_type] || log.action_type}
                           </td>
-                          <td className="px-6 py-4 text-slate-300">
+                          <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
                             {log.operator_id}
                             <span className="text-xs text-muted-foreground ml-1">({log.operator_type})</span>
                           </td>
-                          <td className="px-6 py-4 text-slate-400 text-sm font-mono">
+                          <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono whitespace-nowrap">
                             {log.ip}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                             {log.status === 'success' ? (
                               <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
                             ) : (
@@ -1756,8 +1943,8 @@ export function AdminDashboard() {
         {activeTab === 'settings' && canManageSettings && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">系统设置</h2>
-              <p className="text-muted-foreground">管理系统配置和服务器状态</p>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">系统设置</h2>
+              <p className="text-sm text-muted-foreground">管理系统配置和服务器状态</p>
             </div>
 
             <Tabs defaultValue="config" className="w-full">
@@ -2226,7 +2413,7 @@ export function AdminDashboard() {
 
       {/* Review Dialog */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>
               {reviewAction === 'approve' ? '通过申诉' : '拒绝申诉'}
@@ -2286,7 +2473,7 @@ export function AdminDashboard() {
 
       {/* Appeal Detail Dialog */}
       <Dialog open={appealDetailOpen} onOpenChange={setAppealDetailOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl w-[calc(100%-2rem)] mx-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>申诉详情</DialogTitle>
@@ -2523,7 +2710,7 @@ export function AdminDashboard() {
 
       {/* Add to Blacklist Dialog */}
       <Dialog open={addBlacklistDialogOpen} onOpenChange={setAddBlacklistDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>添加黑名单</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2574,7 +2761,7 @@ export function AdminDashboard() {
 
       {/* Edit Blacklist Dialog */}
       <Dialog open={editBlacklistDialogOpen} onOpenChange={setEditBlacklistDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>修改黑名单条目</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2626,7 +2813,7 @@ export function AdminDashboard() {
 
       {/* Delete Appeal Dialog */}
       <Dialog open={deleteAppealDialogOpen} onOpenChange={setDeleteAppealDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>删除申诉</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2655,7 +2842,7 @@ export function AdminDashboard() {
 
       {/* Add Admin Dialog */}
       <Dialog open={addAdminDialogOpen} onOpenChange={setAddAdminDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>添加管理员</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2733,7 +2920,7 @@ export function AdminDashboard() {
 
       {/* Edit Admin Dialog */}
       <Dialog open={editAdminDialogOpen} onOpenChange={setEditAdminDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>修改管理员</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2801,7 +2988,7 @@ export function AdminDashboard() {
 
       {/* Delete Admin Dialog */}
       <Dialog open={deleteAdminDialogOpen} onOpenChange={setDeleteAdminDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>删除管理员</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -2830,7 +3017,7 @@ export function AdminDashboard() {
 
       {/* Restart Server Dialog */}
       <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>重启服务器</DialogTitle>
             <DialogDescription className="text-slate-400">

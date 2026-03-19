@@ -101,6 +101,33 @@
   background: var(--brand);
 }
 
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Better touch targets on mobile */
+  button, 
+  [role="button"],
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  
+  /* Responsive tables */
+  .glass table {
+    font-size: 0.875rem;
+  }
+  
+  /* Dialog mobile padding */
+  [data-slot="dialog-content"] {
+    padding: 1rem;
+  }
+}
+
 /* Animation keyframes */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
