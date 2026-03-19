@@ -95,12 +95,17 @@ export function useGeetest(options: UseGeetestOptions = {}) {
       return;
     }
 
-    if (!isReady || !(window as any).initGeetest4 || !containerRef.current) {
+    if (!isReady || !(window as any).initGeetest4) {
       return;
     }
 
     // 如果没有获取到配置，等待配置获取完成
     if (!config?.captcha_id) {
+      return;
+    }
+
+    // bind 模式不需要容器，其他模式需要
+    if (product !== 'bind' && !containerRef.current) {
       return;
     }
 
@@ -123,8 +128,8 @@ export function useGeetest(options: UseGeetestOptions = {}) {
       (captcha: any) => {
         captchaRef.current = captcha;
 
-        // 将验证码挂载到 DOM
-        if (containerRef.current) {
+        // 将验证码挂载到 DOM（非 bind 模式）
+        if (product !== 'bind' && containerRef.current) {
           captcha.appendTo(containerRef.current);
         }
 
@@ -173,7 +178,9 @@ export function useGeetest(options: UseGeetestOptions = {}) {
 
   // 当准备就绪且有配置时初始化
   useEffect(() => {
-    if (isReady && containerRef.current && config) {
+    // bind 模式不需要容器，其他模式需要
+    const shouldInit = isReady && config && (product === 'bind' || containerRef.current);
+    if (shouldInit) {
       initCaptcha();
     }
 
@@ -183,7 +190,7 @@ export function useGeetest(options: UseGeetestOptions = {}) {
         captchaRef.current = null;
       }
     };
-  }, [isReady, config, initCaptcha]);
+  }, [isReady, config, product, initCaptcha]);
 
   // 重置验证
   const reset = useCallback(() => {
