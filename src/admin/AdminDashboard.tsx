@@ -220,6 +220,11 @@ export function AdminDashboard() {
   const [deleteAppealDialogOpen, setDeleteAppealDialogOpen] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState<Appeal | null>(null);
   const [deletingAppealLoading, setDeletingAppealLoading] = useState(false);
+  
+  // Clear processed appeals dialog
+  const [clearProcessedDialogOpen, setClearProcessedDialogOpen] = useState(false);
+  const [clearProcessedDays, setClearProcessedDays] = useState(30);
+  const [clearingProcessed, setClearingProcessed] = useState(false);
 
   // Admin management
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -268,6 +273,12 @@ export function AdminDashboard() {
   const [deleteBotDialogOpen, setDeleteBotDialogOpen] = useState(false);
   const [deletingBot, setDeletingBot] = useState<BotToken | null>(null);
   const [deletingBotLoading, setDeletingBotLoading] = useState(false);
+  
+  // View bot token dialog
+  const [viewTokenDialogOpen, setViewTokenDialogOpen] = useState(false);
+  const [viewingBot, setViewingBot] = useState<BotToken | null>(null);
+  const [viewingBotToken, setViewingBotToken] = useState('');
+  const [viewingBotLoading, setViewingBotLoading] = useState(false);
 
   // Audit Logs
   const [logs, setLogs] = useState<any[]>([]);
@@ -937,6 +948,41 @@ export function AdminDashboard() {
     }
   };
 
+  const clearProcessedAppeals = async () => {
+    if (!token) return;
+    
+    setClearingProcessed(true);
+    try {
+      const body: any = {};
+      if (clearProcessedDays > 0) {
+        body.days = clearProcessedDays;
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/appeals/clear-processed`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`已清理 ${data.data.deleted_count} 条已处理申诉`);
+        setClearProcessedDialogOpen(false);
+        fetchAppeals(token);
+        fetchStats(token);
+      } else {
+        toast.error(data.message || '清理失败');
+      }
+    } catch (err) {
+      toast.error('清理失败');
+    } finally {
+      setClearingProcessed(false);
+    }
+  };
+
   const addAdmin = async () => {
     if (!newAdminId.trim() || !newAdminName.trim() || !newAdminPassword.trim()) {
       toast.error('请填写所有必填项');
@@ -1268,6 +1314,34 @@ export function AdminDashboard() {
       toast.error('删除失败');
     } finally {
       setDeletingBotLoading(false);
+    }
+  };
+
+  const fetchBotToken = async (bot: BotToken) => {
+    if (!token) return;
+    
+    setViewingBot(bot);
+    setViewingBotToken('');
+    setViewingBotLoading(true);
+    setViewTokenDialogOpen(true);
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/bots/${bot.bot_name}/token`, {
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setViewingBotToken(data.data.token);
+      } else {
+        toast.error(data.message || '获取 Token 失败');
+        setViewTokenDialogOpen(false);
+      }
+    } catch (err) {
+      toast.error('获取 Token 失败');
+      setViewTokenDialogOpen(false);
+    } finally {
+      setViewingBotLoading(false);
     }
   };
 
@@ -1661,6 +1735,16 @@ export function AdminDashboard() {
                 <Button onClick={() => fetchAppeals(token)} variant="outline" size="icon">
                   <RefreshCw className="w-4 h-4" />
                 </Button>
+                {adminLevel >= 4 && (
+                  <Button 
+                    onClick={() => setClearProcessedDialogOpen(true)} 
+                    variant="outline"
+                    className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    清理已处理
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -2105,6 +2189,7 @@ export function AdminDashboard() {
                 <table className="w-full min-w-[500px]">
                   <thead className="bg-slate-800/50">
                     <tr>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">头像</th>
                       <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">管理员ID</th>
                       <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">名称</th>
                       <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">等级</th>
@@ -2115,6 +2200,19 @@ export function AdminDashboard() {
                   <tbody className="divide-y divide-slate-800">
                     {admins.map((admin) => (
                       <tr key={admin.admin_id} className="hover:bg-slate-800/30">
+                        <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                          {admin.avatar ? (
+                            <img 
+                              src={admin.avatar} 
+                              alt={admin.name}
+                              className="w-10 h-10 rounded-full object-cover border border-slate-700"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-medium">
+                              {admin.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 md:px-6 py-4 text-white font-mono whitespace-nowrap">{admin.admin_id}</td>
                         <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">{admin.name}</td>
                         <td className="px-4 md:px-6 py-4 whitespace-nowrap">{getLevelBadge(admin.level)}</td>
@@ -2198,6 +2296,17 @@ export function AdminDashboard() {
                         </td>
                         <td className="px-4 md:px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
+                            {adminLevel >= 4 && (
+                              <Button
+                                onClick={() => fetchBotToken(bot)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                                title="查看 Token"
+                              >
+                                <Key className="w-4 h-4" />
+                              </Button>
+                            )}
                             {(adminLevel >= 4 || bot.owner === JSON.parse(localStorage.getItem('admin_info') || '{}').admin_id) && (
                               <>
                                 <Button
@@ -3282,6 +3391,57 @@ export function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Clear Processed Appeals Dialog */}
+      <Dialog open={clearProcessedDialogOpen} onOpenChange={setClearProcessedDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>清理已处理申诉</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              清理已处理的申诉记录，释放存储空间
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>清理范围</Label>
+              <select
+                value={clearProcessedDays}
+                onChange={(e) => setClearProcessedDays(Number(e.target.value))}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+              >
+                <option value={0}>全部已处理申诉（谨慎使用）</option>
+                <option value={30}>30天前的已处理申诉（推荐）</option>
+                <option value={60}>60天前的已处理申诉</option>
+                <option value={90}>90天前的已处理申诉</option>
+              </select>
+            </div>
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm">
+              <AlertCircle className="w-4 h-4 inline-block mr-2" />
+              {clearProcessedDays === 0 
+                ? '将删除所有已处理的申诉记录，此操作不可恢复！' 
+                : `将删除 ${clearProcessedDays} 天前已处理的申诉记录`}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearProcessedDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={clearProcessedAppeals}
+              disabled={clearingProcessed}
+              variant="destructive"
+            >
+              {clearingProcessed ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <><Trash2 className="w-4 h-4 mr-2" />确认清理</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add Admin Dialog */}
       <Dialog open={addAdminDialogOpen} onOpenChange={setAddAdminDialogOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
@@ -3663,6 +3823,61 @@ export function AdminDashboard() {
               ) : (
                 <><Trash2 className="w-4 h-4 mr-2" />确认删除</>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Bot Token Dialog */}
+      <Dialog open={viewTokenDialogOpen} onOpenChange={setViewTokenDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>查看 Bot Token</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {viewingBot && `Bot: ${viewingBot.bot_name}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {viewingBotLoading ? (
+              <div className="text-center py-8">
+                <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
+                <p className="text-muted-foreground mt-4">加载中...</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Token 原文</Label>
+                  <div className="relative">
+                    <textarea
+                      value={viewingBotToken}
+                      readOnly
+                      className="w-full h-32 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm resize-none"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(viewingBotToken);
+                        toast.success('Token 已复制到剪贴板');
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                    >
+                      复制
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm">
+                  <AlertCircle className="w-4 h-4 inline-block mr-2" />
+                  请妥善保管 Token，不要分享给他人。此操作已被记录到审计日志。
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewTokenDialogOpen(false)}>
+              关闭
             </Button>
           </DialogFooter>
         </DialogContent>
