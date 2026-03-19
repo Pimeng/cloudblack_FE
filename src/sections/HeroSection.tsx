@@ -16,6 +16,7 @@ interface BlacklistResult {
 
 export function HeroSection() {
   const [userId, setUserId] = useState('');
+  const [searchedUserId, setSearchedUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BlacklistResult | null>(null);
   const [error, setError] = useState('');
@@ -25,6 +26,8 @@ export function HeroSection() {
   const inputRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const queryIdRef = useRef(0);
+  const isQueryingRef = useRef(false);
 
   useEffect(() => {
     // Entrance animation
@@ -59,51 +62,54 @@ export function HeroSection() {
       return;
     }
     
+    // 保存查询的QQ号，防止输入框修改时结果跟着变
+    setSearchedUserId(userId.trim());
+    
+    // 防止重复查询
+    if (isQueryingRef.current) return;
+    isQueryingRef.current = true;
+    
     setLoading(true);
     setError('');
-    setResult(null);
+    
+    // 生成唯一查询ID，防止旧查询覆盖新结果
+    const currentQueryId = ++queryIdRef.current;
     
     try {
       const response = await fetch(`https://cloudblack-api.07210700.xyz/api/check?user_id=${userId.trim()}`);
       const data = await response.json();
       
+      // 检查是否是最新的查询
+      if (currentQueryId !== queryIdRef.current) return;
+      
       if (data.success) {
         setResult(data);
-        // Animate result
-        setTimeout(() => {
-          gsap.fromTo(resultRef.current,
-            { height: 0, opacity: 0 },
-            { height: 'auto', opacity: 1, duration: 0.5, ease: 'power2.out' }
-          );
-        }, 100);
       } else {
         setError(data.message || '查询失败');
       }
     } catch (err) {
+      // 检查是否是最新的查询
+      if (currentQueryId !== queryIdRef.current) return;
+      
       // For demo, simulate a response
-      setTimeout(() => {
-        const mockResult: BlacklistResult = {
-          in_blacklist: Math.random() > 0.7,
-          data: {
-            user_id: userId,
-            reason: '发布违规广告',
-            added_by: 'system',
-            added_at: '2026-03-10 14:30:00'
-          }
-        };
-        if (!mockResult.in_blacklist) {
-          delete mockResult.data;
+      const mockResult: BlacklistResult = {
+        in_blacklist: Math.random() > 0.7,
+        data: {
+          user_id: userId,
+          reason: '发布违规广告',
+          added_by: 'system',
+          added_at: '2026-03-10 14:30:00'
         }
-        setResult(mockResult);
-        setTimeout(() => {
-          gsap.fromTo(resultRef.current,
-            { height: 0, opacity: 0 },
-            { height: 'auto', opacity: 1, duration: 0.5, ease: 'power2.out' }
-          );
-        }, 100);
-      }, 800);
+      };
+      if (!mockResult.in_blacklist) {
+        delete mockResult.data;
+      }
+      setResult(mockResult);
     } finally {
-      setLoading(false);
+      if (currentQueryId === queryIdRef.current) {
+        setLoading(false);
+        isQueryingRef.current = false;
+      }
     }
   };
 
@@ -165,7 +171,10 @@ export function HeroSection() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="pl-12 pr-4 py-6 text-lg bg-background/50 border-border/50 focus:border-brand focus:ring-brand/20 rounded-xl"
+                className="pl-12 pr-4 py-6 text-lg bg-slate-800/80 border-slate-700/50 rounded-xl
+                  focus:border-brand/60 focus:ring-2 focus:ring-brand/20 
+                  transition-all duration-200 ease-out
+                  placeholder:text-slate-500"
               />
             </div>
             
@@ -197,48 +206,51 @@ export function HeroSection() {
           
           {/* Result */}
           {result && (
-            <div ref={resultRef} className="mt-6 overflow-hidden">
-              <div className={`rounded-xl p-5 ${result.in_blacklist ? 'bg-destructive/10 border border-destructive/30' : 'bg-green-500/10 border border-green-500/30'}`}>
-                <div className="flex items-center gap-3 mb-3">
+            <div 
+              ref={resultRef} 
+              className="mt-6 overflow-hidden animate-fade-in-up"
+            >
+              <div className={`rounded-xl p-4 min-h-[100px] flex flex-col justify-center ${result.in_blacklist ? 'bg-destructive/10 border border-destructive/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                <div className="flex items-center gap-3">
                   {result.in_blacklist ? (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
-                        <UserX className="w-5 h-5 text-destructive" />
+                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                        <UserX className="w-6 h-6 md:w-7 md:h-7 text-destructive" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-destructive">该用户在黑名单中</h3>
-                        <p className="text-sm text-muted-foreground">QQ: {userId}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-destructive text-[clamp(1rem,4vw,1.5rem)] leading-tight">该用户在黑名单中</h3>
+                        <p className="text-muted-foreground text-[clamp(0.75rem,3vw,1rem)] mt-1">QQ: {searchedUserId}</p>
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <UserCheck className="w-5 h-5 text-green-500" />
+                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                        <UserCheck className="w-6 h-6 md:w-7 md:h-7 text-green-500" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-green-500">该用户不在黑名单中</h3>
-                        <p className="text-sm text-muted-foreground">QQ: {userId}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-green-500 text-[clamp(1rem,4vw,1.5rem)] leading-tight">该用户不在黑名单中</h3>
+                        <p className="text-muted-foreground text-[clamp(0.75rem,3vw,1rem)] mt-1">QQ: {searchedUserId}</p>
                       </div>
                     </>
                   )}
                 </div>
                 
                 {result.in_blacklist && result.data && (
-                  <div className="space-y-2 pt-3 border-t border-border/30">
+                  <div className="mt-3 pt-3 border-t border-border/30 space-y-1.5">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <span className="text-sm text-muted-foreground">封禁原因:</span>
-                        <p className="text-sm">{result.data.reason}</p>
+                      <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">封禁原因:</span>
+                        <p className="text-[clamp(0.75rem,3vw,1rem)] break-words">{result.data.reason}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">添加时间: {result.data.added_at}</span>
+                      <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">添加时间: {result.data.added_at}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">操作者: {result.data.added_by}</span>
+                      <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-muted-foreground text-[clamp(0.7rem,2.5vw,0.875rem)]">操作者: {result.data.added_by}</span>
                     </div>
                   </div>
                 )}
