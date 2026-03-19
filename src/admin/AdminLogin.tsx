@@ -134,10 +134,37 @@ export function AdminLogin() {
       // 登录成功，存储 temp_token 并跳转
       // data.data.temp_token 是临时 token
       localStorage.setItem('admin_token', data.data.temp_token);
+      
+      // 如果后端返回了 level，使用返回的值
+      // 建议后端在登录响应中添加 level 字段
+      const adminLevel = data.data.level ?? 3;
+      
       localStorage.setItem('admin_info', JSON.stringify({
         admin_id: data.data.admin_id,
         name: data.data.name,
+        level: adminLevel,
       }));
+      
+      // 尝试获取管理员列表来确认等级（如果后端登录响应没有返回level）
+      try {
+        const adminsResponse = await fetch(`${API_BASE}/api/admin/admins`, {
+          headers: { 'Authorization': data.data.temp_token },
+        });
+        const adminsData = await adminsResponse.json();
+        if (adminsData.success) {
+          const currentAdmin = adminsData.data.find((a: any) => a.admin_id === data.data.admin_id);
+          if (currentAdmin) {
+            localStorage.setItem('admin_info', JSON.stringify({
+              admin_id: currentAdmin.admin_id,
+              name: currentAdmin.name,
+              level: currentAdmin.level,
+            }));
+          }
+        }
+      } catch (e) {
+        // 忽略错误，使用默认值
+      }
+      
       navigate('/admin/dashboard');
     } catch (err) {
       setError('连接失败，请检查网络');

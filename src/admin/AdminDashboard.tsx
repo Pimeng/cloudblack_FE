@@ -256,6 +256,15 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/stats`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -279,6 +288,15 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/appeals?${params}`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setAppeals(data.data.items);
@@ -305,6 +323,15 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/blacklist?${params}`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setBlacklist(data.data.items);
@@ -323,6 +350,15 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/admins`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setAdmins(data.data);
@@ -340,10 +376,19 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/config`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
-      if (data.success) {
-        setConfig(data.data);
-        setEditConfig(data.data);
+      if (data.success && data.data.config) {
+        setConfig(data.data.config);
+        setEditConfig(data.data.config);
       }
     } catch (err) {
       toast.error('获取系统配置失败');
@@ -379,6 +424,15 @@ export function AdminDashboard() {
       const response = await fetch(`${API_BASE}/api/admin/logs?${params}`, {
         headers: { 'Authorization': authToken },
       });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setLogs(data.data.items);
@@ -770,19 +824,22 @@ export function AdminDashboard() {
     
     setUpdatingConfig(true);
     try {
+      // 过滤掉敏感字段（根据API文档，smtp和turnstile不可通过此接口修改）
+      const { smtp, turnstile, ...allowedConfig } = editConfig;
+      
       const response = await fetch(`${API_BASE}/api/admin/config`, {
         method: 'PUT',
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editConfig),
+        body: JSON.stringify(allowedConfig),
       });
       
       const data = await response.json();
       if (data.success) {
         toast.success('配置已更新，重启后生效');
-        setConfig({ ...config, ...editConfig });
+        setConfig({ ...config, ...allowedConfig });
       } else {
         toast.error(data.message || '更新失败');
       }
@@ -1603,12 +1660,13 @@ export function AdminDashboard() {
                   <div className="glass rounded-2xl p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>服务器地址</Label>
+                        <Label>服务器地址（只读）</Label>
                         <Input
                           value={editConfig.host || ''}
-                          onChange={(e) => setEditConfig({ ...editConfig, host: e.target.value })}
-                          className="bg-slate-800 border-slate-700"
+                          disabled
+                          className="bg-slate-800/50 border-slate-700 text-muted-foreground cursor-not-allowed"
                         />
+                        <p className="text-xs text-muted-foreground">服务器地址不可修改，需手动修改配置文件</p>
                       </div>
                       <div className="space-y-2">
                         <Label>端口</Label>
@@ -1640,6 +1698,9 @@ export function AdminDashboard() {
                         />
                       </div>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      注意：SMTP 和 Turnstile 等敏感配置不可通过此界面修改，请直接编辑配置文件。
+                    </p>
                     <div className="flex gap-2 pt-4">
                       <Button onClick={updateConfig} disabled={updatingConfig} className="bg-brand hover:bg-brand-dark">
                         {updatingConfig ? (
