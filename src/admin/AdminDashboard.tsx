@@ -24,9 +24,6 @@ import {
   RotateCcw,
   Server,
   Shield,
-  X,
-  ChevronDown,
-  ChevronUp,
   Power,
   Eye,
   ScrollText
@@ -188,7 +185,6 @@ export function AdminDashboard() {
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logFilterAction, setLogFilterAction] = useState('');
-  const [logFilterOperator, setLogFilterOperator] = useState('');
   const [logFilterStatus, setLogFilterStatus] = useState<'all' | 'success' | 'failure'>('all');
   const [actionTypes, setActionTypes] = useState<Record<string, string>>({});
   const [logStats, setLogStats] = useState<any>(null);
@@ -253,7 +249,7 @@ export function AdminDashboard() {
       fetchActionTypes(token);
       fetchLogStats(token);
     }
-  }, [token, activeTab, logsPage, logFilterAction, logFilterOperator, logFilterStatus]);
+  }, [token, activeTab, logsPage, logFilterAction, logFilterStatus]);
 
   const fetchStats = async (authToken: string) => {
     try {
@@ -378,7 +374,6 @@ export function AdminDashboard() {
         per_page: '50',
       });
       if (logFilterAction) params.append('action_type', logFilterAction);
-      if (logFilterOperator) params.append('operator_id', logFilterOperator);
       if (logFilterStatus !== 'all') params.append('status', logFilterStatus);
 
       const response = await fetch(`${API_BASE}/api/admin/logs?${params}`, {
