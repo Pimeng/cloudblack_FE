@@ -26,7 +26,8 @@ import {
   Shield,
   Power,
   Eye,
-  ScrollText
+  ScrollText,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,11 +85,26 @@ interface Admin {
   created_at: string;
 }
 
+interface SMTPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+}
+
+interface TurnstileConfig {
+  enabled: boolean;
+  site_key: string;
+  secret_key: string;
+}
+
 interface SystemConfig {
   host: string;
   port: number;
   debug: boolean;
   temp_token_ttl: number;
+  smtp?: SMTPConfig;
+  turnstile?: TurnstileConfig;
   [key: string]: any;
 }
 
@@ -824,8 +840,16 @@ export function AdminDashboard() {
     
     setUpdatingConfig(true);
     try {
-      // 过滤掉敏感字段（根据API文档，smtp和turnstile不可通过此接口修改）
-      const { smtp, turnstile, ...allowedConfig } = editConfig;
+      // 等级4管理员可以修改任何配置，包括敏感配置
+      // 低等级管理员只能修改非敏感配置
+      let configToUpdate: Partial<SystemConfig>;
+      if (adminLevel >= 4) {
+        configToUpdate = editConfig;
+      } else {
+        // 非等级4管理员：过滤掉敏感字段
+        const { smtp, turnstile, ...allowedConfig } = editConfig;
+        configToUpdate = allowedConfig;
+      }
       
       const response = await fetch(`${API_BASE}/api/admin/config`, {
         method: 'PUT',
@@ -833,13 +857,13 @@ export function AdminDashboard() {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(allowedConfig),
+        body: JSON.stringify(configToUpdate),
       });
       
       const data = await response.json();
       if (data.success) {
         toast.success('配置已更新，重启后生效');
-        setConfig({ ...config, ...allowedConfig });
+        setConfig({ ...config, ...configToUpdate });
       } else {
         toast.error(data.message || '更新失败');
       }
@@ -1657,50 +1681,172 @@ export function AdminDashboard() {
                     <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
                   </div>
                 ) : config ? (
-                  <div className="glass rounded-2xl p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>服务器地址（只读）</Label>
-                        <Input
-                          value={editConfig.host || ''}
-                          disabled
-                          className="bg-slate-800/50 border-slate-700 text-muted-foreground cursor-not-allowed"
-                        />
-                        <p className="text-xs text-muted-foreground">服务器地址不可修改，需手动修改配置文件</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>端口</Label>
-                        <Input
-                          type="number"
-                          value={editConfig.port || ''}
-                          onChange={(e) => setEditConfig({ ...editConfig, port: parseInt(e.target.value) })}
-                          className="bg-slate-800 border-slate-700"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>调试模式</Label>
-                        <select
-                          value={editConfig.debug ? 'true' : 'false'}
-                          onChange={(e) => setEditConfig({ ...editConfig, debug: e.target.value === 'true' })}
-                          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-                        >
-                          <option value="false">关闭</option>
-                          <option value="true">开启</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Token有效期（秒）</Label>
-                        <Input
-                          type="number"
-                          value={editConfig.temp_token_ttl || ''}
-                          onChange={(e) => setEditConfig({ ...editConfig, temp_token_ttl: parseInt(e.target.value) })}
-                          className="bg-slate-800 border-slate-700"
-                        />
+                  <div className="space-y-6">
+                    {/* 基础配置 */}
+                    <div className="glass rounded-2xl p-6 space-y-4">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Server className="w-5 h-5 text-brand" />
+                        基础配置
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>服务器地址（只读）</Label>
+                          <Input
+                            value={editConfig.host || ''}
+                            disabled
+                            className="bg-slate-800/50 border-slate-700 text-muted-foreground cursor-not-allowed"
+                          />
+                          <p className="text-xs text-muted-foreground">服务器地址不可修改，需手动修改配置文件</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>端口</Label>
+                          <Input
+                            type="number"
+                            value={editConfig.port || ''}
+                            onChange={(e) => setEditConfig({ ...editConfig, port: parseInt(e.target.value) })}
+                            className="bg-slate-800 border-slate-700"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>调试模式</Label>
+                          <select
+                            value={editConfig.debug ? 'true' : 'false'}
+                            onChange={(e) => setEditConfig({ ...editConfig, debug: e.target.value === 'true' })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                          >
+                            <option value="false">关闭</option>
+                            <option value="true">开启</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Token有效期（秒）</Label>
+                          <Input
+                            type="number"
+                            value={editConfig.temp_token_ttl || ''}
+                            onChange={(e) => setEditConfig({ ...editConfig, temp_token_ttl: parseInt(e.target.value) })}
+                            className="bg-slate-800 border-slate-700"
+                          />
+                        </div>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      注意：SMTP 和 Turnstile 等敏感配置不可通过此界面修改，请直接编辑配置文件。
-                    </p>
+
+                    {/* SMTP 配置 - 仅等级4管理员可见 */}
+                    {adminLevel >= 4 && (
+                      <div className="glass rounded-2xl p-6 space-y-4">
+                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                          <Mail className="w-5 h-5 text-blue-500" />
+                          SMTP 邮件配置
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>SMTP 服务器地址</Label>
+                            <Input
+                              value={editConfig.smtp?.host || ''}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                smtp: { ...editConfig.smtp, host: e.target.value } as SMTPConfig 
+                              })}
+                              placeholder="smtp.example.com"
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>SMTP 端口</Label>
+                            <Input
+                              type="number"
+                              value={editConfig.smtp?.port || ''}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                smtp: { ...editConfig.smtp, port: parseInt(e.target.value) } as SMTPConfig 
+                              })}
+                              placeholder="465"
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>SMTP 用户名</Label>
+                            <Input
+                              value={editConfig.smtp?.username || ''}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                smtp: { ...editConfig.smtp, username: e.target.value } as SMTPConfig 
+                              })}
+                              placeholder="user@example.com"
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>SMTP 密码</Label>
+                            <Input
+                              type="password"
+                              value={editConfig.smtp?.password || ''}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                smtp: { ...editConfig.smtp, password: e.target.value } as SMTPConfig 
+                              })}
+                              placeholder="留空则不修改"
+                              className="bg-slate-800 border-slate-700"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Turnstile 配置 - 仅等级4管理员可见 */}
+                    {adminLevel >= 4 && (
+                      <div className="glass rounded-2xl p-6 space-y-4">
+                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-green-500" />
+                          Turnstile 验证码配置
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="turnstileEnabled"
+                              checked={editConfig.turnstile?.enabled || false}
+                              onChange={(e) => setEditConfig({ 
+                                ...editConfig, 
+                                turnstile: { ...editConfig.turnstile, enabled: e.target.checked } as TurnstileConfig 
+                              })}
+                              className="rounded border-slate-700 bg-slate-800"
+                            />
+                            <Label htmlFor="turnstileEnabled" className="cursor-pointer">
+                              启用 Turnstile 验证码
+                            </Label>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Site Key</Label>
+                              <Input
+                                value={editConfig.turnstile?.site_key || ''}
+                                onChange={(e) => setEditConfig({ 
+                                  ...editConfig, 
+                                  turnstile: { ...editConfig.turnstile, site_key: e.target.value } as TurnstileConfig 
+                                })}
+                                placeholder="0x4AAAAA..."
+                                className="bg-slate-800 border-slate-700"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Secret Key</Label>
+                              <Input
+                                type="password"
+                                value={editConfig.turnstile?.secret_key || ''}
+                                onChange={(e) => setEditConfig({ 
+                                  ...editConfig, 
+                                  turnstile: { ...editConfig.turnstile, secret_key: e.target.value } as TurnstileConfig 
+                                })}
+                                placeholder="0x4AAAAA..."
+                                className="bg-slate-800 border-slate-700"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 保存按钮 */}
                     <div className="flex gap-2 pt-4">
                       <Button onClick={updateConfig} disabled={updatingConfig} className="bg-brand hover:bg-brand-dark">
                         {updatingConfig ? (
