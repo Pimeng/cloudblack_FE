@@ -1,5 +1,5 @@
-﻿﻿import { useState, useRef, useEffect } from 'react';
-import { Send, X, Image as ImageIcon, CheckCircle, Shield, Search, Clock, FileText } from 'lucide-react';
+﻿﻿import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, X, Image as ImageIcon, CheckCircle, Search, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,12 +44,25 @@ export function AppealSection({ active }: { active?: boolean }) {
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<AppealItem[] | null>(null);
 
-  const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
   const { openImage } = useImageViewer();
-  const { containerRef, isLoading: geetestLoading, reset: resetGeetest, isEnabled } = useGeetest({
-    product: 'float',
-    onSuccess: (result) => { setGeetestResult(result); setError(''); },
-    onError: (err) => { setError(`人机验证失败：${err}`); },
+  
+  // 使用 bind 模式的极验验证，点击提交按钮时触发
+  const { 
+    isLoading: geetestLoading, 
+    isReady, 
+    isEnabled,
+    verify,
+    reset: resetGeetest 
+  } = useGeetest({
+    product: 'bind',
+    onSuccess: (result) => {
+      // 验证成功后自动提交
+      executeSubmit(result);
+    },
+    onError: (err) => {
+      setError(`人机验证失败：${err}`);
+      setSubmitting(false);
+    },
   });
 
   const sectionRef = useRef<HTMLElement>(null);
@@ -110,6 +123,53 @@ export function AppealSection({ active }: { active?: boolean }) {
     return null;
   };
 
+  // 实际提交申诉的逻辑
+  const executeSubmit = useCallback(async (geetestData: GeetestResult | null) => {
+    setSubmitting(true);
+    setError('');
+    try {
+      const checkRes = await fetch(`${API_BASE}/api/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: formData.user_id.trim(),
+          geetest: geetestData 
+        }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkData.success || !checkData.in_blacklist) {
+        setError('该用户不在黑名单中，无需提交申诉');
+        setSubmitting(false);
+        resetGeetest();
+        return;
+      }
+      const res = await fetch(`${API_BASE}/api/appeals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: formData.user_id, 
+          user_type: formData.user_type, 
+          content: formData.content, 
+          contact_email: formData.contact_email, 
+          images, 
+          geetest: geetestData 
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) { 
+        setError(data.message || '提交失败'); 
+        resetGeetest();
+        setSubmitting(false); 
+        return; 
+      }
+      setSubmitted(true);
+      gsap.fromTo('.success-message', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
+    } catch { 
+      setError('提交失败，请稍后重试'); 
+      setSubmitting(false); 
+    }
+  }, [formData, images, resetGeetest]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.user_id.trim()) { setError('请输入QQ号'); return; }
@@ -119,24 +179,14 @@ export function AppealSection({ active }: { active?: boolean }) {
     if (!formData.content.trim()) { setError('请输入申诉内容'); return; }
     if (formData.content.trim().length < 20) { setError('申诉内容至少需要20个字符'); return; }
     if (formData.content.length > 2000) { setError('申诉内容不能超过2000字'); return; }
-    if (isEnabled && !geetestResult) { setError('请完成人机验证'); return; }
-    setSubmitting(true); setError('');
-    try {
-      const checkRes = await fetch(`${API_BASE}/api/check?user_id=${formData.user_id.trim()}`);
-      const checkData = await checkRes.json();
-      if (!checkData.success || !checkData.in_blacklist) {
-        setError('该用户不在黑名单中，无需提交申诉'); setSubmitting(false); return;
-      }
-      const res = await fetch(`${API_BASE}/api/appeals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: formData.user_id, user_type: formData.user_type, content: formData.content, contact_email: formData.contact_email, images, geetest: geetestResult }),
-      });
-      const data = await res.json();
-      if (!data.success) { setError(data.message || '提交失败'); resetGeetest(); setGeetestResult(null); setSubmitting(false); return; }
-      setSubmitted(true);
-      gsap.fromTo('.success-message', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
-    } catch { setError('提交失败，请稍后重试'); setSubmitting(false); }
+    
+    // 如果启用了极验，先触发验证
+    if (isEnabled) {
+      verify();
+    } else {
+      // 极验未启用，直接提交
+      await executeSubmit(null);
+    }
   };
 
   if (submitted) {
@@ -252,28 +302,9 @@ export function AppealSection({ active }: { active?: boolean }) {
                 <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大5MB</p>
               </div>
 
-              {/* 人机验证 */}
-              {isEnabled && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" /><span>人机验证</span>
-                    {geetestResult && <span className="text-green-500 text-xs">(已完成)</span>}
-                  </div>
-                  <div className="relative">
-                    {geetestLoading && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                        <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                        <span>加载验证组件...</span>
-                      </div>
-                    )}
-                    <div ref={containerRef} className={geetestLoading ? 'hidden' : ''} />
-                  </div>
-                </div>
-              )}
-
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
 
-              <Button type="submit" disabled={submitting || (isEnabled && !geetestResult)}
+              <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
                 className="w-full py-5 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
                 {submitting
                   ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>

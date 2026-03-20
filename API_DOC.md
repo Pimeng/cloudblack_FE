@@ -138,12 +138,29 @@
 
 ### 2.2 检查用户是否在黑名单
 - **接口地址**: `/api/check`
-- **请求方法**: `GET`
+- **请求方法**: `POST`
 - **鉴权**: 不需要
-- **请求参数**:
-  | 参数名 | 类型 | 说明 |
-  | :--- | :--- | :--- |
-  | `user_id` | string | 用户ID |
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "geetest": {
+          "lot_number": "验证流水号",
+          "captcha_output": "验证输出信息",
+          "pass_token": "验证通过标识",
+          "gen_time": "验证通过时间戳"
+      }
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID |
+  | `geetest` | object | 否 | 极验验证数据（如启用） |
+  | `geetest.lot_number` | string | 是 | 验证流水号（如启用） |
+  | `geetest.captcha_output` | string | 是 | 验证输出信息（如启用） |
+  | `geetest.pass_token` | string | 是 | 验证通过标识（如启用） |
+  | `geetest.gen_time` | string | 是 | 验证通过时间戳（如启用） |
 - **响应示例**:
   ```json
   {

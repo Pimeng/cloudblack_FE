@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, AlertCircle, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 import { gsap } from 'gsap';
 
 interface BlacklistResult {
@@ -21,6 +22,25 @@ export function HeroSection() {
   const [result, setResult] = useState<BlacklistResult | null>(null);
   const [queryTime, setQueryTime] = useState<string>('');
   const [error, setError] = useState('');
+  
+  // 使用 bind 模式的极验验证，点击查询按钮时触发
+  const { 
+    isLoading: geetestLoading, 
+    isReady, 
+    isEnabled,
+    verify,
+    reset: resetGeetest 
+  } = useGeetest({
+    product: 'bind',
+    onSuccess: (result) => {
+      // 验证成功后自动执行查询
+      executeSearch(result);
+    },
+    onError: (err) => {
+      setError(`人机验证失败：${err}`);
+      setLoading(false);
+    },
+  });
   
   const cardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -57,12 +77,8 @@ export function HeroSection() {
     return () => ctx.revert();
   }, []);
 
-  const handleSearch = async () => {
-    if (!userId.trim()) {
-      setError('请输入QQ号');
-      return;
-    }
-    
+  // 实际执行查询的逻辑
+  const executeSearch = useCallback(async (geetestData: GeetestResult | null) => {
     // 保存查询的QQ号和时间，防止输入框修改时结果跟着变
     setSearchedUserId(userId.trim());
     setQueryTime(new Date().toLocaleString());
@@ -78,7 +94,14 @@ export function HeroSection() {
     const currentQueryId = ++queryIdRef.current;
     
     try {
-      const response = await fetch(`https://cloudblack-api.07210700.xyz/api/check?user_id=${userId.trim()}`);
+      const response = await fetch('https://cloudblack-api.07210700.xyz/api/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: userId.trim(),
+          geetest: geetestData 
+        }),
+      });
       const data = await response.json();
       
       // 检查是否是最新的查询
@@ -112,6 +135,21 @@ export function HeroSection() {
         setLoading(false);
         isQueryingRef.current = false;
       }
+    }
+  }, [userId]);
+
+  const handleSearch = async () => {
+    if (!userId.trim()) {
+      setError('请输入QQ号');
+      return;
+    }
+    
+    // 如果启用了极验，先触发验证
+    if (isEnabled) {
+      verify();
+    } else {
+      // 极验未启用，直接查询
+      await executeSearch(null);
     }
   };
 
@@ -182,13 +220,18 @@ export function HeroSection() {
             
             <Button
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || geetestLoading || (isEnabled && !isReady)}
               className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   查询中...
+                </span>
+              ) : geetestLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  加载中...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
