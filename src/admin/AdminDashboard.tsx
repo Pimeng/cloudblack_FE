@@ -286,6 +286,7 @@ export function AdminDashboard() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotal, setLogsTotal] = useState(0);
+  const [logsPerPage, setLogsPerPage] = useState(50);
   const [logFilterAction, setLogFilterAction] = useState('');
   const [logFilterStatus, setLogFilterStatus] = useState<'all' | 'success' | 'failure'>('all');
   const [actionTypes, setActionTypes] = useState<Record<string, string>>({});
@@ -367,7 +368,7 @@ export function AdminDashboard() {
       fetchActionTypes(token);
       fetchLogStats(token);
     }
-  }, [token, activeTab, logsPage, logFilterAction, logFilterStatus]);
+  }, [token, activeTab, logsPage, logsPerPage, logFilterAction, logFilterStatus]);
 
   const fetchStats = async (authToken: string) => {
     try {
@@ -581,7 +582,7 @@ export function AdminDashboard() {
     try {
       const params = new URLSearchParams({
         page: logsPage.toString(),
-        per_page: '50',
+        per_page: logsPerPage.toString(),
       });
       if (logFilterAction) params.append('action_type', logFilterAction);
       if (logFilterStatus !== 'all') params.append('status', logFilterStatus);
@@ -2533,27 +2534,63 @@ export function AdminDashboard() {
                   </table>
                 </div>
 
-                {Math.ceil(logsTotal / 50) > 1 && (
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      onClick={() => setLogsPage(p => Math.max(1, p - 1))}
-                      disabled={logsPage === 1}
-                      variant="outline"
-                      size="icon"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      第 {logsPage} / {Math.ceil(logsTotal / 50)} 页
-                    </span>
-                    <Button
-                      onClick={() => setLogsPage(p => Math.min(Math.ceil(logsTotal / 50), p + 1))}
-                      disabled={logsPage === Math.ceil(logsTotal / 50)}
-                      variant="outline"
-                      size="icon"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+                {Math.ceil(logsTotal / logsPerPage) > 1 && (
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Per page selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">每页显示</span>
+                      <select
+                        value={logsPerPage}
+                        onChange={(e) => {
+                          setLogsPerPage(Number(e.target.value));
+                          setLogsPage(1);
+                        }}
+                        className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span className="text-sm text-muted-foreground">条</span>
+                    </div>
+
+                    {/* Page navigation */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => setLogsPage(p => Math.max(1, p - 1))}
+                        disabled={logsPage === 1}
+                        variant="outline"
+                        size="icon"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">第</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={Math.ceil(logsTotal / logsPerPage)}
+                          value={logsPage}
+                          onChange={(e) => {
+                            const page = parseInt(e.target.value);
+                            if (page >= 1 && page <= Math.ceil(logsTotal / logsPerPage)) {
+                              setLogsPage(page);
+                            }
+                          }}
+                          className="w-16 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-sm text-white text-center"
+                        />
+                        <span className="text-sm text-muted-foreground">/ {Math.ceil(logsTotal / logsPerPage)} 页</span>
+                      </div>
+                      <Button
+                        onClick={() => setLogsPage(p => Math.min(Math.ceil(logsTotal / logsPerPage), p + 1))}
+                        disabled={logsPage === Math.ceil(logsTotal / logsPerPage)}
+                        variant="outline"
+                        size="icon"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </>

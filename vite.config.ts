@@ -12,4 +12,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Add hash to force cache invalidation
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name?.split('.');
+          const ext = info?.[info.length - 1];
+          if (/css/i.test(ext || '')) {
+            return `assets/[name]-[hash].css`;
+          }
+          return `assets/[name]-[hash].[ext]`;
+        },
+      },
+    },
+  },
 });

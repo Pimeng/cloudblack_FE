@@ -209,25 +209,12 @@ export function AdminLogin() {
             </div>
 
             {/* Geetest Verification Status */}
-            {isEnabled && (
+            {isEnabled && geetestResult && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Shield className="w-4 h-4" />
                   <span>人机验证</span>
-                  {geetestLoading ? (
-                    <span className="text-yellow-500 text-xs flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      加载中...
-                    </span>
-                  ) : isReady ? (
-                    geetestResult ? (
-                      <span className="text-green-500 text-xs">(已完成)</span>
-                    ) : (
-                      <span className="text-blue-500 text-xs">(点击登录进行验证)</span>
-                    )
-                  ) : (
-                    <span className="text-yellow-500 text-xs">(初始化中...)</span>
-                  )}
+                  <span className="text-green-500 text-xs">(已完成)</span>
                 </div>
               </div>
             )}
