@@ -198,7 +198,7 @@ export function AppealSection({ active }: { active?: boolean }) {
           </div>
           <h3 className="text-2xl font-bold mb-4">申诉提交成功</h3>
           <p className="text-muted-foreground mb-6">我们会尽快审核您的申诉，处理结果将发送至您的邮箱。</p>
-          <Button onClick={() => { setSubmitted(false); setFormData({ user_id: '', user_type: 'user', content: '', contact_email: '' }); setImages([]); resetGeetest(); setGeetestResult(null); }} className="bg-brand hover:bg-brand-dark">
+          <Button onClick={() => { setSubmitted(false); setFormData({ user_id: '', user_type: 'user', content: '', contact_email: '' }); setImages([]); resetGeetest(); }} className="bg-brand hover:bg-brand-dark">
             继续提交申诉
           </Button>
         </div>

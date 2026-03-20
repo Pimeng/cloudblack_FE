@@ -28,8 +28,7 @@ export function HeroSection() {
     isLoading: geetestLoading, 
     isReady, 
     isEnabled,
-    verify,
-    reset: resetGeetest 
+    verify
   } = useGeetest({
     product: 'bind',
     onSuccess: (result) => {
