@@ -1,9 +1,12 @@
-/assets/*
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.js
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=31536000, immutable
 
-/assets/*.css
-  Content-Type: text/css; charset=utf-8
+/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /*.html
