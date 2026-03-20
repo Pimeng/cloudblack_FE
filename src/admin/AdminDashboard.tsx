@@ -3005,8 +3005,8 @@ export function AdminDashboard() {
       {/* Appeal Detail Dialog */}
       <Dialog open={appealDetailOpen} onOpenChange={setAppealDetailOpen}>
         <DialogContent className="bg-slate-900 border-slate-800 text-white 
-          w-[calc(100%-1.5rem)] sm:w-[calc(100%-3rem)] md:w-[95%] lg:w-[90%] xl:w-[85%] 2xl:w-[80%]
-          max-w-[1600px] 
+          w-[calc(100%-1.5rem)] sm:!w-[calc(100%-3rem)] md:!w-[95%] lg:!w-[90%] xl:!w-[85%] 2xl:!w-[80%]
+          !max-w-[1600px] 
           mx-auto
           max-h-[95vh] sm:max-h-[90vh] 
           overflow-y-auto">
