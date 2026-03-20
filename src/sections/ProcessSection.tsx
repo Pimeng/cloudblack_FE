@@ -1,9 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { FileText, Clock, CheckCircle } from 'lucide-react';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const steps = [
   {
@@ -26,116 +23,66 @@ const steps = [
   },
 ];
 
-export function ProcessSection() {
+interface ProcessSectionProps {
+  active?: boolean;
+}
+
+export function ProcessSection({ active }: ProcessSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const lineRef = useRef<SVGPathElement>(null);
   const stepsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const triggersRef = useRef<ScrollTrigger[]>([]);
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Title glitch effect
-      const titleTrigger = ScrollTrigger.create({
-        trigger: titleRef.current,
-        start: 'top 80%',
-        onEnter: () => {
-          gsap.fromTo(titleRef.current,
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8, ease: 'steps(10)' }
-          );
-        },
-        once: true
-      });
-      triggersRef.current.push(titleTrigger);
+    if (!active || hasAnimated.current) return;
+    hasAnimated.current = true;
 
-      // Line drawing animation
-      if (lineRef.current) {
-        const length = lineRef.current.getTotalLength();
-        gsap.set(lineRef.current, {
-          strokeDasharray: length,
-          strokeDashoffset: length
-        });
-        
-        const lineTrigger = ScrollTrigger.create({
-          trigger: sectionRef.current,
-          start: 'top 60%',
-          end: 'bottom 80%',
-          scrub: 1,
-          onUpdate: (self) => {
-            gsap.set(lineRef.current, {
-              strokeDashoffset: length * (1 - self.progress)
-            });
-          }
-        });
-        triggersRef.current.push(lineTrigger);
+    // Title
+    gsap.fromTo(titleRef.current,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.8, ease: 'steps(10)' }
+    );
+
+    // SVG line draw
+    if (lineRef.current) {
+      const length = lineRef.current.getTotalLength();
+      gsap.fromTo(lineRef.current,
+        { strokeDasharray: length, strokeDashoffset: length },
+        { strokeDashoffset: 0, duration: 1.2, ease: 'power2.out', delay: 0.3 }
+      );
+    }
+
+    // Steps
+    stepsRef.current.forEach((step, index) => {
+      if (!step) return;
+      const xOffset = steps[index].side === 'left' ? -50 : 50;
+      gsap.fromTo(step,
+        { x: xOffset, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.8, delay: 0.2 + index * 0.2, ease: 'power2.out' }
+      );
+      const node = step.querySelector('.step-node');
+      if (node) {
+        gsap.fromTo(node,
+          { scale: 0 },
+          { scale: 1, duration: 0.5, delay: 0.4 + index * 0.2, ease: 'elastic.out(1, 0.5)' }
+        );
       }
-
-      // Steps animation
-      stepsRef.current.forEach((step, index) => {
-        if (!step) return;
-        
-        const xOffset = steps[index].side === 'left' ? -50 : 50;
-        
-        const stepTrigger = ScrollTrigger.create({
-          trigger: step,
-          start: 'top 80%',
-          onEnter: () => {
-            gsap.fromTo(step,
-              { x: xOffset, opacity: 0 },
-              { 
-                x: 0, 
-                opacity: 1, 
-                duration: 0.8, 
-                delay: index * 0.2,
-                ease: 'power2.out' 
-              }
-            );
-            
-            // Animate node glow
-            const node = step.querySelector('.step-node');
-            if (node) {
-              gsap.fromTo(node,
-                { scale: 0 },
-                { 
-                  scale: 1, 
-                  duration: 0.5, 
-                  delay: index * 0.2 + 0.3,
-                  ease: 'elastic.out(1, 0.5)' 
-                }
-              );
-            }
-          },
-          once: true
-        });
-        triggersRef.current.push(stepTrigger);
-      });
-    }, sectionRef);
-
-    return () => {
-      triggersRef.current.forEach(trigger => trigger.kill());
-      triggersRef.current = [];
-      ctx.revert();
-    };
-  }, []);
+    });
+  }, [active]);
 
   return (
-    <section 
-      ref={sectionRef}
-      className="relative py-32 px-4 overflow-hidden"
-    >
-      {/* Section title */}
-      <h2 
+    <section ref={sectionRef} className="relative py-10 px-4 overflow-hidden h-screen flex flex-col justify-center">
+      <h2
         ref={titleRef}
-        className="text-3xl md:text-4xl font-bold text-center text-gradient mb-20"
+        className="text-3xl md:text-4xl font-bold text-center text-gradient mb-8"
+        style={{ opacity: 0 }}
       >
         申诉流程
       </h2>
 
-      {/* Timeline container */}
-      <div className="max-w-4xl mx-auto relative">
-        {/* SVG Line */}
-        <svg 
+      <div className="max-w-3xl mx-auto relative w-full">
+        <svg
           className="absolute left-1/2 top-0 h-full w-4 -translate-x-1/2 hidden md:block"
           preserveAspectRatio="none"
           viewBox="0 0 16 100"
@@ -157,47 +104,37 @@ export function ProcessSection() {
           </defs>
         </svg>
 
-        {/* Steps */}
-        <div className="space-y-16 md:space-y-24">
+        <div className="space-y-6">
           {steps.map((step, index) => (
             <div
               key={step.title}
               ref={el => { stepsRef.current[index] = el; }}
-              className={`relative flex items-center ${
-                step.side === 'left' 
-                  ? 'md:flex-row flex-col' 
-                  : 'md:flex-row-reverse flex-col'
-              }`}
+              className={`relative flex items-center gap-4 ${step.side === 'left' ? 'md:flex-row' : 'md:flex-row-reverse'} flex-row`}
+              style={{ opacity: 0 }}
             >
-              {/* Content card */}
-              <div className={`w-full md:w-5/12 ${
-                step.side === 'left' ? 'md:text-right md:pr-12' : 'md:text-left md:pl-12'
-              }`}>
-                <div className="glass rounded-2xl p-6 hover:shadow-glow transition-shadow duration-500">
-                  <div className={`flex items-center gap-4 mb-4 ${
-                    step.side === 'left' ? 'md:flex-row-reverse' : ''
-                  }`}>
-                    <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center">
-                      <step.icon className="w-6 h-6 text-brand" />
+              {/* Card */}
+              <div className={`flex-1 min-w-0 ${step.side === 'left' ? 'md:text-right md:pr-10' : 'md:text-left md:pl-10'}`}>
+                <div className="glass rounded-2xl p-5 hover:shadow-glow transition-shadow duration-500">
+                  <div className={`flex items-center gap-3 mb-3 ${step.side === 'left' ? 'md:flex-row-reverse' : ''}`}>
+                    <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center flex-shrink-0">
+                      <step.icon className="w-5 h-5 text-brand" />
                     </div>
-                    <h3 className="text-xl font-semibold">{step.title}</h3>
+                    <h3 className="text-lg font-semibold">{step.title}</h3>
                   </div>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {step.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{step.description}</p>
                 </div>
               </div>
 
-              {/* Center node */}
-              <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center justify-center">
-                <div className="step-node relative">
-                  <div className="w-6 h-6 rounded-full bg-brand animate-pulse-glow" />
-                  <div className="absolute inset-0 w-6 h-6 rounded-full bg-brand/50 animate-ping" />
+              {/* Center node — visible on all sizes */}
+              <div className="flex-shrink-0 flex items-center justify-center w-8">
+                <div className="step-node relative" style={{ scale: '0' }}>
+                  <div className="w-5 h-5 rounded-full bg-brand animate-pulse-glow" />
+                  <div className="absolute inset-0 w-5 h-5 rounded-full bg-brand/50 animate-ping" />
                 </div>
               </div>
 
-              {/* Empty space for alternating layout */}
-              <div className="hidden md:block w-5/12" />
+              {/* Empty spacer for alternating layout on desktop */}
+              <div className="hidden md:block flex-1" />
             </div>
           ))}
         </div>

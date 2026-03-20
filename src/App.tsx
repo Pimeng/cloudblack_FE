@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
 import { HeroSection } from './sections/HeroSection';
@@ -24,48 +24,154 @@ import {
 
 gsap.registerPlugin(ScrollTrigger);
 
-function HomePage() {
-  useEffect(() => {
-    // Configure ScrollTrigger defaults
-    ScrollTrigger.defaults({
-      toggleActions: 'play none none none',
-    });
+type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal';
+const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal'];
+const PAGE_LABELS: Record<PageKey, string> = {
+  hero: '云黑查询',
+  features: '了解云黑',
+  process: '申诉流程',
+  stats: '数据统计',
+  appeal: '申诉中心',
+};
 
-    // Smooth scroll behavior
-    const handleAnchorClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest('a[href^="#"]');
-      if (anchor) {
-        e.preventDefault();
-        const href = anchor.getAttribute('href');
-        if (href && href !== '#') {
-          const element = document.querySelector(href);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-          }
-        }
-      }
-    };
+function PageDots({ currentIndex, onGoTo }: { currentIndex: number; onGoTo: (i: number) => void }) {
+  // Each dot is h-2 (8px) or h-6 (24px) for active, gap-3 (12px) between
+  // We calculate the center Y of each dot relative to the container
+  const DOT_H_INACTIVE = 8;
+  const DOT_H_ACTIVE = 24;
+  const GAP = 12;
 
-    document.addEventListener('click', handleAnchorClick);
+  // Compute cumulative center positions
+  const centers = PAGES.map((_, i) => {
+    let y = 0;
+    for (let j = 0; j < i; j++) {
+      y += (j === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) + GAP;
+    }
+    y += (i === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) / 2;
+    return y;
+  });
 
-    return () => {
-      document.removeEventListener('click', handleAnchorClick);
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    };
-  }, []);
+  const totalHeight = PAGES.reduce((acc, _, i) => {
+    return acc + (i === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) + (i < PAGES.length - 1 ? GAP : 0);
+  }, 0);
+
+  const activeCenterY = centers[currentIndex];
+  // tooltip top relative to container top = activeCenterY - totalHeight/2
+  const tooltipOffset = activeCenterY - totalHeight / 2;
 
   return (
-    <div className="relative min-h-screen">
+    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-3">
+      {/* Tooltip — positioned relative to the dots container center */}
+      <div
+        className="absolute left-5 z-50 pointer-events-none"
+        style={{
+          top: '50%',
+          transform: `translateY(calc(-50% + ${tooltipOffset}px))`,
+          transition: 'transform 0.4s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
+        <div className="glass rounded-lg px-3 py-1.5 text-sm text-white whitespace-nowrap flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
+          {PAGE_LABELS[PAGES[currentIndex]]}
+        </div>
+      </div>
+
+      {PAGES.map((_, i) => (
+        <button
+          key={i}
+          onClick={() => onGoTo(i)}
+          className={`w-2 rounded-full transition-all duration-300 ${
+            i === currentIndex
+              ? 'h-6 bg-brand shadow-glow'
+              : 'h-2 bg-white/30 hover:bg-white/60'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HomePage() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const isAnimating = useRef(false);
+  const touchStartY = useRef(0);
+
+
+  const goTo = useCallback((index: number) => {
+    if (index < 0 || index >= PAGES.length || isAnimating.current) return;
+    isAnimating.current = true;
+    setCurrentIndex(index);
+    // Refresh ScrollTrigger after transition so section animations fire
+    setTimeout(() => {
+      ScrollTrigger.refresh();
+      isAnimating.current = false;
+    }, 750);
+  }, []);
+
+  // Wheel handler
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      // If the event target is inside a scrollable panel, only let it
+      // bubble up to page-switching when the panel has hit its scroll limit.
+      const target = e.target as HTMLElement;
+      const panel = target.closest<HTMLElement>('[data-scrollable]');
+      if (panel) {
+        const atTop = panel.scrollTop === 0;
+        const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
+        // Still has room to scroll internally — don't switch page
+        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return;
+      }
+
+      e.preventDefault();
+      if (e.deltaY > 0) goTo(currentIndex + 1);
+      else goTo(currentIndex - 1);
+    };
+
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [currentIndex, goTo]);
+
+  // Touch handler
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const delta = touchStartY.current - e.changedTouches[0].clientY;
+      if (Math.abs(delta) < 30) return;
+      if (delta > 0) goTo(currentIndex + 1);
+      else goTo(currentIndex - 1);
+    };
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [currentIndex, goTo]);
+
+  return (
+    <div className="relative h-screen overflow-hidden">
       <FluidBackground />
-      <main className="relative z-10">
-        <HeroSection />
-        <FeaturesSection />
-        <ProcessSection />
-        <StatsSection />
-        <AppealSection />
-        <Footer />
-      </main>
+      <PageDots currentIndex={currentIndex} onGoTo={goTo} />
+
+      {/* Fullpage slider */}
+      <div
+        className="relative z-10 w-full transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateY(-${currentIndex * 100}vh)` }}
+      >
+        {PAGES.map((page, i) => (
+          <div key={page} className="h-screen w-full overflow-y-auto" data-scrollable>
+            {page === 'hero' && <HeroSection />}
+            {page === 'features' && <FeaturesSection active={currentIndex === i} />}
+            {page === 'process' && <ProcessSection active={currentIndex === i} />}
+            {page === 'stats' && <StatsSection active={currentIndex === i} />}
+            {page === 'appeal' && <AppealSection active={currentIndex === i} />}
+            {page === 'appeal' && <Footer />}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
