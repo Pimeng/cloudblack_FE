@@ -133,6 +133,7 @@ export function AppealSection({ active }: { active?: boolean }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           user_id: formData.user_id.trim(),
+          user_type: formData.user_type,
           geetest: geetestData 
         }),
       });

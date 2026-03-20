@@ -98,6 +98,7 @@ export function HeroSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           user_id: userId.trim(),
+          user_type: 'user',
           geetest: geetestData 
         }),
       });

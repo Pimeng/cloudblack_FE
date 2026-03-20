@@ -6,7 +6,11 @@
    - [1.1 Bot Token 鉴权](#11-bot-token-鉴权)
    - [1.2 管理员 Token 鉴权](#12-管理员-token-鉴权)
    - [1.3 权限等级系统](#13-权限等级系统)
-2. [黑名单接口（Bot用）](#2-黑名单接口bot用)
+2. [黑名单接口](#2-黑名单接口)
+   - [2.1 公开接口（供普通用户使用）](#21-公开接口供普通用户使用)
+   - [2.2 Bot专用接口](#22-bot专用接口)
+   - [2.3 兼容旧接口（已废弃）](#23-兼容旧接口已废弃建议迁移)
+   - **说明**: 支持 `user_type` 参数区分用户(`user`)和群聊(`group`)
 3. [申诉接口（前端用）](#3-申诉接口前端用)
    - [3.1 提交申诉](#31-提交申诉)
    - [3.2 查询申诉详情](#32-查询申诉详情)
@@ -112,38 +116,19 @@
 
 ---
 
-## 2. 黑名单接口（Bot用）
+## 2. 黑名单接口
 
-### 2.1 获取黑名单列表
-- **接口地址**: `/api/getlist`
-- **请求方法**: `GET`
-- **鉴权**: 不需要
-- **响应示例**:
-  ```json
-  {
-      "success": true,
-      "data": {
-          "blacklist": [
-              {
-                  "user_id": "1234567890",
-                  "reason": "发布违规广告",
-                  "added_by": "yll",
-                  "added_at": "2026-02-01 00:50:00"
-              }
-          ],
-          "updateAt": "2026-02-01 00:50:00"
-      }
-  }
-  ```
+### 2.1 公开接口（供普通用户使用）
 
-### 2.2 检查用户是否在黑名单
+#### 2.1.1 检查用户/群聊是否在黑名单
 - **接口地址**: `/api/check`
 - **请求方法**: `POST`
-- **鉴权**: 不需要
+- **鉴权**: 不需要（带人机验证）
 - **请求体**:
   ```json
   {
       "user_id": "1234567890",
+      "user_type": "user",
       "geetest": {
           "lot_number": "验证流水号",
           "captcha_output": "验证输出信息",
@@ -155,7 +140,8 @@
 - **参数说明**:
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
-  | `user_id` | string | 是 | 用户ID |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
   | `geetest` | object | 否 | 极验验证数据（如启用） |
   | `geetest.lot_number` | string | 是 | 验证流水号（如启用） |
   | `geetest.captcha_output` | string | 是 | 验证输出信息（如启用） |
@@ -168,6 +154,7 @@
       "in_blacklist": true,
       "data": {
           "user_id": "1234567890",
+          "user_type": "user",
           "reason": "发布违规广告",
           "added_by": "yll",
           "added_at": "2026-02-01 00:50:00"
@@ -175,40 +162,172 @@
   }
   ```
 
-### 2.3 添加黑名单条目
-- **接口地址**: `/api/add`
-- **请求方法**: `POST`
+### 2.2 Bot专用接口
+
+> **说明**: 所有 `/api/bot/*` 接口都需要 **Bot Token** 鉴权，且**免人机验证**。
+> 
+> **鉴权方式**: 在请求头中添加 `Authorization: your_bot_token`
+
+#### 2.2.1 获取黑名单列表（Bot专用）
+- **接口地址**: `/api/bot/getlist`
+- **请求方法**: `GET`
 - **鉴权**: **需要（Bot Token）**
-- **请求参数**:
-  | 参数名 | 类型 | 说明 |
-  | :--- | :--- | :--- |
-  | `user_id` | string | 用户的唯一标识符 (ID) |
-  | `reason` | string | 加入黑名单的原因 |
+- **其他限制**: 频率限制 + IP限制
 - **响应示例**:
   ```json
   {
       "success": true,
-      "message": "添加成功",
+      "data": {
+          "blacklist": [
+              {
+                  "user_id": "1234567890",
+                  "user_type": "user",
+                  "reason": "发布违规广告",
+                  "added_by": "yll",
+                  "added_at": "2026-02-01 00:50:00"
+              },
+              {
+                  "user_id": "987654321",
+                  "user_type": "group",
+                  "reason": "群聊违规",
+                  "added_by": "yll",
+                  "added_at": "2026-02-01 01:00:00"
+              }
+          ],
+          "updateAt": "2026-02-01 01:00:00"
+      }
+  }
+  ```
+
+#### 2.2.2 检查用户/群聊是否在黑名单（Bot专用）
+- **接口地址**: `/api/bot/check`
+- **请求方法**: `POST`
+- **鉴权**: **需要（Bot Token）**
+- **其他限制**: 频率限制 + IP限制（**免人机验证**）
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "user_type": "user"
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+- **响应示例**:
+  ```json
+  {
+      "success": true,
+      "in_blacklist": true,
+      "data": {
+          "user_id": "1234567890",
+          "user_type": "user",
+          "reason": "发布违规广告",
+          "added_by": "yll",
+          "added_at": "2026-02-01 00:50:00"
+      }
+  }
+  ```
+
+#### 2.2.3 添加黑名单条目（Bot专用）
+- **接口地址**: `/api/bot/add`
+- **请求方法**: `POST`
+- **鉴权**: **需要（Bot Token）**
+- **其他限制**: 频率限制 + IP限制
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "user_type": "user",
+      "reason": "发布违规广告"
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+  | `reason` | string | 是 | 加入黑名单的原因 |
+- **响应示例**:
+  ```json
+  {
+      "success": true,
+      "message": "添加用户成功",
       "data": { ... }
   }
   ```
 
-### 2.4 删除黑名单条目
-- **接口地址**: `/api/delete`
+#### 2.2.4 删除黑名单条目（Bot专用）
+- **接口地址**: `/api/bot/delete`
 - **请求方法**: `POST`
 - **鉴权**: **需要（Bot Token）**
-- **请求参数**:
-  | 参数名 | 类型 | 说明 |
-  | :--- | :--- | :--- |
-  | `user_id` | string | 要删除的用户 ID |
+- **其他限制**: 频率限制 + IP限制
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "user_type": "user"
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
 - **响应示例**:
   ```json
   {
       "success": true,
-      "message": "删除成功",
+      "message": "删除用户成功",
       "data": { ... }
   }
   ```
+
+### 2.3 兼容旧接口（已废弃，建议迁移）
+
+> **警告**: 以下旧接口将在未来版本中移除，请尽快迁移到新的 `/api/bot/*` 接口。
+
+#### 2.3.1 添加黑名单条目（旧接口）
+- **接口地址**: `/api/add`
+- **请求方法**: `POST`
+- **鉴权**: **需要（Bot Token）**
+- **其他限制**: 频率限制 + IP限制
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "user_type": "user",
+      "reason": "发布违规广告"
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+  | `reason` | string | 是 | 加入黑名单的原因 |
+- **说明**: 功能同 `/api/bot/add`，保留用于兼容旧版Bot
+
+#### 2.3.2 删除黑名单条目（旧接口）
+- **接口地址**: `/api/delete`
+- **请求方法**: `POST`
+- **鉴权**: **需要（Bot Token）**
+- **其他限制**: 频率限制 + IP限制
+- **请求体**:
+  ```json
+  {
+      "user_id": "1234567890",
+      "user_type": "user"
+  }
+  ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+- **说明**: 功能同 `/api/bot/delete`，保留用于兼容旧版Bot
 
 ---
 
@@ -218,6 +337,9 @@
 - **接口地址**: `/api/appeals`
 - **请求方法**: `POST`
 - **鉴权**: 不需要
+- **说明**:
+  - 如果已调用 `/api/appeals/verify-captcha` 完成验证且未超过5分钟，则提交申诉时会自动跳过重复验证
+  - `geetest` 数据必须与 `verify-captcha` 接口使用的一致
 - **请求体**:
   ```json
   {
@@ -237,16 +359,16 @@
 - **参数说明**:
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
-  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_id` | string | 是 | 用户ID或群号，必须与 `verify-captcha` 接口使用的一致 |
   | `user_type` | string | 否 | 类型：`user`(个人QQ，默认)、`group`(群号) |
   | `content` | string | 是 | 申诉内容，最多2000字 |
   | `contact_email` | string | 是 | 联系邮箱 |
   | `images` | array | 否 | 图片URL列表，最多3张 |
-  | `geetest` | object | 否 | 极验验证数据（如启用） |
-  | `geetest.lot_number` | string | 是 | 验证流水号（如启用） |
-  | `geetest.captcha_output` | string | 是 | 验证输出信息（如启用） |
-  | `geetest.pass_token` | string | 是 | 验证通过标识（如启用） |
-  | `geetest.gen_time` | string | 是 | 验证通过时间戳（如启用） |
+  | `geetest` | object | 否 | 极验验证数据（如已单独验证则为可选） |
+  | `geetest.lot_number` | string | 条件 | 验证流水号（未单独验证时为必填） |
+  | `geetest.captcha_output` | string | 条件 | 验证输出信息（未单独验证时为必填） |
+  | `geetest.pass_token` | string | 条件 | 验证通过标识（未单独验证时为必填） |
+  | `geetest.gen_time` | string | 条件 | 验证通过时间戳（未单独验证时为必填） |
 - **响应示例**:
   ```json
   {
@@ -391,15 +513,19 @@
   }
   ```
 
-### 3.4 人机验证接口（预留）
+### 3.4 人机验证接口（极验 GT4）
 - **接口地址**: `/api/appeals/verify-captcha`
 - **请求方法**: `POST`
 - **鉴权**: 不需要
-- **说明**: 极验 GT4 人机验证服务端验证接口
+- **说明**: 
+  - 极验 GT4 人机验证服务端验证接口
+  - 验证成功后会缓存结果（5分钟），后续提交申诉时无需重复验证
+  - **注意**: 提交申诉时使用的 `user_id` 必须与本接口一致
 - **请求体**:
   ```json
   {
       "provider": "geetest",
+      "user_id": "1234567890",
       "geetest": {
           "lot_number": "验证流水号",
           "captcha_output": "验证输出信息",
@@ -412,6 +538,7 @@
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
   | `provider` | string | 是 | 验证提供商，固定为 `geetest` |
+  | `user_id` | string | 是 | 用户ID或群号，用于缓存验证结果 |
   | `geetest.lot_number` | string | 是 | 验证流水号 |
   | `geetest.captcha_output` | string | 是 | 验证输出信息 |
   | `geetest.pass_token` | string | 是 | 验证通过标识 |
@@ -424,6 +551,18 @@
       "data": {
           "provider": "geetest",
           "verified": true
+      }
+  }
+  ```
+- **响应示例**（缓存命中）:
+  ```json
+  {
+      "success": true,
+      "message": "验证通过（缓存）",
+      "data": {
+          "provider": "geetest",
+          "verified": true,
+          "from_cache": true
       }
   }
   ```
@@ -677,6 +816,7 @@
   | 参数名 | 类型 | 说明 |
   | :--- | :--- | :--- |
   | `search` | string | 搜索关键词（搜索user_id/reason/added_by） |
+  | `user_type` | string | 类型筛选：`user`(用户)、`group`(群聊) |
   | `page` | int | 页码（默认1） |
   | `per_page` | int | 每页数量（默认50，最大200） |
 - **响应示例**: 同 4.1 格式
@@ -690,9 +830,16 @@
   ```json
   {
       "user_id": "1234567890",
+      "user_type": "user",
       "reason": "严重违规"
   }
   ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+  | `reason` | string | 是 | 加入黑名单的原因 |
 - **响应示例**: 同 2.3
 
 ### 4.7 手动移除黑名单（管理端）
@@ -704,9 +851,16 @@
   ```json
   {
       "user_id": "1234567890",
+      "user_type": "user",
       "reason": "已申诉通过"
   }
   ```
+- **参数说明**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `user_id` | string | 是 | 用户ID或群号 |
+  | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
+  | `reason` | string | 否 | 移除原因 |
 - **响应示例**: 同 2.4
 
 ### 4.8 修改黑名单条目
@@ -714,19 +868,23 @@
 - **请求方法**: `PUT`
 - **鉴权**: **需要（管理员 Token）**
 - **需要等级**: 3+
-- **说明**: 修改黑名单中的原因或QQ号
+- **说明**: 修改黑名单条目（支持修改原因、ID、类型）
 - **请求体":
   ```json
   {
-      "reason": "新的违规原因",    // 可选
-      "new_user_id": "新QQ号"      // 可选，用于修改QQ号
+      "user_type": "user",           // 原类型，可选，默认"user"
+      "reason": "新的违规原因",     // 可选
+      "new_user_id": "新QQ号",      // 可选，用于修改ID
+      "new_user_type": "group"      // 可选，用于修改类型
   }
   ```
 - **参数说明**:
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
+  | `user_type` | string | 否 | 原类型：`user`(用户，默认)、`group`(群聊) |
   | `reason` | string | 否 | 新的违规原因 |
-  | `new_user_id` | string | 否 | 新的QQ号（如需修改QQ号） |
+  | `new_user_id` | string | 否 | 新的用户ID或群号 |
+  | `new_user_type` | string | 否 | 新的类型：`user`或`group` |
 - **响应示例**:
   ```json
   {
@@ -734,6 +892,7 @@
       "message": "更新成功",
       "data": {
           "user_id": "1234567890",
+          "user_type": "user",
           "reason": "新的违规原因",
           "added_by": "bot:xxx",
           "added_at": "2026-03-16 10:00:00",
