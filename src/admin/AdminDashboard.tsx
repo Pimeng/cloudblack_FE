@@ -33,8 +33,7 @@ import {
   Menu,
   X,
   Bot,
-  Key,
-  User
+  Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
