@@ -1891,7 +1891,7 @@ export function AdminDashboard() {
                       </div>
 
                       {/* AI 分析概览 - 列表接口返回简化数据 */}
-                      {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.recommendation && (
+                      {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && (appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) && (
                         <div className="mt-4 bg-gradient-to-br from-purple-900/30 to-slate-800 rounded-lg p-4 border border-purple-500/20">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -1900,13 +1900,13 @@ export function AdminDashboard() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge className={
-                                appeal.ai_analysis.recommendation.includes('通过') 
+                                (appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || '').includes('通过') 
                                   ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                  : appeal.ai_analysis.recommendation.includes('拒绝')
+                                  : (appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || '').includes('拒绝')
                                   ? 'bg-red-500/20 text-red-400 border-red-500/30'
                                   : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
                               }>
-                                {appeal.ai_analysis.recommendation}
+                                {appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation}
                               </Badge>
                             </div>
                           </div>
