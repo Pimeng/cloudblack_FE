@@ -422,16 +422,16 @@ export function AdminDashboard() {
       if (data.success) {
         const appealsWithAI = await Promise.all(
           data.data.items.map(async (appeal: Appeal) => {
-            // 如果没有完整AI分析数据，请求详情接口获取
+            // 如果没有完整AI分析数据，请求专门的AI分析接口获取
             if (appeal.ai_analysis?.status === 'completed' && !appeal.ai_analysis?.result) {
               try {
-                const detailRes = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
+                const detailRes = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
                   headers: { 'Authorization': authToken },
                 });
                 if (detailRes.ok) {
                   const detailData = await detailRes.json();
-                  if (detailData.success && detailData.data.ai_analysis) {
-                    return { ...appeal, ai_analysis: detailData.data.ai_analysis };
+                  if (detailData.success && detailData.data) {
+                    return { ...appeal, ai_analysis: detailData.data };
                   }
                 }
               } catch {
@@ -671,17 +671,17 @@ export function AdminDashboard() {
   const openAppealDetail = async (appeal: Appeal, scrollToAI = false) => {
     setViewingAppeal(appeal);
     setAppealDetailOpen(true);
-    // 如果没有AI分析数据，或者只有简化数据（没有result详情），则请求详情API
+    // 如果没有AI分析数据，或者只有简化数据（没有result详情），则请求专门的AI分析接口
     const needsDetail = !appeal.ai_analysis || (appeal.ai_analysis.status === 'completed' && !appeal.ai_analysis.result);
     if (needsDetail) {
       try {
-        const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
+        const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
           headers: { 'Authorization': token },
         });
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.data.ai_analysis) {
-            setViewingAppeal(prev => prev ? { ...prev, ai_analysis: data.data.ai_analysis } : null);
+          if (data.success && data.data) {
+            setViewingAppeal(prev => prev ? { ...prev, ai_analysis: data.data } : null);
           }
         }
       } catch (err) {
