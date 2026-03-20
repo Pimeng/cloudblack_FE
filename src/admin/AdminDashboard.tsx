@@ -46,131 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
-// AI 分析内容组件 - 支持在卡片内加载详情
-function AIAnalysisContent({ appeal, token, API_BASE }: { appeal: Appeal; token: string; API_BASE: string }) {
-  const [detail, setDetail] = useState<AIAnalysisResult | undefined>(appeal.ai_analysis);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
-  const loadDetail = async () => {
-    if (detail?.result) {
-      setExpanded(true);
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
-        headers: { 'Authorization': token },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.ai_analysis) {
-          setDetail(data.data.ai_analysis);
-          setExpanded(true);
-        }
-      }
-    } catch (err) {
-      console.error('获取AI分析详情失败:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const result = detail?.result;
-
-  if (!expanded || !result) {
-    return (
-      <div className="h-[120px] flex flex-col items-center justify-center text-slate-500 space-y-2">
-        <Sparkles className="w-8 h-8 text-purple-500/30" />
-        <p className="text-xs text-center">AI 分析已完成</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={loadDetail}
-          disabled={loading}
-          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2 text-xs"
-        >
-          {loading ? (
-            <span className="w-3.5 h-3.5 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mr-1" />
-          ) : (
-            <Eye className="w-3.5 h-3.5 mr-1" />
-          )}
-          展开分析
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="h-[160px] overflow-y-auto space-y-2 pr-1">
-        {/* 置信度 */}
-        {result.confidence > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">置信度:</span>
-            <span className="text-purple-400">{result.confidence}%</span>
-          </div>
-        )}
-        {/* 申诉要点 */}
-        {result.summary && (
-          <div className="space-y-1">
-            <p className="text-xs text-purple-400 font-medium">申诉要点</p>
-            <p className="text-xs text-slate-300 break-words">{result.summary}</p>
-          </div>
-        )}
-        {/* 理由分析 */}
-        {result.reason_analysis && (
-          <div className="space-y-1">
-            <p className="text-xs text-purple-400 font-medium">理由分析</p>
-            <p className="text-xs text-slate-300 break-words">{result.reason_analysis}</p>
-          </div>
-        )}
-        {/* 处理建议 */}
-        {result.suggestions && (
-          <div className="space-y-1">
-            <p className="text-xs text-purple-400 font-medium">处理建议</p>
-            <p className="text-xs text-slate-300 break-words">{result.suggestions}</p>
-          </div>
-        )}
-        {/* 风险因素 */}
-        {result.risk_factors && result.risk_factors.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs text-purple-400 font-medium">风险提示</p>
-            <div className="flex flex-wrap gap-1">
-              {result.risk_factors.slice(0, 3).map((risk, idx) => (
-                <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-[10px] px-1 py-0">
-                  {risk.length > 15 ? risk.substring(0, 15) + '...' : risk}
-                </Badge>
-              ))}
-              {result.risk_factors.length > 3 && (
-                <span className="text-[10px] text-slate-500">+{result.risk_factors.length - 3}</span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="pt-2 border-t border-purple-500/20 flex justify-between items-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setExpanded(false)}
-          className="text-slate-400 hover:text-slate-300 hover:bg-slate-700/50 h-7 px-2 text-xs"
-        >
-          收起
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {}}
-          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2 text-xs"
-        >
-          <Eye className="w-3.5 h-3.5 mr-1" />
-          查看完整详情
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings';
 
@@ -541,7 +417,28 @@ export function AdminDashboard() {
       
       const data = await response.json();
       if (data.success) {
-        setAppeals(data.data.items);
+        const appealsWithAI = await Promise.all(
+          data.data.items.map(async (appeal: Appeal) => {
+            // 如果没有完整AI分析数据，请求详情接口获取
+            if (appeal.ai_analysis?.status === 'completed' && !appeal.ai_analysis?.result) {
+              try {
+                const detailRes = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}`, {
+                  headers: { 'Authorization': authToken },
+                });
+                if (detailRes.ok) {
+                  const detailData = await detailRes.json();
+                  if (detailData.success && detailData.data.ai_analysis) {
+                    return { ...appeal, ai_analysis: detailData.data.ai_analysis };
+                  }
+                }
+              } catch {
+                // 忽略单个请求失败
+              }
+            }
+            return appeal;
+          })
+        );
+        setAppeals(appealsWithAI);
         setAppealTotal(data.data.total);
       }
     } catch (err) {
@@ -2014,7 +1911,61 @@ export function AdminDashboard() {
                             </div>
                           </div>
                           {/* 固定高度展示AI分析内容 */}
-                          <AIAnalysisContent appeal={appeal} token={token} API_BASE={API_BASE} />
+                          <div className="h-[160px] overflow-y-auto space-y-2 pr-1">
+                            {appeal.ai_analysis?.result ? (
+                              <>
+                                {/* 置信度 */}
+                                {appeal.ai_analysis.result.confidence > 0 && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-slate-400">置信度:</span>
+                                    <span className="text-purple-400">{appeal.ai_analysis.result.confidence}%</span>
+                                  </div>
+                                )}
+                                {/* 申诉要点 */}
+                                {appeal.ai_analysis.result.summary && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">申诉要点</p>
+                                    <p className="text-xs text-slate-300 break-words">{appeal.ai_analysis.result.summary}</p>
+                                  </div>
+                                )}
+                                {/* 理由分析 */}
+                                {appeal.ai_analysis.result.reason_analysis && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">理由分析</p>
+                                    <p className="text-xs text-slate-300 break-words">{appeal.ai_analysis.result.reason_analysis}</p>
+                                  </div>
+                                )}
+                                {/* 处理建议 */}
+                                {appeal.ai_analysis.result.suggestions && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">处理建议</p>
+                                    <p className="text-xs text-slate-300 break-words">{appeal.ai_analysis.result.suggestions}</p>
+                                  </div>
+                                )}
+                                {/* 风险因素 */}
+                                {appeal.ai_analysis.result.risk_factors && appeal.ai_analysis.result.risk_factors.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">风险提示</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {appeal.ai_analysis.result.risk_factors.slice(0, 3).map((risk, idx) => (
+                                        <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-[10px] px-1 py-0">
+                                          {risk.length > 15 ? risk.substring(0, 15) + '...' : risk}
+                                        </Badge>
+                                      ))}
+                                      {appeal.ai_analysis.result.risk_factors.length > 3 && (
+                                        <span className="text-[10px] text-slate-500">+{appeal.ai_analysis.result.risk_factors.length - 3}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-slate-500">
+                                <span className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mr-2" />
+                                <span className="text-xs">加载中...</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
 
