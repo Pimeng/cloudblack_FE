@@ -12,6 +12,7 @@ import { AdminDashboard } from './admin/AdminDashboard';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Toaster } from '@/components/ui/sonner';
+import { ImageViewerProvider } from '@/hooks/useImageViewer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -217,6 +218,7 @@ function WelcomeAlert() {
 function App() {
   return (
     <BrowserRouter>
+      <ImageViewerProvider>
       <WelcomeAlert />
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -224,6 +226,7 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ImageViewerProvider>
       <Toaster 
         position="top-center"
         toastOptions={{

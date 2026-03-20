@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ImageViewer } from '@/components/ImageViewer';
+import { useImageViewer } from '@/hooks/useImageViewer';
 import { gsap } from 'gsap';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 
@@ -45,7 +45,7 @@ export function AppealSection({ active }: { active?: boolean }) {
   const [queryResult, setQueryResult] = useState<AppealItem[] | null>(null);
 
   const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
-  const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const { openImage } = useImageViewer();
   const { containerRef, isLoading: geetestLoading, reset: resetGeetest, isEnabled } = useGeetest({
     product: 'float',
     onSuccess: (result) => { setGeetestResult(result); setError(''); },
@@ -157,7 +157,6 @@ export function AppealSection({ active }: { active?: boolean }) {
   }
 
   return (
-    <>
     <section ref={sectionRef} className="relative py-10 px-8 min-h-screen md:h-screen flex flex-col justify-center items-stretch">
       <div className="text-center mb-6">
         <h2 className="text-3xl md:text-4xl font-bold text-gradient mb-2">申诉中心</h2>
@@ -233,7 +232,7 @@ export function AppealSection({ active }: { active?: boolean }) {
                 <div className="flex flex-wrap gap-3">
                   {images.map((url, index) => (
                     <div key={index} className="relative w-16 h-16 rounded-lg overflow-hidden group cursor-pointer"
-                      onClick={() => setViewerImage(url.startsWith('http') ? url : `${API_BASE}${url}`)}>
+                      onClick={() => openImage(url.startsWith('http') ? url : `${API_BASE}${url}`)}>
                       <img src={url.startsWith('http') ? url : `${API_BASE}${url}`} alt={`上传图片 ${index + 1}`} className="w-full h-full object-cover" />
                       <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(index); }}
                         className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -345,13 +344,5 @@ export function AppealSection({ active }: { active?: boolean }) {
         )}
       </div>
     </section>
-
-    {/* 图片全屏查看器 */}
-    <ImageViewer
-      src={viewerImage || ''}
-      isOpen={!!viewerImage}
-      onClose={() => setViewerImage(null)}
-    />
-    </>
   );
 }

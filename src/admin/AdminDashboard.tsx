@@ -43,7 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ImageViewer } from '@/components/ImageViewer';
+import { useImageViewer } from '@/hooks/useImageViewer';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
@@ -201,7 +201,7 @@ export function AdminDashboard() {
   // Appeal detail dialog
   const [appealDetailOpen, setAppealDetailOpen] = useState(false);
   const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
-  const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const { openImage } = useImageViewer();
   const [requestingAIAnalysis, setRequestingAIAnalysis] = useState(false);
   const [deletingAIAnalysis, setDeletingAIAnalysis] = useState(false);
   const aiAnalysisRef = useRef<HTMLDivElement>(null);
@@ -3196,7 +3196,7 @@ export function AdminDashboard() {
                     {viewingAppeal.images.map((img, idx) => (
                       <div 
                         key={idx}
-                        onClick={() => setViewerImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
+                        onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
                         className="w-32 h-32 rounded-lg overflow-hidden bg-slate-800 cursor-pointer hover:ring-2 hover:ring-brand/50 transition-all"
                       >
                         <img 
@@ -3388,12 +3388,6 @@ export function AdminDashboard() {
               )}
             </div>
           )}
-        {/* 图片全屏查看器 */}
-        <ImageViewer
-          src={viewerImage || ''}
-          isOpen={!!viewerImage}
-          onClose={() => setViewerImage(null)}
-        />
         </DialogContent>
       </Dialog>
 
