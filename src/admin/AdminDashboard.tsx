@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ImageViewer } from '@/components/ImageViewer';
 
 const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
@@ -200,6 +201,7 @@ export function AdminDashboard() {
   // Appeal detail dialog
   const [appealDetailOpen, setAppealDetailOpen] = useState(false);
   const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [requestingAIAnalysis, setRequestingAIAnalysis] = useState(false);
   const [deletingAIAnalysis, setDeletingAIAnalysis] = useState(false);
   const aiAnalysisRef = useRef<HTMLDivElement>(null);
@@ -3144,7 +3146,7 @@ export function AdminDashboard() {
                 variant="ghost"
                 size="sm"
                 onClick={refreshAppealDetail}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white mr-8"
               >
                 <RefreshCw className="w-4 h-4 mr-1" />
                 刷新
@@ -3192,19 +3194,17 @@ export function AdminDashboard() {
                   <span className="text-muted-foreground text-sm">相关截图:</span>
                   <div className="mt-2 flex gap-2 flex-wrap">
                     {viewingAppeal.images.map((img, idx) => (
-                      <a 
+                      <div 
                         key={idx}
-                        href={img.startsWith('http') ? img : `${API_BASE}${img}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-32 h-32 rounded-lg overflow-hidden bg-slate-800"
+                        onClick={() => setViewerImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
+                        className="w-32 h-32 rounded-lg overflow-hidden bg-slate-800 cursor-pointer hover:ring-2 hover:ring-brand/50 transition-all"
                       >
                         <img 
                           src={img.startsWith('http') ? img : `${API_BASE}${img}`}
                           alt={`证据 ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />
-                      </a>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -3388,6 +3388,12 @@ export function AdminDashboard() {
               )}
             </div>
           )}
+        {/* 图片全屏查看器 */}
+        <ImageViewer
+          src={viewerImage || ''}
+          isOpen={!!viewerImage}
+          onClose={() => setViewerImage(null)}
+        />
         </DialogContent>
       </Dialog>
 
