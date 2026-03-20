@@ -15,14 +15,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Add hash to force cache invalidation
+        // Force new hash for cache busting
+        entryFileNames: `assets/[name]-[hash]-v2.js`,
+        chunkFileNames: `assets/[name]-[hash]-v2.js`,
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name?.split('.');
           const ext = info?.[info.length - 1];
           if (/css/i.test(ext || '')) {
-            return `assets/[name]-[hash].css`;
+            return `assets/[name]-[hash]-v2.css`;
           }
-          return `assets/[name]-[hash].[ext]`;
+          return `assets/[name]-[hash]-v2.[ext]`;
         },
       },
     },
