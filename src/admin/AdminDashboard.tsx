@@ -1595,8 +1595,23 @@ export function AdminDashboard() {
             onClick={() => { openProfileDialog(); setMobileMenuOpen(false); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
           >
-            <User className="w-5 h-5" />
-            个人设置
+            {adminInfo?.avatar ? (
+              <img 
+                src={adminInfo.avatar} 
+                alt={adminInfo.name || adminInfo.admin_id}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+                {(adminInfo?.name || adminInfo?.admin_id || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex flex-col items-start">
+              <span className="text-white text-sm font-medium">
+                {adminInfo?.name || adminInfo?.admin_id || '管理员'}
+              </span>
+              <span className="text-xs text-slate-500">个人设置</span>
+            </div>
           </button>
           <button
             onClick={handleLogout}
@@ -1760,7 +1775,7 @@ export function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {appeals.map((appeal) => (
                     <div key={appeal.appeal_id} className="glass rounded-2xl p-6">
                       <div className="flex items-start justify-between mb-4">
@@ -1856,7 +1871,7 @@ export function AdminDashboard() {
                       {/* AI 分析概览 - 列表接口返回简化数据 */}
                       {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.recommendation && (
                         <div className="mt-4 bg-gradient-to-br from-purple-900/30 to-slate-800 rounded-lg p-4 border border-purple-500/20">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <Sparkles className="w-4 h-4 text-purple-500" />
                               <span className="text-sm font-medium text-purple-400">AI 建议</span>
@@ -1871,16 +1886,49 @@ export function AdminDashboard() {
                               }>
                                 {appeal.ai_analysis.recommendation}
                               </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openAppealDetail(appeal, true)}
-                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2"
-                              >
-                                <Eye className="w-3.5 h-3.5 mr-1" />
-                                详情
-                              </Button>
                             </div>
+                          </div>
+                          {/* 固定高度展示AI分析内容 */}
+                          <div className="h-[160px] overflow-y-auto space-y-2 pr-1">
+                            {/* 置信度 */}
+                            {appeal.ai_analysis.result?.confidence && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-slate-400">置信度:</span>
+                                <span className="text-purple-400">{appeal.ai_analysis.result.confidence}%</span>
+                              </div>
+                            )}
+                            {/* 申诉要点 */}
+                            {appeal.ai_analysis.result?.summary && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-purple-400 font-medium">申诉要点</p>
+                                <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.summary}</p>
+                              </div>
+                            )}
+                            {/* 理由分析 */}
+                            {appeal.ai_analysis.result?.reason_analysis && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-purple-400 font-medium">理由分析</p>
+                                <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.reason_analysis}</p>
+                              </div>
+                            )}
+                            {/* 处理建议 */}
+                            {appeal.ai_analysis.result?.suggestions && (
+                              <div className="space-y-1">
+                                <p className="text-xs text-purple-400 font-medium">处理建议</p>
+                                <p className="text-xs text-slate-300 break-words line-clamp-2">{appeal.ai_analysis.result.suggestions}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-purple-500/20 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openAppealDetail(appeal, true)}
+                              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 px-2 text-xs"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              查看完整分析
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -2424,8 +2472,14 @@ export function AdminDashboard() {
                             {actionTypes[log.action_type] || log.action_type}
                           </td>
                           <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
-                            {log.operator_id}
-                            <span className="text-xs text-muted-foreground ml-1">({log.operator_type})</span>
+                            <div className="flex items-center gap-2">
+                              <span>{log.operator_id}</span>
+                              {log.operator_type === 'admin' && (
+                                <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                                  管理员
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono whitespace-nowrap">
                             {log.ip}
