@@ -1889,32 +1889,57 @@ export function AdminDashboard() {
                           </div>
                           {/* 固定高度展示AI分析内容 */}
                           <div className="h-[160px] overflow-y-auto space-y-2 pr-1">
-                            {/* 置信度 */}
-                            {appeal.ai_analysis.result?.confidence && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="text-slate-400">置信度:</span>
-                                <span className="text-purple-400">{appeal.ai_analysis.result.confidence}%</span>
-                              </div>
-                            )}
-                            {/* 申诉要点 */}
-                            {appeal.ai_analysis.result?.summary && (
-                              <div className="space-y-1">
-                                <p className="text-xs text-purple-400 font-medium">申诉要点</p>
-                                <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.summary}</p>
-                              </div>
-                            )}
-                            {/* 理由分析 */}
-                            {appeal.ai_analysis.result?.reason_analysis && (
-                              <div className="space-y-1">
-                                <p className="text-xs text-purple-400 font-medium">理由分析</p>
-                                <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.reason_analysis}</p>
-                              </div>
-                            )}
-                            {/* 处理建议 */}
-                            {appeal.ai_analysis.result?.suggestions && (
-                              <div className="space-y-1">
-                                <p className="text-xs text-purple-400 font-medium">处理建议</p>
-                                <p className="text-xs text-slate-300 break-words line-clamp-2">{appeal.ai_analysis.result.suggestions}</p>
+                            {appeal.ai_analysis.result ? (
+                              <>
+                                {/* 置信度 */}
+                                {appeal.ai_analysis.result.confidence > 0 && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-slate-400">置信度:</span>
+                                    <span className="text-purple-400">{appeal.ai_analysis.result.confidence}%</span>
+                                  </div>
+                                )}
+                                {/* 申诉要点 */}
+                                {appeal.ai_analysis.result.summary && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">申诉要点</p>
+                                    <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.summary}</p>
+                                  </div>
+                                )}
+                                {/* 理由分析 */}
+                                {appeal.ai_analysis.result.reason_analysis && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">理由分析</p>
+                                    <p className="text-xs text-slate-300 break-words line-clamp-3">{appeal.ai_analysis.result.reason_analysis}</p>
+                                  </div>
+                                )}
+                                {/* 处理建议 */}
+                                {appeal.ai_analysis.result.suggestions && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">处理建议</p>
+                                    <p className="text-xs text-slate-300 break-words line-clamp-2">{appeal.ai_analysis.result.suggestions}</p>
+                                  </div>
+                                )}
+                                {/* 风险因素 */}
+                                {appeal.ai_analysis.result.risk_factors && appeal.ai_analysis.result.risk_factors.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-purple-400 font-medium">风险提示</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {appeal.ai_analysis.result.risk_factors.slice(0, 2).map((risk, idx) => (
+                                        <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-[10px] px-1 py-0">
+                                          {risk.length > 10 ? risk.substring(0, 10) + '...' : risk}
+                                        </Badge>
+                                      ))}
+                                      {appeal.ai_analysis.result.risk_factors.length > 2 && (
+                                        <span className="text-[10px] text-slate-500">+{appeal.ai_analysis.result.risk_factors.length - 2}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-2">
+                                <Sparkles className="w-8 h-8 text-purple-500/30" />
+                                <p className="text-xs text-center">AI 分析已完成<br/>点击"查看完整分析"了解详情</p>
                               </div>
                             )}
                           </div>
