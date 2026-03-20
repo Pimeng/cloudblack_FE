@@ -9,9 +9,10 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ src, alt = '图片', isOpen, onClose }: ImageViewerProps) {
-  // 处理 ESC 键关闭
+  // 处理 ESC 键关闭，阻止事件冒泡避免同时关闭 Dialog
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      e.stopPropagation();
       onClose();
     }
   }, [onClose]);
@@ -37,7 +38,7 @@ export function ImageViewer({ src, alt = '图片', isOpen, onClose }: ImageViewe
       {/* 关闭按钮 */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+        className="absolute top-4 right-4 z-[110] p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
         aria-label="关闭"
       >
         <X className="w-6 h-6" />
