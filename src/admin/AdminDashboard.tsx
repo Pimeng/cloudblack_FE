@@ -33,7 +33,12 @@ import {
   Menu,
   X,
   Bot,
-  Key
+  Key,
+  Database,
+  Plus,
+  Download,
+  Archive,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +54,7 @@ const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
 
 
-type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings';
+type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings' | 'backup';
 
 interface Stats {
   pending_appeals: number;
@@ -142,6 +147,38 @@ interface AIAnalysisResult {
     risk_factors: string[];
   };
   updated_at?: string;
+}
+
+interface BackupStatus {
+  enabled: boolean;
+  cron: string;
+  cron_available: boolean;
+  running: boolean;
+  backup_dir: string;
+  max_backups: number;
+  retention_days: number;
+  next_backup: string;
+  db_file: string;
+  backup_count: number;
+}
+
+interface BackupItem {
+  filename: string;
+  path: string;
+  created_at: number;
+  created_at_str: string;
+  size: number;
+  size_human: string;
+  remark: string;
+  is_auto: boolean;
+}
+
+interface BackupConfig {
+  enabled: boolean;
+  cron: string;
+  backup_dir: string;
+  max_backups: number;
+  retention_days: number;
 }
 
 interface SystemConfig {
@@ -304,6 +341,26 @@ export function AdminDashboard() {
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [updatingConfig, setUpdatingConfig] = useState(false);
 
+  // Backup management
+  const [backups, setBackups] = useState<BackupItem[]>([]);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
+  const [, setBackupConfig] = useState<BackupConfig | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [createBackupDialogOpen, setCreateBackupDialogOpen] = useState(false);
+  const [newBackupRemark, setNewBackupRemark] = useState('');
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [deleteBackupDialogOpen, setDeleteBackupDialogOpen] = useState(false);
+  const [deletingBackup, setDeletingBackup] = useState<BackupItem | null>(null);
+  const [deletingBackupLoading, setDeletingBackupLoading] = useState(false);
+  const [editBackupConfigDialogOpen, setEditBackupConfigDialogOpen] = useState(false);
+  const [editBackupConfig, setEditBackupConfig] = useState<Partial<BackupConfig>>({});
+  const [updatingBackupConfig, setUpdatingBackupConfig] = useState(false);
+  const [cronValidationResult, setCronValidationResult] = useState<{valid: boolean; next_run?: string} | null>(null);
+  const [editBackupRemarkDialogOpen, setEditBackupRemarkDialogOpen] = useState(false);
+  const [editingBackupRemark, setEditingBackupRemark] = useState<BackupItem | null>(null);
+  const [newBackupRemarkValue, setNewBackupRemarkValue] = useState('');
+  const [updatingBackupRemark, setUpdatingBackupRemark] = useState(false);
+
   // Profile (Edit own info)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [profileName, setProfileName] = useState('');
@@ -371,6 +428,14 @@ export function AdminDashboard() {
       fetchLogStats(token);
     }
   }, [token, activeTab, logsPage, logsPerPage, logFilterAction, logFilterStatus]);
+
+  useEffect(() => {
+    if (token && activeTab === 'backup') {
+      fetchBackupStatus(token);
+      fetchBackups(token);
+      fetchBackupConfig(token);
+    }
+  }, [token, activeTab]);
 
   const fetchStats = async (authToken: string) => {
     try {
@@ -638,6 +703,216 @@ export function AdminDashboard() {
       }
     } catch (err) {
       console.error('获取日志统计失败:', err);
+    }
+  };
+
+  // Backup API functions
+  const fetchBackupStatus = async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/status`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackupStatus(data.data);
+      }
+    } catch (err) {
+      console.error('获取备份状态失败:', err);
+    }
+  };
+
+  const fetchBackups = async (authToken: string) => {
+    setBackupLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/list`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        navigate('/admin');
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackups(data.data.backups);
+      }
+    } catch (err) {
+      toast.error('获取备份列表失败');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const fetchBackupConfig = async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackupConfig(data.data);
+        setEditBackupConfig(data.data);
+      }
+    } catch (err) {
+      console.error('获取备份配置失败:', err);
+    }
+  };
+
+  const createBackup = async () => {
+    if (!token) return;
+    
+    setCreatingBackup(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ remark: newBackupRemark || undefined }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('备份创建成功');
+        setCreateBackupDialogOpen(false);
+        setNewBackupRemark('');
+        fetchBackups(token);
+        fetchBackupStatus(token);
+      } else {
+        toast.error(data.message || '备份创建失败');
+      }
+    } catch (err) {
+      toast.error('备份创建失败');
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
+  const deleteBackupFn = async () => {
+    if (!deletingBackup || !token) return;
+    
+    setDeletingBackupLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/${deletingBackup.filename}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('备份已删除');
+        setDeleteBackupDialogOpen(false);
+        setDeletingBackup(null);
+        fetchBackups(token);
+        fetchBackupStatus(token);
+      } else {
+        toast.error(data.message || '删除失败');
+      }
+    } catch (err) {
+      toast.error('删除失败');
+    } finally {
+      setDeletingBackupLoading(false);
+    }
+  };
+
+  const updateBackupConfig = async () => {
+    if (!token) return;
+    
+    setUpdatingBackupConfig(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editBackupConfig),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('备份配置已更新');
+        setBackupConfig(data.data);
+        setEditBackupConfigDialogOpen(false);
+        fetchBackupStatus(token);
+      } else {
+        toast.error(data.message || '更新失败');
+      }
+    } catch (err) {
+      toast.error('更新失败');
+    } finally {
+      setUpdatingBackupConfig(false);
+    }
+  };
+
+  const validateCron = async (cron: string) => {
+    if (!token || !cron) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/validate-cron`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cron }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setCronValidationResult(data.data);
+      }
+    } catch (err) {
+      console.error('验证 CRON 失败:', err);
+    }
+  };
+
+  const updateBackupRemarkFn = async () => {
+    if (!editingBackupRemark || !token) return;
+    
+    setUpdatingBackupRemark(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/${editingBackupRemark.filename}/remark`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ remark: newBackupRemarkValue }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('备注已更新');
+        setEditBackupRemarkDialogOpen(false);
+        setEditingBackupRemark(null);
+        fetchBackups(token);
+      } else {
+        toast.error(data.message || '更新失败');
+      }
+    } catch (err) {
+      toast.error('更新失败');
+    } finally {
+      setUpdatingBackupRemark(false);
     }
   };
 
@@ -1597,6 +1872,19 @@ export function AdminDashboard() {
               >
                 <ScrollText className="w-5 h-5" />
                 审计日志
+              </button>
+            )}
+            {adminLevel >= 3 && (
+              <button
+                onClick={() => { setActiveTab('backup'); setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                  activeTab === 'backup' 
+                    ? 'bg-brand/20 text-brand' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Database className="w-5 h-5" />
+                数据库备份
               </button>
             )}
             {canManageSettings && (
@@ -2596,6 +2884,180 @@ export function AdminDashboard() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'backup' && adminLevel >= 3 && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">数据库备份</h2>
+                <p className="text-sm text-muted-foreground">管理数据库自动备份和手动备份</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {adminLevel >= 4 && (
+                  <Button onClick={() => setCreateBackupDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
+                    <Plus className="w-4 h-4 mr-2" />
+                    创建备份
+                  </Button>
+                )}
+                {adminLevel >= 4 && (
+                  <Button onClick={() => setEditBackupConfigDialogOpen(true)} variant="outline">
+                    <Settings className="w-4 h-4 mr-2" />
+                    备份设置
+                  </Button>
+                )}
+                <Button onClick={() => { fetchBackupStatus(token); fetchBackups(token); }} variant="outline" size="icon">
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Backup Status */}
+            {backupStatus && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${backupStatus.enabled ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+                      <Database className={`w-5 h-5 ${backupStatus.enabled ? 'text-green-500' : 'text-gray-500'}`} />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">自动备份</p>
+                      <p className={`font-medium ${backupStatus.enabled ? 'text-green-400' : 'text-gray-400'}`}>
+                        {backupStatus.enabled ? '已启用' : '已禁用'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">备份频率</p>
+                      <p className="text-white font-medium">{backupStatus.cron}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <Archive className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">备份数量</p>
+                      <p className="text-white font-medium">{backupStatus.backup_count} / {backupStatus.max_backups}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">下次备份</p>
+                      <p className="text-white font-medium">{backupStatus.next_backup || '未安排'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backup List */}
+            {backupLoading ? (
+              <div className="text-center py-20">
+                <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
+                <p className="text-muted-foreground mt-4">加载中...</p>
+              </div>
+            ) : backups.length === 0 ? (
+              <div className="glass rounded-2xl p-12 text-center">
+                <Database className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">暂无备份文件</p>
+                <p className="text-sm text-muted-foreground">点击"创建备份"按钮手动创建备份</p>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl overflow-x-auto">
+                <table className="w-full min-w-[700px]">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">文件名</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">类型</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">大小</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">创建时间</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 whitespace-nowrap">备注</th>
+                      <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400 whitespace-nowrap">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {backups.map((backup) => (
+                      <tr key={backup.filename} className="hover:bg-slate-800/30">
+                        <td className="px-4 md:px-6 py-4 text-white font-mono text-sm whitespace-nowrap">{backup.filename}</td>
+                        <td className="px-4 md:px-6 py-4 whitespace-nowrap">
+                          <Badge className={backup.is_auto ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}>
+                            {backup.is_auto ? '自动' : '手动'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">{backup.size_human}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{backup.created_at_str}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={backup.remark}>
+                          {backup.remark || '-'}
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            {adminLevel >= 4 && (
+                              <Button
+                                onClick={() => {
+                                  setEditingBackupRemark(backup);
+                                  setNewBackupRemarkValue(backup.remark || '');
+                                  setEditBackupRemarkDialogOpen(true);
+                                }}
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                title="编辑备注"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              onClick={() => {
+                                const downloadUrl = `${API_BASE}/api/admin/backup/download/${backup.filename}`;
+                                window.open(downloadUrl, '_blank');
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                              title="下载备份"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            {adminLevel >= 4 && (
+                              <Button
+                                onClick={() => {
+                                  setDeletingBackup(backup);
+                                  setDeleteBackupDialogOpen(true);
+                                }}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                                title="删除备份"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
@@ -4102,6 +4564,222 @@ export function AdminDashboard() {
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <><Edit3 className="w-4 h-4 mr-2" />保存修改</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Backup Dialog */}
+      <Dialog open={createBackupDialogOpen} onOpenChange={setCreateBackupDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>创建数据库备份</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              手动创建数据库备份文件
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>备份备注（可选）</Label>
+              <Textarea
+                value={newBackupRemark}
+                onChange={(e) => setNewBackupRemark(e.target.value)}
+                placeholder="例如：升级前备份、数据迁移备份等..."
+                className="bg-slate-800 border-slate-700 min-h-[80px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateBackupDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={createBackup}
+              disabled={creatingBackup}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {creatingBackup ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              创建备份
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Backup Dialog */}
+      <Dialog open={deleteBackupDialogOpen} onOpenChange={setDeleteBackupDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>删除备份</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {deletingBackup && `确定要删除备份 ${deletingBackup.filename} 吗？此操作不可恢复。`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteBackupDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={deleteBackupFn}
+              disabled={deletingBackupLoading}
+              variant="destructive"
+            >
+              {deletingBackupLoading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Backup Config Dialog */}
+      <Dialog open={editBackupConfigDialogOpen} onOpenChange={setEditBackupConfigDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>备份设置</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              配置自动备份参数
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="backupEnabled"
+                checked={editBackupConfig.enabled || false}
+                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, enabled: e.target.checked })}
+                className="rounded border-slate-700 bg-slate-800"
+              />
+              <Label htmlFor="backupEnabled" className="cursor-pointer">
+                启用自动备份
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>CRON 表达式</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editBackupConfig.cron || ''}
+                  onChange={(e) => {
+                    setEditBackupConfig({ ...editBackupConfig, cron: e.target.value });
+                    validateCron(e.target.value);
+                  }}
+                  placeholder="0 2 * * *"
+                  className="bg-slate-800 border-slate-700 font-mono"
+                />
+              </div>
+              {cronValidationResult && (
+                <p className={`text-sm ${cronValidationResult.valid ? 'text-green-400' : 'text-red-400'}`}>
+                  {cronValidationResult.valid 
+                    ? `✓ 有效，下次执行: ${cronValidationResult.next_run}` 
+                    : '✗ 无效的 CRON 表达式'}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                常用示例：0 2 * * *（每天凌晨2点）、0 */6 * * *（每6小时）、0 0 * * 0（每周日）
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>备份目录</Label>
+              <Input
+                value={editBackupConfig.backup_dir || ''}
+                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, backup_dir: e.target.value })}
+                placeholder="backups"
+                className="bg-slate-800 border-slate-700"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>最大备份数量</Label>
+              <Input
+                type="number"
+                value={editBackupConfig.max_backups || ''}
+                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, max_backups: parseInt(e.target.value) })}
+                placeholder="10"
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-muted-foreground">超过此数量时，最旧的备份将被自动删除</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>保留天数</Label>
+              <Input
+                type="number"
+                value={editBackupConfig.retention_days || ''}
+                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, retention_days: parseInt(e.target.value) })}
+                placeholder="30"
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-muted-foreground">超过此天数的备份将被自动删除</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBackupConfigDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={updateBackupConfig}
+              disabled={updatingBackupConfig}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {updatingBackupConfig ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <><Settings className="w-4 h-4 mr-2" />保存设置</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Backup Remark Dialog */}
+      <Dialog open={editBackupRemarkDialogOpen} onOpenChange={setEditBackupRemarkDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>编辑备份备注</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {editingBackupRemark && `修改 ${editingBackupRemark.filename} 的备注`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>备注</Label>
+              <Textarea
+                value={newBackupRemarkValue}
+                onChange={(e) => setNewBackupRemarkValue(e.target.value)}
+                placeholder="输入备注信息..."
+                className="bg-slate-800 border-slate-700 min-h-[80px]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBackupRemarkDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={updateBackupRemarkFn}
+              disabled={updatingBackupRemark}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {updatingBackupRemark ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <><Edit3 className="w-4 h-4 mr-2" />保存</>
               )}
             </Button>
           </DialogFooter>
