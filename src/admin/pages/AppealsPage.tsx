@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye, Sparkles, X } from 'lucide-react';
+import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye, Sparkles, X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useImageViewer } from '@/hooks/useImageViewer';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { Appeal } from '../types';
 import { API_BASE } from '../types';
@@ -17,6 +18,8 @@ export function AppealsPage() {
     appeals, appealPage, setAppealPage, appealTotal, appealFilter, setAppealFilter,
     fetchAppeals, loading 
   } = useOutletContext<AdminDataContext>();
+  
+  const { openImage } = useImageViewer();
   
   // Review dialog state
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -48,6 +51,9 @@ export function AppealsPage() {
 
   const canReviewAppeals = adminLevel >= 2;
   const canManageBlacklist = adminLevel >= 3;
+  const canClearProcessed = adminLevel >= 3;
+  const canRefreshAI = adminLevel >= 2;
+  const canDeleteAI = adminLevel >= 3;
   const appealTotalPages = Math.ceil(appealTotal / 20);
 
   const getStatusBadge = (status: string) => {
@@ -210,6 +216,48 @@ export function AppealsPage() {
     }
   };
 
+  const refreshAIAnalysis = async (appealId: string) => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${appealId}/ai-analysis`, {
+        method: 'POST',
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('AI 分析已刷新');
+        fetchAppeals();
+      } else {
+        toast.error(data.message || '刷新失败');
+      }
+    } catch (err) {
+      toast.error('刷新失败');
+    }
+  };
+
+  const deleteAIAnalysis = async (appealId: string) => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${appealId}/ai-analysis`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('AI 分析已删除');
+        fetchAppeals();
+      } else {
+        toast.error(data.message || '删除失败');
+      }
+    } catch (err) {
+      toast.error('删除失败');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -234,7 +282,7 @@ export function AppealsPage() {
           <Button onClick={() => fetchAppeals()} variant="outline" size="icon">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          {adminLevel >= 4 && (
+          {canClearProcessed && (
             <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10">
               <Trash2 className="w-4 h-4 mr-2" />
               清理已处理
@@ -289,22 +337,23 @@ export function AppealsPage() {
                 
                 {/* Images */}
                 {appeal.images && appeal.images.length > 0 && (
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-4" onClick={(e) => e.stopPropagation()}>
                     {appeal.images.slice(0, 3).map((img, idx) => (
-                      <a 
+                      <button
                         key={idx}
-                        href={img.startsWith('http') ? img : `${API_BASE}${img}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-16 h-16 rounded-lg overflow-hidden bg-slate-800"
+                        onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
+                        className="w-16 h-16 rounded-lg overflow-hidden bg-slate-800 relative group cursor-pointer"
                       >
                         <img 
                           src={img.startsWith('http') ? img : `${API_BASE}${img}`}
                           alt={`证据 ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
-                      </a>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-5 h-5 text-white" />
+                        </div>
+                      </button>
                     ))}
                     {appeal.images.length > 3 && (
                       <span className="text-xs text-slate-500 self-center">+{appeal.images.length - 3}</span>
@@ -525,20 +574,21 @@ export function AppealsPage() {
                   <span className="text-muted-foreground text-sm">相关截图:</span>
                   <div className="mt-2 flex gap-2 flex-wrap">
                     {viewingAppeal.images.map((img, idx) => (
-                      <a 
+                      <button
                         key={idx}
-                        href={img.startsWith('http') ? img : `${API_BASE}${img}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-24 h-24 rounded-lg overflow-hidden bg-slate-800"
+                        onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
+                        className="w-24 h-24 rounded-lg overflow-hidden bg-slate-800 relative group cursor-pointer"
                       >
                         <img 
                           src={img.startsWith('http') ? img : `${API_BASE}${img}`}
                           alt={`证据 ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform group-hover:scale-110"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
-                      </a>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -547,9 +597,33 @@ export function AppealsPage() {
               {/* AI Analysis */}
               {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'completed' && viewingAppeal.ai_analysis.result && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-purple-500" />
-                    <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-500" />
+                      <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {canRefreshAI && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => viewingAppeal && refreshAIAnalysis(viewingAppeal.appeal_id)}
+                          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDeleteAI && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => viewingAppeal && deleteAIAnalysis(viewingAppeal.appeal_id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-3">

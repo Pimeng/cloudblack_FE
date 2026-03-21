@@ -9,9 +9,10 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ src, alt = '图片', isOpen, onClose }: ImageViewerProps) {
-  // 处理 ESC 键关闭，阻止事件冒泡避免同时关闭 Dialog
+  // 处理 ESC 键关闭，使用捕获阶段监听以确保优先处理，阻止事件传播避免同时关闭其他对话框
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      e.preventDefault();
       e.stopPropagation();
       onClose();
     }
@@ -19,11 +20,12 @@ export function ImageViewer({ src, alt = '图片', isOpen, onClose }: ImageViewe
 
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+      // 使用捕获阶段监听，确保优先于其他组件处理 Esc 键
+      document.addEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = '';
     };
   }, [isOpen, handleKeyDown]);
@@ -44,15 +46,15 @@ export function ImageViewer({ src, alt = '图片', isOpen, onClose }: ImageViewe
         <X className="w-6 h-6" />
       </button>
 
-      {/* 图片容器 */}
+      {/* 图片容器 - 填满屏幕 */}
       <div
-        className="relative max-w-[90vw] max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className="absolute inset-0 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <img
           src={src}
           alt={alt}
-          className="max-w-full max-h-[90vh] object-contain rounded-lg"
+          className="w-full h-full object-contain rounded-lg"
         />
       </div>
     </div>

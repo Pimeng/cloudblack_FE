@@ -62,6 +62,9 @@ export interface SMTPConfig {
   port: number;
   username: string;
   password: string;
+  from: string;
+  from_name: string;
+  security: string;
 }
 
 export interface GeetestConfig {
@@ -79,6 +82,48 @@ export interface AIAnalysisConfig {
   temperature: number;
   timeout: number;
   cache_file: string;
+  public_url: string;
+}
+
+export interface DatabaseBackupConfig {
+  enabled: boolean;
+  cron: string;
+  backup_dir: string;
+  max_backups: number;
+  retention_days: number;
+}
+
+export interface CORSConfig {
+  enabled: boolean;
+  allowed_origins: string[];
+  allowed_methods: string[];
+  allowed_headers: string[];
+  supports_credentials: boolean;
+}
+
+export interface RateLimitConfig {
+  rate_limit_max_requests: number;
+  rate_limit_window: number;
+  ip_limit_max_attempts: number;
+  ip_limit_window: number;
+}
+
+export interface UploadConfig {
+  max_upload_size: number;
+  allowed_extensions: string[];
+  upload_folder: string;
+}
+
+export interface HotlinkProtectionConfig {
+  enabled: boolean;
+  allowed_empty_referer: boolean;
+  protected_paths: string[];
+}
+
+export interface AuditLogConfig {
+  audit_log_file: string;
+  audit_log_max_size: number;
+  audit_log_retention_days: number;
 }
 
 export interface AIAnalysisResult {
@@ -132,9 +177,19 @@ export interface SystemConfig {
   port: number;
   debug: boolean;
   temp_token_ttl: number;
+  timezone: string;
+  log_level: string;
+  ip_header: string;
+  root_redirect_url: string;
   smtp?: SMTPConfig;
   geetest?: GeetestConfig;
   ai_analysis?: AIAnalysisConfig;
+  database_backup?: DatabaseBackupConfig;
+  cors?: CORSConfig;
+  rate_limit?: RateLimitConfig;
+  upload?: UploadConfig;
+  hotlink_protection?: HotlinkProtectionConfig;
+  audit_log?: AuditLogConfig;
   [key: string]: any;
 }
 

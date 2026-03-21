@@ -69,6 +69,7 @@ export function useAdminData() {
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [backupConfigLoading, setBackupConfigLoading] = useState(false);
   
   // Initialization state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -395,6 +396,7 @@ export function useAdminData() {
   }, [handleAuthError]);
 
   const fetchBackupConfig = useCallback(async (authToken: string) => {
+    setBackupConfigLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
         headers: { 'Authorization': authToken },
@@ -410,6 +412,8 @@ export function useAdminData() {
       }
     } catch (err) {
       console.error('获取备份配置失败:', err);
+    } finally {
+      setBackupConfigLoading(false);
     }
   }, []);
 
@@ -498,9 +502,11 @@ export function useAdminData() {
     backupConfig,
     setBackupConfig,
     backupLoading,
+    backupConfigLoading,
     fetchBackupStatus: () => fetchBackupStatus(token),
     fetchBackups: () => fetchBackups(token),
     fetchBackupConfig: () => fetchBackupConfig(token),
+    backupConfigLoading,
     
     // Common
     loading,

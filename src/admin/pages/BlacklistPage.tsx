@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Users, Search, RefreshCw, Ban, Edit3 } from 'lucide-react';
+import { Users, Search, RefreshCw, Ban, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -25,6 +25,10 @@ export function BlacklistPage() {
   const [editReason, setEditReason] = useState('');
   const [editUserId, setEditUserId] = useState('');
   const [updatingLoading, setUpdatingLoading] = useState(false);
+  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<BlacklistItem | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   useEffect(() => {
     if (token) fetchBlacklist();
@@ -110,6 +114,31 @@ export function BlacklistPage() {
     setEditDialogOpen(true);
   };
 
+  const deleteBlacklistItem = async () => {
+    if (!deletingItem || !token) return;
+    
+    setDeletingLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/blacklist/${deletingItem.user_id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token },
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('已移出黑名单');
+        setDeleteDialogOpen(false);
+        fetchBlacklist();
+      } else {
+        toast.error(data.message || '移除失败');
+      }
+    } catch (err) {
+      toast.error('移除失败');
+    } finally {
+      setDeletingLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -172,14 +201,24 @@ export function BlacklistPage() {
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         {canManageBlacklist && (
-                          <Button
-                            onClick={() => openEditDialog(item)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
+                          <>
+                            <Button
+                              onClick={() => openEditDialog(item)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true); }}
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -255,6 +294,23 @@ export function BlacklistPage() {
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
             <Button onClick={updateBlacklistItem} disabled={updatingLoading} className="bg-brand hover:bg-brand-dark">
               {updatingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Edit3 className="w-4 h-4 mr-2" />保存修改</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>移除黑名单</DialogTitle>
+            <DialogDescription className="text-slate-400">{deletingItem && `确定要将 ${deletingItem.user_id} 移出黑名单吗？`}</DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+            <Button onClick={deleteBlacklistItem} disabled={deletingLoading} variant="destructive">
+              {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认移除</>}
             </Button>
           </DialogFooter>
         </DialogContent>
