@@ -1,6 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+
+// 全局请求锁，防止重复请求
+const requestLocks = new Map<string, Promise<any>>();
+
+// 缓存过期时间：3分钟（毫秒）
+const CACHE_TTL = 3 * 60 * 1000;
+
+// 全局缓存存储
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const cacheStore = new Map<string, CacheEntry<any>>();
+
+// 清除所有缓存
+const clearAllCache = () => {
+  cacheStore.clear();
+};
+
+// 获取缓存数据（如果未过期）
+const getCache = <T>(key: string): T | null => {
+  const entry = cacheStore.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cacheStore.delete(key);
+    return null;
+  }
+  return entry.data;
+};
+
+// 设置缓存数据
+const setCache = <T>(key: string, data: T) => {
+  cacheStore.set(key, { data, timestamp: Date.now() });
+};
 import type {
   Stats,
   Appeal,
@@ -106,24 +140,50 @@ export function useAdminData() {
     navigate('/admin');
   }, [navigate]);
 
-  const fetchStats = useCallback(async (authToken: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/stats`, {
-        headers: { 'Authorization': authToken },
-      });
-      
-      if (response.status === 401 || response.status === 403) {
-        handleAuthError();
+  const fetchStats = useCallback(async (authToken: string, forceRefresh = false) => {
+    const cacheKey = `stats-${authToken}`;
+    const lockKey = `stats-lock-${authToken}`;
+    
+    // 如果不是强制刷新，先检查缓存
+    if (!forceRefresh) {
+      const cached = getCache<Stats>(cacheKey);
+      if (cached) {
+        setStats(cached);
         return;
       }
-      
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.data);
-      }
-    } catch (err) {
-      toast.error('获取统计数据失败');
     }
+    
+    // 如果已有请求在进行中，等待它完成
+    if (requestLocks.has(lockKey)) {
+      return requestLocks.get(lockKey);
+    }
+    
+    const requestPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/stats`, {
+          headers: { 'Authorization': authToken },
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+          handleAuthError();
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.data);
+          setCache(cacheKey, data.data);
+        }
+      } catch (err) {
+        toast.error('获取统计数据失败');
+      } finally {
+        // 请求完成后移除锁
+        requestLocks.delete(lockKey);
+      }
+    })();
+    
+    requestLocks.set(lockKey, requestPromise);
+    return requestPromise;
   }, [handleAuthError]);
 
   const fetchAppeals = useCallback(async (authToken: string, page = appealPage, filter = appealFilter) => {
@@ -417,9 +477,12 @@ export function useAdminData() {
     }
   }, []);
 
+  // 强制刷新所有数据（清除缓存后重新获取）
   const refreshAll = useCallback(() => {
     if (token) {
-      fetchStats(token);
+      clearAllCache();
+      fetchStats(token, true);
+      toast.success('数据已刷新');
     }
   }, [token, fetchStats]);
 

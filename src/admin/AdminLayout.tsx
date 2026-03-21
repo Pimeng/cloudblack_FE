@@ -13,6 +13,7 @@ import {
   Bot,
   Database,
   Edit3,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -216,6 +217,14 @@ export function AdminLayout() {
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-800 space-y-2">
+          <button
+            onClick={() => { data.refreshAll(); setMobileMenuOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            title="清除缓存并刷新数据"
+          >
+            <RefreshCw className="w-5 h-5" />
+            刷新数据
+          </button>
           <button
             onClick={() => { setProfileDialogOpen(true); setMobileMenuOpen(false); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"

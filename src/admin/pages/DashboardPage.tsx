@@ -1,11 +1,11 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Clock, FileText, CheckCircle, TrendingUp, UserX, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAdminData } from '../hooks/useAdminData';
+import type { AdminDataContext } from '../hooks/useAdminData';
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { stats } = useAdminData();
+  const { stats } = useOutletContext<AdminDataContext>();
 
   if (!stats) {
     return (
