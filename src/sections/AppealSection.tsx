@@ -38,6 +38,9 @@ export function AppealSection({ active }: { active?: boolean }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  
+  // 防重提交锁 - 防止极验 pass_token 被二次使用
+  const isProcessingRef = useRef(false);
 
   const [queryUserId, setQueryUserId] = useState('');
   const [queryUserType, setQueryUserType] = useState<'user' | 'group'>('user');
@@ -125,6 +128,12 @@ export function AppealSection({ active }: { active?: boolean }) {
 
   // 实际提交申诉的逻辑
   const executeSubmit = useCallback(async (geetestData: GeetestResult | null) => {
+    // 防重检查：如果正在处理中，直接返回
+    if (isProcessingRef.current) {
+      return;
+    }
+    
+    isProcessingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
@@ -167,12 +176,20 @@ export function AppealSection({ active }: { active?: boolean }) {
       gsap.fromTo('.success-message', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
     } catch { 
       setError('提交失败，请稍后重试'); 
+    } finally {
+      isProcessingRef.current = false;
       setSubmitting(false); 
     }
   }, [formData, images, resetGeetest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 防重检查：如果正在处理中，忽略本次点击
+    if (isProcessingRef.current || submitting) {
+      return;
+    }
+    
     if (!formData.user_id.trim()) { setError('请输入QQ号'); return; }
     if (!/^\d+$/.test(formData.user_id.trim())) { setError('QQ号必须为数字'); return; }
     if (!formData.contact_email.trim()) { setError('请输入联系邮箱'); return; }
