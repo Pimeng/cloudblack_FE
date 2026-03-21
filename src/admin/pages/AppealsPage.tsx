@@ -37,8 +37,9 @@ export function AppealsPage() {
   
   // Animation state
   const [animating, setAnimating] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<'initial' | 'expanding' | 'content'>('initial');
+  const [animationPhase, setAnimationPhase] = useState<'initial' | 'expanding' | 'content' | 'closing-start' | 'closing'>('initial');
   const [cardRect, setCardRect] = useState<DOMRect | null>(null);
+  const [lastAppealId, setLastAppealId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
@@ -73,18 +74,31 @@ export function AppealsPage() {
   const openDetailDialog = useCallback((appeal: Appeal, appealId: string) => {
     const cardEl = cardRefs.current.get(appealId);
     if (cardEl) {
+      // Get position and store it in a ref to avoid React batching issues
       const rect = cardEl.getBoundingClientRect();
-      setCardRect(rect);
+      
+      // Store appeal ID first
+      setLastAppealId(appealId);
       setViewingAppeal(appeal);
+      
+      // Set rect and animating synchronously
+      setCardRect({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      } as DOMRect);
       setAnimating(true);
       setAnimationPhase('initial');
       
-      // Start expanding after a small delay
-      setTimeout(() => {
-        setAnimationPhase('expanding');
-      }, 50);
+      // Double RAF to ensure DOM has painted
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setAnimationPhase('expanding');
+        });
+      });
       
-      // Show detail when animation is almost complete (80% progress)
+      // Show detail when animation is almost complete
       setTimeout(() => {
         setDetailDialogOpen(true);
       }, 250);
@@ -101,12 +115,42 @@ export function AppealsPage() {
   }, []);
   
   const closeDetailDialog = useCallback(() => {
-    setDetailDialogOpen(false);
-    setAnimationPhase('initial');
-    setAnimating(false);
-    setCardRect(null);
-    setViewingAppeal(null);
-  }, []);
+    // Get current card position for closing animation
+    if (lastAppealId) {
+      const cardEl = cardRefs.current.get(lastAppealId);
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        setCardRect({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        } as DOMRect);
+      }
+    }
+    
+    // Step 1: Set mask at full screen (no transition, z-40 below dialog's z-50)
+    setAnimationPhase('closing-start');
+    
+    // Step 2: Start transition to card position
+    requestAnimationFrame(() => {
+      setAnimationPhase('closing');
+    });
+    
+    // Step 3: Hide detail content mid-animation
+    setTimeout(() => {
+      setDetailDialogOpen(false);
+    }, 150);
+    
+    // Step 4: Finish animation and cleanup
+    setTimeout(() => {
+      setAnimationPhase('initial');
+      setAnimating(false);
+      setCardRect(null);
+      setLastAppealId(null);
+      setViewingAppeal(null);
+    }, 350);
+  }, [lastAppealId]);
 
   const submitReview = async () => {
     if (!selectedAppeal || !reviewReason.trim() || !token) return;
@@ -401,16 +445,22 @@ export function AppealsPage() {
       {animating && cardRect && animationPhase !== 'content' && (
         (() => {
           const isMobile = window.innerWidth < 768;
-          const targetLeft = isMobile ? 0 : 256;
-          const targetWidth = isMobile ? '100%' : 'calc(100% - 256px)';
+          const fullLeft = isMobile ? 0 : 256;
+          const fullWidth = isMobile ? '100%' : 'calc(100% - 256px)';
+          
+          // Determine target state based on phase
+          // initial/closing: at card position (animation target)
+          // expanding/closing-start: at full screen
+          const isAtCardPosition = animationPhase === 'initial' || animationPhase === 'closing';
+          
           return (
             <div 
-              className="fixed z-40 bg-slate-950 rounded-2xl overflow-hidden"
+              className="fixed z-40 bg-slate-900/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50"
               style={{
-                left: animationPhase === 'initial' ? cardRect.left : targetLeft,
-                top: animationPhase === 'initial' ? cardRect.top : 0,
-                width: animationPhase === 'initial' ? cardRect.width : targetWidth,
-                height: animationPhase === 'initial' ? cardRect.height : '100%',
+                left: isAtCardPosition ? cardRect.left : fullLeft,
+                top: isAtCardPosition ? cardRect.top : 0,
+                width: isAtCardPosition ? cardRect.width : fullWidth,
+                height: isAtCardPosition ? cardRect.height : '100%',
                 transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             />
