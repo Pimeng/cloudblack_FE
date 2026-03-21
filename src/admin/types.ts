@@ -1,0 +1,157 @@
+// Admin Dashboard Types
+
+export const API_BASE = 'https://cloudblack-api.07210700.xyz';
+
+export type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings' | 'backup';
+
+export interface Stats {
+  pending_appeals: number;
+  total_appeals: number;
+  blacklist_count: number;
+  processed_appeals: number;
+  success_rate: number;
+  avg_processing_hours: number;
+}
+
+export interface Appeal {
+  appeal_id: string;
+  user_id: string;
+  user_type: 'user' | 'group';
+  content: string;
+  contact_email: string;
+  images: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at?: string;
+  review?: {
+    action: string;
+    reason: string;
+    admin_id: string;
+    admin_name: string;
+    reviewed_at: string;
+  };
+  ai_analysis?: AIAnalysisResult;
+}
+
+export interface BlacklistItem {
+  user_id: string;
+  reason: string;
+  added_by: string;
+  added_at: string;
+  updated_at?: string;
+}
+
+export interface Admin {
+  admin_id: string;
+  name: string;
+  level: number;
+  created_at: string;
+  avatar?: string;
+}
+
+export interface BotToken {
+  bot_name: string;
+  owner: string;
+  description: string;
+  created_at: string;
+  token?: string;
+}
+
+export interface SMTPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+}
+
+export interface GeetestConfig {
+  enabled: boolean;
+  captcha_id: string;
+  captcha_key: string;
+}
+
+export interface AIAnalysisConfig {
+  enabled: boolean;
+  api_key: string;
+  base_url: string;
+  model: string;
+  max_tokens: number;
+  temperature: number;
+  timeout: number;
+  cache_file: string;
+}
+
+export interface AIAnalysisResult {
+  status: string;
+  recommendation?: string;
+  result?: {
+    summary: string;
+    reason_analysis: string;
+    recommendation: string;
+    confidence: number;
+    suggestions: string;
+    risk_factors: string[];
+  };
+  updated_at?: string;
+}
+
+export interface BackupStatus {
+  enabled: boolean;
+  cron: string;
+  cron_available: boolean;
+  running: boolean;
+  backup_dir: string;
+  max_backups: number;
+  retention_days: number;
+  next_backup: string;
+  db_file: string;
+  backup_count: number;
+}
+
+export interface BackupItem {
+  filename: string;
+  path: string;
+  created_at: number;
+  created_at_str: string;
+  size: number;
+  size_human: string;
+  remark: string;
+  is_auto: boolean;
+}
+
+export interface BackupConfig {
+  enabled: boolean;
+  cron: string;
+  backup_dir: string;
+  max_backups: number;
+  retention_days: number;
+}
+
+export interface SystemConfig {
+  host: string;
+  port: number;
+  debug: boolean;
+  temp_token_ttl: number;
+  smtp?: SMTPConfig;
+  geetest?: GeetestConfig;
+  ai_analysis?: AIAnalysisConfig;
+  [key: string]: any;
+}
+
+export interface SystemInfo {
+  platform: string;
+  python_version: string;
+  cpu_percent: number;
+  memory: {
+    total: number;
+    available: number;
+    percent: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    free: number;
+    percent: number;
+  };
+  uptime: number;
+}

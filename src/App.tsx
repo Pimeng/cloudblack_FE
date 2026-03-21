@@ -8,7 +8,17 @@ import { StatsSection } from './sections/StatsSection';
 import { AppealSection } from './sections/AppealSection';
 import { Footer } from './sections/Footer';
 import { AdminLogin } from './admin/AdminLogin';
-import { AdminDashboard } from './admin/AdminDashboard';
+import { AdminLayout } from './admin/AdminLayout';
+import { 
+  DashboardPage, 
+  AppealsPage, 
+  BlacklistPage, 
+  AdminsPage, 
+  BotsPage, 
+  LogsPage, 
+  SettingsPage, 
+  BackupPage 
+} from './admin/pages';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Toaster } from '@/components/ui/sonner';
@@ -223,7 +233,16 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="appeals" element={<AppealsPage />} />
+          <Route path="blacklist" element={<BlacklistPage />} />
+          <Route path="admins" element={<AdminsPage />} />
+          <Route path="bots" element={<BotsPage />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="backup" element={<BackupPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </ImageViewerProvider>

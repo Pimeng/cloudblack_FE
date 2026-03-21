@@ -1,0 +1,500 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import type {
+  Stats,
+  Appeal,
+  BlacklistItem,
+  Admin,
+  BotToken,
+  SystemConfig,
+  SystemInfo,
+  BackupItem,
+  BackupStatus,
+  BackupConfig,
+} from '../types';
+import { API_BASE } from '../types';
+
+// Type definition for the context provided by useAdminData
+export type AdminDataContext = ReturnType<typeof useAdminData>;
+
+export function useAdminData() {
+  const navigate = useNavigate();
+  const [token, setToken] = useState('');
+  const [adminLevel, setAdminLevel] = useState<number>(0);
+  const [adminInfo, setAdminInfo] = useState<Admin | null>(null);
+  
+  // Stats
+  const [stats, setStats] = useState<Stats | null>(null);
+  
+  // Appeals
+  const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [appealPage, setAppealPage] = useState(1);
+  const [appealTotal, setAppealTotal] = useState(0);
+  const [appealFilter, setAppealFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [loading, setLoading] = useState(false);
+  
+  // Blacklist
+  const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
+  const [blacklistPage, setBlacklistPage] = useState(1);
+  const [blacklistTotal, setBlacklistTotal] = useState(0);
+  const [blacklistSearch, setBlacklistSearch] = useState('');
+  
+  // Admins
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  
+  // Bots
+  const [bots, setBots] = useState<BotToken[]>([]);
+  const [botsLoading, setBotsLoading] = useState(false);
+  
+  // Logs
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logsPerPage, setLogsPerPage] = useState(50);
+  const [logFilterAction, setLogFilterAction] = useState('');
+  const [logFilterStatus, setLogFilterStatus] = useState<'all' | 'success' | 'failure'>('all');
+  const [actionTypes, setActionTypes] = useState<Record<string, string>>({});
+  const [logStats, setLogStats] = useState<any>(null);
+  
+  // Settings
+  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [configLoading, setConfigLoading] = useState(false);
+  
+  // Backup
+  const [backups, setBackups] = useState<BackupItem[]>([]);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
+  const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+
+  // Initialize token and admin info
+  useEffect(() => {
+    const storedToken = localStorage.getItem('admin_token');
+    const storedAdminInfo = localStorage.getItem('admin_info');
+    if (!storedToken) {
+      navigate('/admin');
+      return;
+    }
+    setToken(storedToken);
+    if (storedAdminInfo) {
+      try {
+        const info = JSON.parse(storedAdminInfo);
+        setAdminLevel(info.level || 0);
+        setAdminInfo(info);
+      } catch {
+        setAdminLevel(0);
+      }
+    }
+    fetchStats(storedToken);
+  }, [navigate]);
+
+  const handleAuthError = useCallback(() => {
+    toast.error('登录已过期，请重新登录');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_info');
+    navigate('/admin');
+  }, [navigate]);
+
+  const fetchStats = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/stats`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.data);
+      }
+    } catch (err) {
+      toast.error('获取统计数据失败');
+    }
+  }, [handleAuthError]);
+
+  const fetchAppeals = useCallback(async (authToken: string, page = appealPage, filter = appealFilter) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: '20',
+      });
+      if (filter !== 'all') {
+        params.append('status', filter);
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/appeals?${params}`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        const appealsWithAI = await Promise.all(
+          data.data.items.map(async (appeal: Appeal) => {
+            if (appeal.ai_analysis?.status === 'completed' && !appeal.ai_analysis?.result) {
+              try {
+                const detailRes = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
+                  headers: { 'Authorization': authToken },
+                });
+                if (detailRes.ok) {
+                  const detailData = await detailRes.json();
+                  if (detailData.success && detailData.data) {
+                    return { ...appeal, ai_analysis: detailData.data };
+                  }
+                }
+              } catch {
+                // 忽略单个请求失败
+              }
+            }
+            return appeal;
+          })
+        );
+        setAppeals(appealsWithAI);
+        setAppealTotal(data.data.total);
+      }
+    } catch (err) {
+      toast.error('获取申诉列表失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [appealPage, appealFilter, handleAuthError]);
+
+  const fetchBlacklist = useCallback(async (authToken: string, page = blacklistPage, search = blacklistSearch) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: '50',
+      });
+      if (search) {
+        params.append('search', search);
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/blacklist?${params}`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBlacklist(data.data.items);
+        setBlacklistTotal(data.data.total);
+      }
+    } catch (err) {
+      toast.error('获取黑名单失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [blacklistPage, blacklistSearch, handleAuthError]);
+
+  const fetchAdmins = useCallback(async (authToken: string) => {
+    setAdminLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/admins`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setAdmins(data.data);
+      }
+    } catch (err) {
+      toast.error('获取管理员列表失败');
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [handleAuthError]);
+
+  const fetchBots = useCallback(async (authToken: string) => {
+    setBotsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/bots`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBots(data.data);
+      }
+    } catch (err) {
+      toast.error('获取 Bot Token 列表失败');
+    } finally {
+      setBotsLoading(false);
+    }
+  }, [handleAuthError]);
+
+  const fetchConfig = useCallback(async (authToken: string) => {
+    setConfigLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/config`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data.config) {
+        setConfig(data.data.config);
+      }
+    } catch (err) {
+      toast.error('获取系统配置失败');
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [handleAuthError]);
+
+  const fetchSystemInfo = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/system-info`, {
+        headers: { 'Authorization': authToken },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSystemInfo(data.data);
+      }
+    } catch (err) {
+      console.error('获取系统信息失败:', err);
+    }
+  }, []);
+
+  const fetchLogs = useCallback(async (authToken: string, page = logsPage, perPage = logsPerPage, action = logFilterAction, status = logFilterStatus) => {
+    setLogsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: perPage.toString(),
+      });
+      if (action) params.append('action_type', action);
+      if (status !== 'all') params.append('status', status);
+
+      const response = await fetch(`${API_BASE}/api/admin/logs?${params}`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setLogs(data.data.items);
+        setLogsTotal(data.data.total);
+      }
+    } catch (err) {
+      toast.error('获取审计日志失败');
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [logsPage, logsPerPage, logFilterAction, logFilterStatus, handleAuthError]);
+
+  const fetchActionTypes = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/logs/action-types`, {
+        headers: { 'Authorization': authToken },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setActionTypes(data.data);
+      }
+    } catch (err) {
+      console.error('获取操作类型失败:', err);
+    }
+  }, []);
+
+  const fetchLogStats = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/logs/statistics?days=7`, {
+        headers: { 'Authorization': authToken },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setLogStats(data.data);
+      }
+    } catch (err) {
+      console.error('获取日志统计失败:', err);
+    }
+  }, []);
+
+  const fetchBackupStatus = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/status`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackupStatus(data.data);
+      }
+    } catch (err) {
+      console.error('获取备份状态失败:', err);
+    }
+  }, [handleAuthError]);
+
+  const fetchBackups = useCallback(async (authToken: string) => {
+    setBackupLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/list`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackups(data.data.backups);
+      }
+    } catch (err) {
+      toast.error('获取备份列表失败');
+    } finally {
+      setBackupLoading(false);
+    }
+  }, [handleAuthError]);
+
+  const fetchBackupConfig = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBackupConfig(data.data);
+      }
+    } catch (err) {
+      console.error('获取备份配置失败:', err);
+    }
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    if (token) {
+      fetchStats(token);
+    }
+  }, [token, fetchStats]);
+
+  return {
+    // Auth
+    token,
+    adminLevel,
+    adminInfo,
+    setAdminInfo,
+    
+    // Stats
+    stats,
+    refreshStats: () => fetchStats(token),
+    
+    // Appeals
+    appeals,
+    setAppeals,
+    appealPage,
+    setAppealPage,
+    appealTotal,
+    appealFilter,
+    setAppealFilter,
+    fetchAppeals: () => fetchAppeals(token),
+    
+    // Blacklist
+    blacklist,
+    blacklistPage,
+    setBlacklistPage,
+    blacklistTotal,
+    blacklistSearch,
+    setBlacklistSearch,
+    fetchBlacklist: () => fetchBlacklist(token),
+    
+    // Admins
+    admins,
+    setAdmins,
+    adminLoading,
+    fetchAdmins: () => fetchAdmins(token),
+    
+    // Bots
+    bots,
+    setBots,
+    botsLoading,
+    fetchBots: () => fetchBots(token),
+    
+    // Logs
+    logs,
+    logsLoading,
+    logsPage,
+    setLogsPage,
+    logsTotal,
+    logsPerPage,
+    setLogsPerPage,
+    logFilterAction,
+    setLogFilterAction,
+    logFilterStatus,
+    setLogFilterStatus,
+    actionTypes,
+    logStats,
+    fetchLogs: () => fetchLogs(token),
+    fetchActionTypes: () => fetchActionTypes(token),
+    fetchLogStats: () => fetchLogStats(token),
+    
+    // Settings
+    config,
+    setConfig,
+    systemInfo,
+    configLoading,
+    fetchConfig: () => fetchConfig(token),
+    fetchSystemInfo: () => fetchSystemInfo(token),
+    
+    // Backup
+    backups,
+    setBackups,
+    backupStatus,
+    setBackupStatus,
+    backupConfig,
+    setBackupConfig,
+    backupLoading,
+    fetchBackupStatus: () => fetchBackupStatus(token),
+    fetchBackups: () => fetchBackups(token),
+    fetchBackupConfig: () => fetchBackupConfig(token),
+    
+    // Common
+    loading,
+    refreshAll,
+    handleAuthError,
+  };
+}
