@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity } from 'lucide-react';
+import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ export function SettingsPage() {
   const [updatingConfig, setUpdatingConfig] = useState(false);
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -153,10 +154,19 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Server className="w-5 h-5 text-brand" />
-                基础配置
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Server className="w-5 h-5 text-brand" />
+                  基础配置
+                </h3>
+                <button
+                  onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-sm text-slate-300 transition-colors"
+                >
+                  {showSensitiveInfo ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {showSensitiveInfo ? '隐藏敏感信息' : '显示敏感信息'}
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>监听地址</Label>
@@ -277,7 +287,7 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label>密码</Label>
                   <Input
-                    type="password"
+                    type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.smtp?.password || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, password: e.target.value } })}
                     className="bg-slate-800 border-slate-700"
@@ -349,7 +359,7 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label>API Key</Label>
                   <Input
-                    type="password"
+                    type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.ai_analysis?.api_key || ''}
                     onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, api_key: e.target.value } })}
                     className="bg-slate-800 border-slate-700"
@@ -469,7 +479,7 @@ export function SettingsPage() {
                   <div className="space-y-2 md:col-span-2">
                     <Label>Captcha Key</Label>
                     <Input
-                      type="password"
+                      type={showSensitiveInfo ? 'text' : 'password'}
                       value={editConfig.geetest?.captcha_key || ''}
                       onChange={(e) => setEditConfig({ ...editConfig, geetest: { ...editConfig.geetest, captcha_key: e.target.value } })}
                       className="bg-slate-800 border-slate-700"

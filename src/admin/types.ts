@@ -181,7 +181,6 @@ export interface SystemConfig {
   log_level: string;
   ip_header: string;
   root_redirect_url: string;
-  show_sensitive_info: boolean;
   smtp?: SMTPConfig;
   geetest?: GeetestConfig;
   ai_analysis?: AIAnalysisConfig;
