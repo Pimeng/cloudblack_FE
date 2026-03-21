@@ -46,7 +46,7 @@ export function AdminLayout() {
   const [updatingProfile, setUpdatingProfile] = useState(false);
   
   const data = useAdminData();
-  const { token, adminLevel, adminInfo, setAdminInfo, stats, refreshStats } = data;
+  const { token, adminLevel, adminInfo, setAdminInfo, stats } = data;
 
   // Determine active tab from URL
   const currentPath = location.pathname.replace('/admin/dashboard', '');
@@ -58,11 +58,8 @@ export function AdminLayout() {
     }
   }, [token, navigate]);
 
-  useEffect(() => {
-    if (token) {
-      refreshStats();
-    }
-  }, [token]);
+  // Stats is already fetched in useAdminData on initialization
+  // No need to fetch again here to avoid duplicate requests
 
   // Initialize profile form when dialog opens
   useEffect(() => {

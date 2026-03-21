@@ -86,7 +86,10 @@ export function AdminLogin() {
         avatar: data.data.avatar || '',
       }));
       
-      // 尝试获取管理员列表来确认等级
+      // 导航到后台首页
+      navigate('/admin/dashboard');
+      
+      // 异步获取管理员列表来更新完整信息（不阻塞导航）
       try {
         const adminsResponse = await fetch(`${API_BASE}/api/admin/admins`, {
           headers: { 'Authorization': data.data.temp_token },
@@ -104,10 +107,8 @@ export function AdminLogin() {
           }
         }
       } catch (e) {
-        // 忽略错误，使用默认值
+        // 忽略错误，使用登录返回的默认值
       }
-      
-      navigate('/admin/dashboard');
     } catch (err) {
       setError('连接失败，请检查网络');
       setLoading(false);

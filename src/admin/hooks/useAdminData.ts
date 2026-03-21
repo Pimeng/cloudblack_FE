@@ -70,7 +70,7 @@ export function useAdminData() {
   const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
   const [backupLoading, setBackupLoading] = useState(false);
 
-  // Initialize token and admin info
+  // Initialize token and admin info - only run once on mount
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token');
     const storedAdminInfo = localStorage.getItem('admin_info');
@@ -88,8 +88,10 @@ export function useAdminData() {
         setAdminLevel(0);
       }
     }
+    // Only fetch stats once during initialization
     fetchStats(storedToken);
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAuthError = useCallback(() => {
     toast.error('登录已过期，请重新登录');
@@ -421,7 +423,9 @@ export function useAdminData() {
     
     // Stats
     stats,
-    refreshStats: () => fetchStats(token),
+    refreshStats: useCallback(() => {
+      if (token) fetchStats(token);
+    }, [token, fetchStats]),
     
     // Appeals
     appeals,
