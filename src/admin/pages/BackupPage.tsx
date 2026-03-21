@@ -70,7 +70,7 @@ export function BackupPage() {
     
     setCreatingLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/backup/create`, {
+      const response = await fetch(`${API_BASE}/api/admin/backup`, {
         method: 'POST',
         headers: {
           'Authorization': token,
