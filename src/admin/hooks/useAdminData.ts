@@ -69,6 +69,9 @@ export function useAdminData() {
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
   const [backupLoading, setBackupLoading] = useState(false);
+  
+  // Initialization state
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize token and admin info - only run once on mount
   useEffect(() => {
@@ -76,6 +79,7 @@ export function useAdminData() {
     const storedAdminInfo = localStorage.getItem('admin_info');
     if (!storedToken) {
       navigate('/admin');
+      setIsInitialized(true);
       return;
     }
     setToken(storedToken);
@@ -90,6 +94,7 @@ export function useAdminData() {
     }
     // Only fetch stats once during initialization
     fetchStats(storedToken);
+    setIsInitialized(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -420,6 +425,7 @@ export function useAdminData() {
     adminLevel,
     adminInfo,
     setAdminInfo,
+    isInitialized,
     
     // Stats
     stats,

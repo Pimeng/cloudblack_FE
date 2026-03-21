@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -30,6 +30,10 @@ export function AppealsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState<Appeal | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
 
   useEffect(() => {
     if (token) fetchAppeals();
@@ -58,6 +62,11 @@ export function AppealsPage() {
     setReviewReason('');
     setRemoveFromBlacklist(action === 'approve');
     setReviewDialogOpen(true);
+  };
+  
+  const openDetailDialog = (appeal: Appeal) => {
+    setViewingAppeal(appeal);
+    setDetailDialogOpen(true);
   };
 
   const submitReview = async () => {
@@ -178,7 +187,12 @@ export function AppealsPage() {
                       提交时间: {new Date(appeal.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-slate-400 hover:text-white"
+                    onClick={() => openDetailDialog(appeal)}
+                  >
                     <Eye className="w-4 h-4 mr-1" />
                     查看详情
                   </Button>
@@ -187,6 +201,66 @@ export function AppealsPage() {
                 <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
                   <p className="text-sm text-slate-300 whitespace-pre-wrap break-words line-clamp-3">{appeal.content}</p>
                 </div>
+                
+                {/* Images */}
+                {appeal.images && appeal.images.length > 0 && (
+                  <div className="flex gap-2 mb-4">
+                    {appeal.images.slice(0, 3).map((img, idx) => (
+                      <a 
+                        key={idx}
+                        href={img.startsWith('http') ? img : `${API_BASE}${img}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-16 h-16 rounded-lg overflow-hidden bg-slate-800"
+                      >
+                        <img 
+                          src={img.startsWith('http') ? img : `${API_BASE}${img}`}
+                          alt={`证据 ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </a>
+                    ))}
+                    {appeal.images.length > 3 && (
+                      <span className="text-xs text-slate-500 self-center">+{appeal.images.length - 3}</span>
+                    )}
+                  </div>
+                )}
+                
+                {/* AI Analysis Summary */}
+                {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && (
+                  <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm text-purple-400">AI 建议</span>
+                      {(appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) ? (
+                        <Badge className={
+                          ((appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) || '').includes('通过') 
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            : ((appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) || '').includes('拒绝')
+                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                            : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                        }>
+                          {appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-slate-500">分析完成</span>
+                      )}
+                    </div>
+                    {/* AI Analysis Summary Content */}
+                    {appeal.ai_analysis.result?.summary && (
+                      <p className="text-xs text-slate-300 line-clamp-2 mb-1">
+                        <span className="text-purple-400">申诉要点：</span>
+                        {appeal.ai_analysis.result.summary}
+                      </p>
+                    )}
+                    {appeal.ai_analysis.result?.confidence && (
+                      <p className="text-xs text-slate-400">
+                        置信度：{appeal.ai_analysis.result.confidence}%
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   {appeal.status === 'pending' && canReviewAppeals && (
@@ -281,6 +355,170 @@ export function AppealsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Detail Dialog */}
+      {detailDialogOpen && (
+        <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <h2 className="text-xl font-semibold text-white">申诉详情</h2>
+            <Button variant="ghost" size="icon" onClick={() => setDetailDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-slate-800">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {viewingAppeal && (
+              <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">申诉ID:</span>
+                  <p className="text-white font-mono">{viewingAppeal.appeal_id}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">状态:</span>
+                  <div className="mt-1">{getStatusBadge(viewingAppeal.status)}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">用户类型:</span>
+                  <p className="text-white">{viewingAppeal.user_type === 'group' ? '群号' : '个人QQ'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">用户ID:</span>
+                  <p className="text-white font-mono">{viewingAppeal.user_id}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">联系邮箱:</span>
+                  <p className="text-white">{viewingAppeal.contact_email || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">提交时间:</span>
+                  <p className="text-white">{new Date(viewingAppeal.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div>
+                <span className="text-muted-foreground text-sm">申诉内容:</span>
+                <div className="mt-2 bg-slate-800 rounded-lg p-4">
+                  <p className="text-white whitespace-pre-wrap break-words">{viewingAppeal.content}</p>
+                </div>
+              </div>
+
+              {/* Images */}
+              {viewingAppeal.images && viewingAppeal.images.length > 0 && (
+                <div>
+                  <span className="text-muted-foreground text-sm">相关截图:</span>
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    {viewingAppeal.images.map((img, idx) => (
+                      <a 
+                        key={idx}
+                        href={img.startsWith('http') ? img : `${API_BASE}${img}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-24 h-24 rounded-lg overflow-hidden bg-slate-800"
+                      >
+                        <img 
+                          src={img.startsWith('http') ? img : `${API_BASE}${img}`}
+                          alt={`证据 ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* AI Analysis */}
+              {viewingAppeal.ai_analysis && viewingAppeal.ai_analysis.status === 'completed' && viewingAppeal.ai_analysis.result && (
+                <div className="p-4 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                    <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">AI 建议:</span>
+                      <Badge className={
+                        viewingAppeal.ai_analysis.result!.recommendation.includes('通过') 
+                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                          : viewingAppeal.ai_analysis.result!.recommendation.includes('拒绝')
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                      }>
+                        {viewingAppeal.ai_analysis.result!.recommendation}
+                      </Badge>
+                      <span className="text-xs text-slate-500">置信度: {viewingAppeal.ai_analysis.result!.confidence}%</span>
+                    </div>
+                    
+                    {viewingAppeal.ai_analysis.result!.summary && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">申诉要点</p>
+                        <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result!.summary}</p>
+                      </div>
+                    )}
+                    
+                    {viewingAppeal.ai_analysis.result!.reason_analysis && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">理由分析</p>
+                        <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result!.reason_analysis}</p>
+                      </div>
+                    )}
+                    
+                    {viewingAppeal.ai_analysis.result!.suggestions && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">处理建议</p>
+                        <p className="text-sm text-slate-300">{viewingAppeal.ai_analysis.result!.suggestions}</p>
+                      </div>
+                    )}
+                    
+                    {viewingAppeal.ai_analysis.result!.risk_factors && viewingAppeal.ai_analysis.result!.risk_factors.length > 0 && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">风险提示</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {viewingAppeal.ai_analysis.result!.risk_factors.map((risk, idx) => (
+                            <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Review Info */}
+              {viewingAppeal.review && (
+                <div>
+                  <span className="text-muted-foreground text-sm">审核信息:</span>
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4 space-y-2">
+                    <p className="text-white">
+                      <span className="text-muted-foreground">审核结果:</span>{' '}
+                      {viewingAppeal.review.action === 'approve' ? '通过' : '拒绝'}
+                    </p>
+                    <p className="text-white">
+                      <span className="text-muted-foreground">审核人:</span>{' '}
+                      {viewingAppeal.review.admin_name} ({viewingAppeal.review.admin_id})
+                    </p>
+                    <p className="text-white">
+                      <span className="text-muted-foreground">审核时间:</span>{' '}
+                      {new Date(viewingAppeal.review.reviewed_at).toLocaleString()}
+                    </p>
+                    <p className="text-white">
+                      <span className="text-muted-foreground">审核理由:</span>{' '}
+                      {viewingAppeal.review.reason}
+                    </p>
+                  </div>
+                </div>
+              )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

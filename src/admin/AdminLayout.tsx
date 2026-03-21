@@ -46,17 +46,18 @@ export function AdminLayout() {
   const [updatingProfile, setUpdatingProfile] = useState(false);
   
   const data = useAdminData();
-  const { token, adminLevel, adminInfo, setAdminInfo, stats } = data;
+  const { token, adminLevel, adminInfo, setAdminInfo, stats, isInitialized } = data;
 
   // Determine active tab from URL
   const currentPath = location.pathname.replace('/admin/dashboard', '');
   const activeTab = navItems.find(item => item.path === currentPath)?.id || 'dashboard';
 
+  // Only redirect after initialization is complete
   useEffect(() => {
-    if (!token) {
+    if (isInitialized && !token) {
       navigate('/admin');
     }
-  }, [token, navigate]);
+  }, [isInitialized, token, navigate]);
 
   // Stats is already fetched in useAdminData on initialization
   // No need to fetch again here to avoid duplicate requests
