@@ -58,39 +58,39 @@ export interface BotToken {
 }
 
 export interface SMTPConfig {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  from: string;
-  from_name: string;
-  security: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  from?: string;
+  from_name?: string;
+  security?: string;
 }
 
 export interface GeetestConfig {
-  enabled: boolean;
-  captcha_id: string;
-  captcha_key: string;
+  enabled?: boolean;
+  captcha_id?: string;
+  captcha_key?: string;
 }
 
 export interface AIAnalysisConfig {
-  enabled: boolean;
-  api_key: string;
-  base_url: string;
-  model: string;
-  max_tokens: number;
-  temperature: number;
-  timeout: number;
-  cache_file: string;
-  public_url: string;
+  enabled?: boolean;
+  api_key?: string;
+  base_url?: string;
+  model?: string;
+  max_tokens?: number;
+  temperature?: number;
+  timeout?: number;
+  cache_file?: string;
+  public_url?: string;
 }
 
 export interface DatabaseBackupConfig {
-  enabled: boolean;
-  cron: string;
-  backup_dir: string;
-  max_backups: number;
-  retention_days: number;
+  enabled?: boolean;
+  cron?: string;
+  backup_dir?: string;
+  max_backups?: number;
+  retention_days?: number;
 }
 
 export interface CORSConfig {

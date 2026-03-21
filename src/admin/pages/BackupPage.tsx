@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Database, RefreshCw, Plus, Trash2, Edit3, Download, Play, Pause, Clock } from 'lucide-react';
+import { Database, RefreshCw, Plus, Trash2, Edit3, Download, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';

@@ -506,7 +506,6 @@ export function useAdminData() {
     fetchBackupStatus: () => fetchBackupStatus(token),
     fetchBackups: () => fetchBackups(token),
     fetchBackupConfig: () => fetchBackupConfig(token),
-    backupConfigLoading,
     
     // Common
     loading,

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, Globe, FileUp, Activity, Clock, Lock } from 'lucide-react';
+import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+
 import type { AdminDataContext } from '../hooks/useAdminData';
 
 import { formatBytes, formatUptime } from '../utils';
@@ -94,7 +94,7 @@ export function SettingsPage() {
 
   const canEditSensitiveConfig = adminLevel >= 4;
 
-  const renderConfigInput = (key: string, value: any, onChange: (val: any) => void, type: string = 'text') => {
+  const renderConfigInput = (_key: string, value: any, onChange: (val: any) => void, type: string = 'text') => {
     if (typeof value === 'boolean') {
       return (
         <select
