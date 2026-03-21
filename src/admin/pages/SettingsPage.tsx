@@ -195,6 +195,18 @@ export function SettingsPage() {
                     <option value="ERROR">ERROR</option>
                   </select>
                 </div>
+                <div className="space-y-2">
+                  <Label>显示敏感信息</Label>
+                  <select
+                    value={editConfig.show_sensitive_info ? 'true' : 'false'}
+                    onChange={(e) => setEditConfig({ ...editConfig, show_sensitive_info: e.target.value === 'true' })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                  >
+                    <option value="true">显示</option>
+                    <option value="false">隐藏</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">控制是否在 API 响应中显示敏感信息</p>
+                </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>根域名重定向 URL</Label>
                   <Input
