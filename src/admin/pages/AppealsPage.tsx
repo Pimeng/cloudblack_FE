@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,12 @@ export function AppealsPage() {
   // Detail dialog state
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [viewingAppeal, setViewingAppeal] = useState<Appeal | null>(null);
+  
+  // Animation state
+  const [animating, setAnimating] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<'initial' | 'expanding' | 'content'>('initial');
+  const [cardRect, setCardRect] = useState<DOMRect | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     if (token) fetchAppeals();
@@ -64,10 +70,43 @@ export function AppealsPage() {
     setReviewDialogOpen(true);
   };
   
-  const openDetailDialog = (appeal: Appeal) => {
-    setViewingAppeal(appeal);
-    setDetailDialogOpen(true);
-  };
+  const openDetailDialog = useCallback((appeal: Appeal, appealId: string) => {
+    const cardEl = cardRefs.current.get(appealId);
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      setCardRect(rect);
+      setViewingAppeal(appeal);
+      setAnimating(true);
+      setAnimationPhase('initial');
+      
+      // Start expanding after a small delay
+      setTimeout(() => {
+        setAnimationPhase('expanding');
+      }, 50);
+      
+      // Show detail when animation is almost complete (80% progress)
+      setTimeout(() => {
+        setDetailDialogOpen(true);
+      }, 250);
+      
+      // Remove mask after animation fully completes
+      setTimeout(() => {
+        setAnimationPhase('content');
+      }, 350);
+    } else {
+      // Fallback if ref not found
+      setViewingAppeal(appeal);
+      setDetailDialogOpen(true);
+    }
+  }, []);
+  
+  const closeDetailDialog = useCallback(() => {
+    setDetailDialogOpen(false);
+    setAnimationPhase('initial');
+    setAnimating(false);
+    setCardRect(null);
+    setViewingAppeal(null);
+  }, []);
 
   const submitReview = async () => {
     if (!selectedAppeal || !reviewReason.trim() || !token) return;
@@ -174,7 +213,14 @@ export function AppealsPage() {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {appeals.map((appeal) => (
-              <div key={appeal.appeal_id} className="glass rounded-2xl p-6">
+              <div 
+                key={appeal.appeal_id} 
+                ref={(el) => {
+                  if (el) cardRefs.current.set(appeal.appeal_id, el);
+                }}
+                className="glass rounded-2xl p-6 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                onClick={() => openDetailDialog(appeal, appeal.appeal_id)}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
@@ -187,15 +233,10 @@ export function AppealsPage() {
                       提交时间: {new Date(appeal.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-slate-400 hover:text-white"
-                    onClick={() => openDetailDialog(appeal)}
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
+                  <div className="flex items-center gap-1 text-slate-400 text-sm">
+                    <Eye className="w-4 h-4" />
                     查看详情
-                  </Button>
+                  </div>
                 </div>
 
                 <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
@@ -356,13 +397,34 @@ export function AppealsPage() {
         </DialogContent>
       </Dialog>
       
+      {/* Animation Layer - Behind the detail dialog */}
+      {animating && cardRect && animationPhase !== 'content' && (
+        (() => {
+          const isMobile = window.innerWidth < 768;
+          const targetLeft = isMobile ? 0 : 256;
+          const targetWidth = isMobile ? '100%' : 'calc(100% - 256px)';
+          return (
+            <div 
+              className="fixed z-40 bg-slate-950 rounded-2xl overflow-hidden"
+              style={{
+                left: animationPhase === 'initial' ? cardRect.left : targetLeft,
+                top: animationPhase === 'initial' ? cardRect.top : 0,
+                width: animationPhase === 'initial' ? cardRect.width : targetWidth,
+                height: animationPhase === 'initial' ? cardRect.height : '100%',
+                transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
+          );
+        })()
+      )}
+      
       {/* Detail Dialog */}
       {detailDialogOpen && (
         <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
             <h2 className="text-xl font-semibold text-white">申诉详情</h2>
-            <Button variant="ghost" size="icon" onClick={() => setDetailDialogOpen(false)} className="text-slate-400 hover:text-white hover:bg-slate-800">
+            <Button variant="ghost" size="icon" onClick={closeDetailDialog} className="text-slate-400 hover:text-white hover:bg-slate-800">
               <X className="w-5 h-5" />
             </Button>
           </div>
