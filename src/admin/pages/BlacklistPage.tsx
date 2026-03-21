@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BlacklistItem } from '../types';
 import { API_BASE } from '../types';
@@ -17,6 +18,7 @@ export function BlacklistPage() {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newUserId, setNewUserId] = useState('');
+  const [newUserType, setNewUserType] = useState<'user' | 'group'>('user');
   const [newReason, setNewReason] = useState('');
   const [addingLoading, setAddingLoading] = useState(false);
   
@@ -24,10 +26,12 @@ export function BlacklistPage() {
   const [editingItem, setEditingItem] = useState<BlacklistItem | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editUserId, setEditUserId] = useState('');
+  const [editUserType, setEditUserType] = useState<'user' | 'group'>('user');
   const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<BlacklistItem | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export function BlacklistPage() {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user_id: newUserId, reason: newReason }),
+        body: JSON.stringify({ user_id: newUserId, user_type: newUserType, reason: newReason }),
       });
       
       const data = await response.json();
@@ -56,6 +60,7 @@ export function BlacklistPage() {
         toast.success('已添加到黑名单');
         setAddDialogOpen(false);
         setNewUserId('');
+        setNewUserType('user');
         setNewReason('');
         fetchBlacklist();
       } else {
@@ -76,6 +81,7 @@ export function BlacklistPage() {
       const body: any = {};
       if (editReason !== editingItem.reason) body.reason = editReason;
       if (editUserId !== editingItem.user_id) body.new_user_id = editUserId;
+      if (editUserType !== editingItem.user_type) body.user_type = editUserType;
       
       if (Object.keys(body).length === 0) {
         toast.info('没有修改内容');
@@ -111,6 +117,7 @@ export function BlacklistPage() {
     setEditingItem(item);
     setEditReason(item.reason);
     setEditUserId(item.user_id);
+    setEditUserType(item.user_type || 'user');
     setEditDialogOpen(true);
   };
 
@@ -119,7 +126,13 @@ export function BlacklistPage() {
     
     setDeletingLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/blacklist/${deletingItem.user_id}`, {
+      const params = new URLSearchParams();
+      params.append('user_type', deletingItem.user_type || 'user');
+      if (deleteReason.trim()) {
+        params.append('reason', deleteReason.trim());
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/blacklist/${deletingItem.user_id}?${params}`, {
         method: 'DELETE',
         headers: { 'Authorization': token },
       });
@@ -128,6 +141,7 @@ export function BlacklistPage() {
       if (data.success) {
         toast.success('已移出黑名单');
         setDeleteDialogOpen(false);
+        setDeleteReason('');
         fetchBlacklist();
       } else {
         toast.error(data.message || '移除失败');
@@ -139,18 +153,28 @@ export function BlacklistPage() {
     }
   };
 
+  const getUserTypeLabel = (type: 'user' | 'group') => {
+    return type === 'group' ? '群聊' : '用户';
+  };
+
+  const getUserTypeBadgeClass = (type: 'user' | 'group') => {
+    return type === 'group' 
+      ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' 
+      : 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">黑名单管理</h2>
-          <p className="text-sm text-muted-foreground">查看和管理黑名单用户</p>
+          <p className="text-sm text-muted-foreground">查看和管理黑名单用户/群聊</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="搜索用户ID或原因..."
+              placeholder="搜索用户ID、群号或原因..."
               value={blacklistSearch}
               onChange={(e) => { setBlacklistSearch(e.target.value); setBlacklistPage(1); }}
               className="pl-10 w-full md:w-64 bg-slate-800 border-slate-700"
@@ -181,10 +205,11 @@ export function BlacklistPage() {
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">用户ID</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">类型</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">ID</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">封禁原因</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">添加时间</th>
@@ -193,7 +218,12 @@ export function BlacklistPage() {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {blacklist.map((item) => (
-                  <tr key={item.user_id} className="hover:bg-slate-800/30">
+                  <tr key={`${item.user_id}-${item.user_type || 'user'}`} className="hover:bg-slate-800/30">
+                    <td className="px-4 md:px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
+                        {getUserTypeLabel(item.user_type || 'user')}
+                      </span>
+                    </td>
                     <td className="px-4 md:px-6 py-4 text-white font-mono">{item.user_id}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by}</td>
@@ -211,7 +241,7 @@ export function BlacklistPage() {
                               <Edit3 className="w-4 h-4" />
                             </Button>
                             <Button
-                              onClick={() => { setDeletingItem(item); setDeleteDialogOpen(true); }}
+                              onClick={() => { setDeletingItem(item); setDeleteReason(''); setDeleteDialogOpen(true); }}
                               variant="ghost"
                               size="sm"
                               className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
@@ -247,13 +277,25 @@ export function BlacklistPage() {
         <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>添加黑名单</DialogTitle>
-            <DialogDescription className="text-slate-400">将用户添加到黑名单</DialogDescription>
+            <DialogDescription className="text-slate-400">将用户或群聊添加到黑名单</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>用户ID (QQ号)</Label>
-              <Input value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder="请输入用户ID" className="bg-slate-800 border-slate-700" />
+              <Label>类型</Label>
+              <Select value={newUserType} onValueChange={(value: 'user' | 'group') => setNewUserType(value)}>
+                <SelectTrigger className="bg-slate-800 border-slate-700">
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">用户（QQ号）</SelectItem>
+                  <SelectItem value="group">群聊（群号）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{newUserType === 'group' ? '群号' : '用户ID (QQ号)'}</Label>
+              <Input value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder={`请输入${newUserType === 'group' ? '群号' : 'QQ号'}`} className="bg-slate-800 border-slate-700" />
             </div>
             <div className="space-y-2">
               <Label>封禁原因</Label>
@@ -275,14 +317,26 @@ export function BlacklistPage() {
         <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>修改黑名单条目</DialogTitle>
-            <DialogDescription className="text-slate-400">修改黑名单中的用户信息</DialogDescription>
+            <DialogDescription className="text-slate-400">修改黑名单中的用户/群聊信息</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>用户ID (QQ号)</Label>
-              <Input value={editUserId} onChange={(e) => setEditUserId(e.target.value)} placeholder="请输入用户ID" className="bg-slate-800 border-slate-700" />
-              <p className="text-xs text-muted-foreground">如需修改QQ号，请输入新的QQ号</p>
+              <Label>类型</Label>
+              <Select value={editUserType} onValueChange={(value: 'user' | 'group') => setEditUserType(value)}>
+                <SelectTrigger className="bg-slate-800 border-slate-700">
+                  <SelectValue placeholder="选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">用户（QQ号）</SelectItem>
+                  <SelectItem value="group">群聊（群号）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{editUserType === 'group' ? '群号' : '用户ID (QQ号)'}</Label>
+              <Input value={editUserId} onChange={(e) => setEditUserId(e.target.value)} placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`} className="bg-slate-800 border-slate-700" />
+              <p className="text-xs text-muted-foreground">如需修改{editUserType === 'group' ? '群号' : 'QQ号'}，请输入新的号码</p>
             </div>
             <div className="space-y-2">
               <Label>封禁原因</Label>
@@ -304,8 +358,26 @@ export function BlacklistPage() {
         <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>移除黑名单</DialogTitle>
-            <DialogDescription className="text-slate-400">{deletingItem && `确定要将 ${deletingItem.user_id} 移出黑名单吗？`}</DialogDescription>
+            <DialogDescription className="text-slate-400">
+              {deletingItem && (
+                <>
+                  确定要将 <span className="text-white font-mono">{deletingItem.user_id}</span> ({getUserTypeLabel(deletingItem.user_type || 'user')}) 移出黑名单吗？
+                </>
+              )}
+            </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>移除原因（可选）</Label>
+              <Textarea 
+                value={deleteReason} 
+                onChange={(e) => setDeleteReason(e.target.value)} 
+                placeholder="请输入移除原因，如：误封已处理..." 
+                className="bg-slate-800 border-slate-700 min-h-[80px]" 
+              />
+            </div>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
