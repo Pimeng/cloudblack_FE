@@ -339,63 +339,55 @@ export function LogsPage() {
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">时间</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作类型</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">摘要</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">IP地址</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">状态</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {logs.map((log: LogItem, index: number) => {
-                  const summary = extractLogSummary(log);
-                  
-                  return (
-                    <tr 
-                      key={index} 
-                      className="hover:bg-slate-800/30"
-                    >
-                      <td className="px-4 md:px-6 py-4">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 text-slate-500 hover:text-slate-300"
-                          onClick={() => openDetailDialog(log)}
-                          title="查看详情"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
-                      <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
-                      <td className="px-4 md:px-6 py-4 text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <span>{log.operator_id}</span>
-                          {log.operator_type === 'admin' && log.operator_level !== undefined && (
-                            <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
-                              L{log.operator_level}
-                            </Badge>
-                          )}
-                          {log.operator_type === 'admin' && log.operator_level === undefined && (
-                            <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                          )}
-                          {log.operator_type === 'bot' && (
-                            <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm max-w-xs truncate">
-                        {summary || '-'}
-                      </td>
-                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
-                      <td className="px-4 md:px-6 py-4">
-                        {log.status === 'success' ? (
-                          <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                        ) : (
-                          <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                {logs.map((log: LogItem, index: number) => (
+                  <tr 
+                    key={index} 
+                    className="hover:bg-slate-800/30"
+                  >
+                    <td className="px-4 md:px-6 py-4">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-slate-500 hover:text-slate-300"
+                        onClick={() => openDetailDialog(log)}
+                        title="查看详情"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
+                    <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
+                    <td className="px-4 md:px-6 py-4 text-slate-300">
+                      <div className="flex items-center gap-2">
+                        <span>{log.operator_id}</span>
+                        {log.operator_type === 'admin' && log.operator_level !== undefined && (
+                          <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                            L{log.operator_level}
+                          </Badge>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {log.operator_type === 'admin' && log.operator_level === undefined && (
+                          <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
+                        )}
+                        {log.operator_type === 'bot' && (
+                          <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
+                    <td className="px-4 md:px-6 py-4">
+                      {log.status === 'success' ? (
+                        <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
+                      ) : (
+                        <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -487,6 +479,16 @@ export function LogsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Summary */}
+              {extractLogSummary(selectedLog) && (
+                <div>
+                  <span className="text-muted-foreground text-sm">摘要:</span>
+                  <div className="mt-2 bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                    <p className="text-slate-300">{extractLogSummary(selectedLog)}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Details */}
               <div>
