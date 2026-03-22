@@ -515,7 +515,9 @@ export function useAdminData() {
     setAppealFilter,
     appealsPerPage,
     setAppealsPerPage,
-    fetchAppeals: () => fetchAppeals(token),
+    fetchAppeals: useCallback(() => {
+      if (token) fetchAppeals(token);
+    }, [token, fetchAppeals]),
     
     // Blacklist
     blacklist,
@@ -526,7 +528,9 @@ export function useAdminData() {
     setBlacklistSearch,
     blacklistTypeFilter,
     setBlacklistTypeFilter,
-    fetchBlacklist: () => fetchBlacklist(token),
+    fetchBlacklist: useCallback(() => {
+      if (token) fetchBlacklist(token);
+    }, [token, fetchBlacklist]),
     
     // Admins
     admins,

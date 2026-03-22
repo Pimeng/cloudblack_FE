@@ -37,7 +37,7 @@ export interface BlacklistItem {
   user_id: string;
   user_type: 'user' | 'group';
   reason: string;
-  added_by: string;
+  added_by?: string;
   added_at: string;
   updated_at?: string;
 }

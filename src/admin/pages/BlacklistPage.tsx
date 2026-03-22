@@ -46,7 +46,7 @@ export function BlacklistPage() {
 
   useEffect(() => {
     if (token) fetchBlacklist();
-  }, [token, blacklistPage, blacklistSearch, blacklistTypeFilter]);
+  }, [token, blacklistPage, blacklistSearch, blacklistTypeFilter, fetchBlacklist]);
 
   const canManageBlacklist = adminLevel >= 3;
   const blacklistTotalPages = Math.ceil(blacklistTotal / 50);
@@ -327,7 +327,7 @@ export function BlacklistPage() {
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by}</td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by || '-'}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(item.added_at).toLocaleString()}</td>
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
@@ -551,7 +551,7 @@ export function BlacklistPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">操作者:</span>
-                    <p className="text-white">{viewingItem.added_by}</p>
+                    <p className="text-white">{viewingItem.added_by || '-'}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">添加时间:</span>

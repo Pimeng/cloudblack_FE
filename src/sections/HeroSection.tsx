@@ -10,7 +10,7 @@ interface BlacklistResult {
   data?: {
     user_id: string;
     reason: string;
-    added_by: string;
+    added_by?: string;
     added_at: string;
   };
 }
@@ -308,7 +308,7 @@ export function HeroSection() {
                         <span className="text-white/60">添加时间:</span> {result.data.added_at}
                       </p>
                       <p className="text-white/90">
-                        <span className="text-white/60">操作者:</span> {result.data.added_by}
+                        <span className="text-white/60">操作者:</span> {result.data.added_by || '-'}
                       </p>
                     </div>
                   )}
