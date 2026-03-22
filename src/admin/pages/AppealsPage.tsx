@@ -33,6 +33,7 @@ export function AppealsPage() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState<Appeal | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
   
   // Detail dialog state
@@ -204,13 +205,20 @@ export function AppealsPage() {
     try {
       const response = await fetch(`${API_BASE}/api/admin/appeals/${deletingAppeal.appeal_id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': token },
+        headers: { 
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          delete_reason: deleteReason.trim() || undefined 
+        }),
       });
       
       const data = await response.json();
       if (data.success) {
         toast.success('申诉已删除');
         setDeleteDialogOpen(false);
+        setDeleteReason('');
         fetchAppeals();
       } else {
         toast.error(data.message || '删除失败');
@@ -547,6 +555,18 @@ export function AppealsPage() {
               {deletingAppeal && `确定要删除用户 ${deletingAppeal.user_id} 的申诉吗？此操作不可恢复。`}
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>删除原因（可选）</Label>
+              <Textarea 
+                value={deleteReason} 
+                onChange={(e) => setDeleteReason(e.target.value)} 
+                placeholder="请输入删除原因，如：申诉内容涉及敏感信息，应用户要求删除..." 
+                className="bg-slate-800 border-slate-700 min-h-[80px]" 
+              />
+            </div>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>

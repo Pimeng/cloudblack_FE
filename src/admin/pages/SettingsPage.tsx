@@ -18,6 +18,7 @@ export function SettingsPage() {
   const { token, adminLevel, config, setConfig, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
   const [editConfig, setEditConfig] = useState<Partial<SystemConfig>>({});
   const [updatingConfig, setUpdatingConfig] = useState(false);
+  const [updateReason, setUpdateReason] = useState('');
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
@@ -48,19 +49,28 @@ export function SettingsPage() {
         configToUpdate = allowedConfig;
       }
       
+      // 添加更新原因到请求体
+      const requestBody: any = {
+        ...configToUpdate,
+      };
+      if (updateReason.trim()) {
+        requestBody._update_reason = updateReason.trim();
+      }
+      
       const response = await fetch(`${API_BASE}/api/admin/config`, {
         method: 'PUT',
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(configToUpdate),
+        body: JSON.stringify(requestBody),
       });
       
       const data = await response.json();
       if (data.success) {
         toast.success('配置已更新，重启后生效');
         setConfig({ ...config, ...configToUpdate });
+        setUpdateReason('');
       } else {
         toast.error(data.message || '更新失败');
       }
@@ -741,6 +751,18 @@ export function SettingsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Update Reason */}
+      <div className="glass rounded-2xl p-4 space-y-2">
+        <Label>更新原因（可选）</Label>
+        <Input
+          value={updateReason}
+          onChange={(e) => setUpdateReason(e.target.value)}
+          placeholder="请输入配置更新原因，将记录到审计日志..."
+          className="bg-slate-800 border-slate-700"
+        />
+        <p className="text-xs text-muted-foreground">提供更新原因有助于后续审计追踪</p>
+      </div>
 
       {/* Save Button */}
       <div className="flex gap-2 pt-4">

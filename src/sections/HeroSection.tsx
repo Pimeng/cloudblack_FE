@@ -307,9 +307,11 @@ export function HeroSection() {
                       <p className="text-white/90">
                         <span className="text-white/60">添加时间:</span> {result.data.added_at}
                       </p>
-                      <p className="text-white/90">
-                        <span className="text-white/60">操作者:</span> {result.data.added_by || '-'}
-                      </p>
+                      {result.data.added_by && (
+                        <p className="text-white/90">
+                          <span className="text-white/60">操作者:</span> {result.data.added_by}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

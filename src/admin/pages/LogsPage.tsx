@@ -1,13 +1,94 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ScrollText, RefreshCw } from 'lucide-react';
+import { ScrollText, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+interface LogDetails {
+  // 黑名单相关
+  target_id?: string;
+  user_type?: string;
+  reason?: string;
+  original_user_id?: string;
+  new_user_id?: string;
+  new_reason?: string;
+  updated_fields?: string[];
+  
+  // 申诉相关
+  appeal_id?: string;
+  action?: string;
+  remove_from_blacklist?: boolean;
+  updates?: string[];
+  delete_reason?: string;
+  deleted_by_admin?: boolean;
+  deleted_by_owner?: boolean;
+  admin_name?: string;
+  appeal_status?: string;
+  days_threshold?: number;
+  deleted_count?: number;
+  deleted_ids?: string[];
+  
+  // 管理员相关
+  target_admin_id?: string;
+  target_level?: number;
+  updated_fields_admin?: string[];
+  success?: boolean;
+  level?: number;
+  
+  // Bot 相关
+  bot_name?: string;
+  owner?: string;
+  description?: string;
+  custom_token?: boolean;
+  has_token_update?: boolean;
+  deleted_by?: string;
+  exists?: boolean;
+  
+  // 系统配置相关
+  updated_sections?: string[];
+  updated_paths?: string[];
+  original_values?: Record<string, unknown>;
+  update_reason?: string;
+  restart_type?: string;
+  triggered_by?: string;
+  token_revoked?: boolean;
+  
+  // AI 分析相关
+  status?: string;
+  refresh?: boolean;
+  
+  // 备份相关
+  filename?: string;
+  size?: string;
+  remark?: string;
+  count?: number;
+  enabled?: boolean;
+  cron?: string;
+  backup_dir?: string;
+  max_backups?: number;
+  retention_days?: number;
+  
+  // 其他
+  error?: string;
+  [key: string]: unknown;
+}
+
+interface LogItem {
+  timestamp: string;
+  action_type: string;
+  operator_id: string;
+  operator_type: string;
+  operator_level?: number;
+  details: LogDetails;
+  ip: string;
+  status: string;
+}
+
 export function LogsPage() {
   const { token, logs, logsLoading, logsPage, setLogsPage, logsTotal, logsPerPage, setLogsPerPage, logFilterAction, setLogFilterAction, logFilterStatus, setLogFilterStatus, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (token) {
@@ -19,12 +100,185 @@ export function LogsPage() {
 
   const totalPages = Math.ceil(logsTotal / logsPerPage);
 
+  const toggleLogExpand = (index: number) => {
+    setExpandedLogs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  // 提取日志中的关键信息摘要
+  const extractLogSummary = (log: LogItem): string | null => {
+    const details = log.details;
+    if (!details) return null;
+
+    const parts: string[] = [];
+
+    // 根据操作类型提取关键信息
+    switch (log.action_type) {
+      case 'blacklist_add':
+        if (details.reason) parts.push(`原因: ${details.reason}`);
+        break;
+      case 'blacklist_remove':
+        if (details.reason) parts.push(`移除原因: ${details.reason}`);
+        break;
+      case 'blacklist_update':
+        if (details.updated_fields?.length) parts.push(`修改: ${details.updated_fields.join(', ')}`);
+        break;
+      case 'appeal_create':
+        if (details.appeal_id) parts.push(`申诉ID: ${details.appeal_id}`);
+        break;
+      case 'appeal_update':
+        if (details.update_reason) parts.push(`修改原因: ${details.update_reason}`);
+        if (details.updates?.length) parts.push(`更新字段: ${details.updates.join(', ')}`);
+        break;
+      case 'appeal_delete':
+        if (details.delete_reason) parts.push(`删除原因: ${details.delete_reason}`);
+        if (details.deleted_by_admin) parts.push('管理员删除');
+        if (details.deleted_by_owner) parts.push('用户自删');
+        break;
+      case 'appeal_review':
+        if (details.action) parts.push(`操作: ${details.action === 'approve' ? '通过' : '拒绝'}`);
+        if (details.reason) parts.push(`审核原因: ${details.reason}`);
+        if (details.remove_from_blacklist) parts.push('已移除黑名单');
+        break;
+      case 'appeal_clear_processed':
+        if (details.deleted_count !== undefined) parts.push(`清理数量: ${details.deleted_count}`);
+        break;
+      case 'admin_create':
+        if (details.target_admin_id) parts.push(`新管理员: ${details.target_admin_id}`);
+        if (details.target_level) parts.push(`等级: ${details.target_level}`);
+        break;
+      case 'admin_update':
+        if (details.updated_fields?.length) parts.push(`修改字段: ${details.updated_fields.join(', ')}`);
+        break;
+      case 'admin_delete':
+        if (details.target_admin_id) parts.push(`被删管理员: ${details.target_admin_id}`);
+        break;
+      case 'admin_login':
+        if (details.level) parts.push(`等级: ${details.level}`);
+        if (details.success === false) parts.push('登录失败');
+        break;
+      case 'bot_create':
+        if (details.bot_name) parts.push(`Bot: ${details.bot_name}`);
+        break;
+      case 'bot_delete':
+        if (details.bot_name) parts.push(`Bot: ${details.bot_name}`);
+        break;
+      case 'config_update':
+        if (details.update_reason) parts.push(`更新原因: ${details.update_reason}`);
+        if (details.updated_sections?.length) parts.push(`更新配置: ${details.updated_sections.join(', ')}`);
+        break;
+      case 'system_restart':
+        if (details.triggered_by) parts.push(`触发者: ${details.triggered_by}`);
+        break;
+      case 'backup_create':
+        if (details.filename) parts.push(`文件: ${details.filename}`);
+        if (details.remark) parts.push(`备注: ${details.remark}`);
+        break;
+      case 'backup_delete':
+        if (details.filename) parts.push(`文件: ${details.filename}`);
+        break;
+      default:
+        break;
+    }
+
+    // 如果有错误信息，始终显示
+    if (details.error) parts.push(`错误: ${details.error}`);
+
+    return parts.length > 0 ? parts.join(' | ') : null;
+  };
+
+  // 渲染详细信息为可读格式
+  const renderDetails = (details: LogDetails): React.ReactNode => {
+    if (!details || Object.keys(details).length === 0) return null;
+
+    const items: React.ReactElement[] = [];
+    
+    Object.entries(details).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      
+      let displayValue: string;
+      if (typeof value === 'boolean') {
+        displayValue = value ? '是' : '否';
+      } else if (typeof value === 'object') {
+        displayValue = JSON.stringify(value);
+      } else {
+        displayValue = String(value);
+      }
+
+      // 为特定字段提供更友好的标签
+      const labelMap: Record<string, string> = {
+        target_id: '目标ID',
+        user_type: '用户类型',
+        reason: '原因',
+        new_reason: '新原因',
+        updated_fields: '更新字段',
+        appeal_id: '申诉ID',
+        action: '操作',
+        remove_from_blacklist: '移除黑名单',
+        updates: '更新内容',
+        update_reason: '更新原因',
+        delete_reason: '删除原因',
+        deleted_by_admin: '管理员删除',
+        deleted_by_owner: '用户自删',
+        admin_name: '管理员',
+        appeal_status: '申诉状态',
+        days_threshold: '天数阈值',
+        deleted_count: '删除数量',
+        target_admin_id: '目标管理员',
+        target_level: '目标等级',
+        bot_name: 'Bot名称',
+        owner: '所有者',
+        updated_sections: '更新配置段',
+        updated_paths: '更新路径',
+        restart_type: '重启类型',
+        triggered_by: '触发者',
+        token_revoked: 'Token已撤销',
+        filename: '文件名',
+        size: '大小',
+        remark: '备注',
+        enabled: '是否启用',
+        cron: '定时表达式',
+        max_backups: '最大备份数',
+        retention_days: '保留天数',
+        error: '错误',
+        success: '是否成功',
+        level: '等级',
+        custom_token: '自定义Token',
+        has_token_update: '更新Token',
+        deleted_by: '删除者',
+        exists: '是否存在',
+        status: '状态',
+        refresh: '刷新',
+        count: '数量',
+        backup_dir: '备份目录',
+      };
+
+      const label = labelMap[key] || key;
+      
+      items.push(
+        <div key={key} className="flex items-start gap-2 text-xs">
+          <span className="text-slate-500 shrink-0">{label}:</span>
+          <span className="text-slate-300 break-all">{displayValue}</span>
+        </div>
+      );
+    });
+
+    return <div className="space-y-1 mt-2">{items}</div>;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">审计日志</h2>
-          <p className="text-sm text-muted-foreground">查看系统操作记录</p>
+          <p className="text-sm text-muted-foreground">查看系统操作记录，点击行可展开详细信息</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <select
@@ -78,39 +332,78 @@ export function LogsPage() {
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-slate-800/50">
                 <tr>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 w-10"></th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">时间</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作类型</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">摘要</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">IP地址</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">状态</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {logs.map((log, index) => (
-                  <tr key={index} className="hover:bg-slate-800/30">
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
-                    <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
-                    <td className="px-4 md:px-6 py-4 text-slate-300">
-                      <div className="flex items-center gap-2">
-                        <span>{log.operator_id}</span>
-                        {log.operator_type === 'admin' && (
-                          <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
-                    <td className="px-4 md:px-6 py-4">
-                      {log.status === 'success' ? (
-                        <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                      ) : (
-                        <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                {logs.map((log: LogItem, index: number) => {
+                  const summary = extractLogSummary(log);
+                  const isExpanded = expandedLogs.has(index);
+                  
+                  return (
+                    <>
+                      <tr 
+                        key={index} 
+                        className="hover:bg-slate-800/30 cursor-pointer"
+                        onClick={() => toggleLogExpand(index)}
+                      >
+                        <td className="px-4 md:px-6 py-4">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500">
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </Button>
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
+                        <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
+                        <td className="px-4 md:px-6 py-4 text-slate-300">
+                          <div className="flex items-center gap-2">
+                            <span>{log.operator_id}</span>
+                            {log.operator_type === 'admin' && log.operator_level !== undefined && (
+                              <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                                L{log.operator_level}
+                              </Badge>
+                            )}
+                            {log.operator_type === 'admin' && log.operator_level === undefined && (
+                              <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
+                            )}
+                            {log.operator_type === 'bot' && (
+                              <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm max-w-xs truncate">
+                          {summary || '-'}
+                        </td>
+                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
+                        <td className="px-4 md:px-6 py-4">
+                          {log.status === 'success' ? (
+                            <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
+                          ) : (
+                            <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="bg-slate-800/30">
+                          <td colSpan={7} className="px-4 md:px-6 py-4">
+                            <div className="bg-slate-900/50 rounded-lg p-4">
+                              <h4 className="text-sm font-medium text-slate-300 mb-2">详细信息</h4>
+                              {renderDetails(log.details)}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>
