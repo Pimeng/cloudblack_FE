@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ScrollText, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { ScrollText, RefreshCw, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface LogDetails {
   // 黑名单相关
@@ -88,7 +87,10 @@ interface LogItem {
 
 export function LogsPage() {
   const { token, logs, logsLoading, logsPage, setLogsPage, logsTotal, logsPerPage, setLogsPerPage, logFilterAction, setLogFilterAction, logFilterStatus, setLogFilterStatus, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
-  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+  
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -100,16 +102,14 @@ export function LogsPage() {
 
   const totalPages = Math.ceil(logsTotal / logsPerPage);
 
-  const toggleLogExpand = (index: number) => {
-    setExpandedLogs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else {
-        newSet.add(index);
-      }
-      return newSet;
-    });
+  const openDetailDialog = (log: LogItem) => {
+    setSelectedLog(log);
+    setDetailDialogOpen(true);
+  };
+
+  const closeDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setSelectedLog(null);
   };
 
   // 提取日志中的关键信息摘要
@@ -347,61 +347,53 @@ export function LogsPage() {
               <tbody className="divide-y divide-slate-800">
                 {logs.map((log: LogItem, index: number) => {
                   const summary = extractLogSummary(log);
-                  const isExpanded = expandedLogs.has(index);
                   
                   return (
-                    <>
-                      <tr 
-                        key={index} 
-                        className="hover:bg-slate-800/30 cursor-pointer"
-                        onClick={() => toggleLogExpand(index)}
-                      >
-                        <td className="px-4 md:px-6 py-4">
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500">
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </Button>
-                        </td>
-                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
-                        <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
-                        <td className="px-4 md:px-6 py-4 text-slate-300">
-                          <div className="flex items-center gap-2">
-                            <span>{log.operator_id}</span>
-                            {log.operator_type === 'admin' && log.operator_level !== undefined && (
-                              <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
-                                L{log.operator_level}
-                              </Badge>
-                            )}
-                            {log.operator_type === 'admin' && log.operator_level === undefined && (
-                              <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                            )}
-                            {log.operator_type === 'bot' && (
-                              <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm max-w-xs truncate">
-                          {summary || '-'}
-                        </td>
-                        <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
-                        <td className="px-4 md:px-6 py-4">
-                          {log.status === 'success' ? (
-                            <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                          ) : (
-                            <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                    <tr 
+                      key={index} 
+                      className="hover:bg-slate-800/30"
+                    >
+                      <td className="px-4 md:px-6 py-4">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-slate-500 hover:text-slate-300"
+                          onClick={() => openDetailDialog(log)}
+                          title="查看详情"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
+                      <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
+                      <td className="px-4 md:px-6 py-4 text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <span>{log.operator_id}</span>
+                          {log.operator_type === 'admin' && log.operator_level !== undefined && (
+                            <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                              L{log.operator_level}
+                            </Badge>
                           )}
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr className="bg-slate-800/30">
-                          <td colSpan={7} className="px-4 md:px-6 py-4">
-                            <div className="bg-slate-900/50 rounded-lg p-4">
-                              <h4 className="text-sm font-medium text-slate-300 mb-2">详细信息</h4>
-                              {renderDetails(log.details)}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
+                          {log.operator_type === 'admin' && log.operator_level === undefined && (
+                            <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
+                          )}
+                          {log.operator_type === 'bot' && (
+                            <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm max-w-xs truncate">
+                        {summary || '-'}
+                      </td>
+                      <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
+                      <td className="px-4 md:px-6 py-4">
+                        {log.status === 'success' ? (
+                          <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
+                        ) : (
+                          <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -437,6 +429,75 @@ export function LogsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Detail Dialog */}
+      {detailDialogOpen && selectedLog && (
+        <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <h2 className="text-xl font-semibold text-white">日志详情</h2>
+            <Button variant="ghost" size="icon" onClick={closeDetailDialog} className="text-slate-400 hover:text-white hover:bg-slate-800">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">时间:</span>
+                  <p className="text-white">{selectedLog.timestamp}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">操作类型:</span>
+                  <p className="text-white">{actionTypes[selectedLog.action_type] || selectedLog.action_type}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">操作者:</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-white">{selectedLog.operator_id}</span>
+                    {selectedLog.operator_type === 'admin' && selectedLog.operator_level !== undefined && (
+                      <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                        L{selectedLog.operator_level}
+                      </Badge>
+                    )}
+                    {selectedLog.operator_type === 'admin' && selectedLog.operator_level === undefined && (
+                      <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
+                    )}
+                    {selectedLog.operator_type === 'bot' && (
+                      <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">IP地址:</span>
+                  <p className="text-white font-mono">{selectedLog.ip}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">状态:</span>
+                  <div className="mt-1">
+                    {selectedLog.status === 'success' ? (
+                      <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
+                    ) : (
+                      <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div>
+                <span className="text-muted-foreground text-sm">详细信息:</span>
+                <div className="mt-2 bg-slate-800 rounded-lg p-4">
+                  {renderDetails(selectedLog.details)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
