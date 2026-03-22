@@ -12,7 +12,12 @@ import { API_BASE } from '../types';
 import { toast } from 'sonner';
 
 export function AdminsPage() {
-  const { token, adminLevel, admins, adminLoading, fetchAdmins } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, adminInfo, admins, adminLoading, fetchAdmins } = useOutletContext<AdminDataContext>();
+  
+  // Permissions
+  const canCreateAdmin = adminLevel >= 4;  // 仅超级管理员可创建
+  const canDeleteAdmin = adminLevel >= 4;  // 仅超级管理员可删除
+  const canEditLevel = adminLevel >= 4;    // 仅超级管理员可修改等级
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -179,10 +184,12 @@ export function AdminsPage() {
           <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">管理员管理</h2>
           <p className="text-sm text-muted-foreground">管理系统管理员账号</p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
-          <UserCog className="w-4 h-4 mr-2" />
-          添加管理员
-        </Button>
+        {canCreateAdmin && (
+          <Button onClick={() => setAddDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
+            <UserCog className="w-4 h-4 mr-2" />
+            添加管理员
+          </Button>
+        )}
       </div>
 
       {adminLoading ? (
@@ -226,12 +233,30 @@ export function AdminsPage() {
                   <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(admin.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button onClick={() => openEditDialog(admin)} variant="ghost" size="sm" className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10">
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                      <Button onClick={() => { setDeletingAdmin(admin); setDeleteDialogOpen(true); }} variant="ghost" size="sm" className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {/* 等级4可以编辑任何管理员，等级3只能编辑自己 */}
+                      {(canEditLevel || admin?.admin_id === adminInfo?.admin_id) && (
+                        <Button 
+                          onClick={() => openEditDialog(admin)} 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                          title={canEditLevel ? '编辑管理员' : '编辑我的信息'}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* 等级4可以删除管理员，但不能删除自己 */}
+                      {canDeleteAdmin && admin?.admin_id !== adminInfo?.admin_id && (
+                        <Button 
+                          onClick={() => { setDeletingAdmin(admin); setDeleteDialogOpen(true); }} 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                          title="删除管理员"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

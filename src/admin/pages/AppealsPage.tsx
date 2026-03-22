@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useImageViewer } from '@/hooks/useImageViewer';
 import type { AdminDataContext } from '../hooks/useAdminData';
@@ -51,10 +52,15 @@ export function AppealsPage() {
 
   const canReviewAppeals = adminLevel >= 2;
   const canManageBlacklist = adminLevel >= 3;
-  const canClearProcessed = adminLevel >= 3;
+  const canClearProcessed = adminLevel >= 4;  // 仅超级管理员可操作
   const canRefreshAI = adminLevel >= 2;
   const canDeleteAI = adminLevel >= 3;
   const appealTotalPages = Math.ceil(appealTotal / 20);
+  
+  // Clear processed dialog state
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearDays, setClearDays] = useState<number | ''>('');
+  const [clearingLoading, setClearingLoading] = useState(false);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -257,6 +263,46 @@ export function AppealsPage() {
       toast.error('删除失败');
     }
   };
+  
+  const clearProcessedAppeals = async () => {
+    if (!token) return;
+    
+    setClearingLoading(true);
+    try {
+      const body: { days?: number } = {};
+      if (clearDays !== '' && clearDays > 0) {
+        body.days = clearDays;
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/appeals/clear-processed`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        const deletedCount = data.data?.deleted_count || 0;
+        if (deletedCount > 0) {
+          toast.success(`已清理 ${deletedCount} 条已处理申诉`);
+        } else {
+          toast.info('没有需要清理的已处理申诉');
+        }
+        setClearDialogOpen(false);
+        setClearDays('');
+        fetchAppeals();
+      } else {
+        toast.error(data.message || '清理失败');
+      }
+    } catch (err) {
+      toast.error('清理失败');
+    } finally {
+      setClearingLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -283,7 +329,11 @@ export function AppealsPage() {
             <RefreshCw className="w-4 h-4" />
           </Button>
           {canClearProcessed && (
-            <Button variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+            <Button 
+              onClick={() => setClearDialogOpen(true)}
+              variant="outline" 
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
               <Trash2 className="w-4 h-4 mr-2" />
               清理已处理
             </Button>
@@ -485,6 +535,45 @@ export function AppealsPage() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
             <Button onClick={deleteAppeal} disabled={deletingLoading} variant="destructive">
               {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认删除</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Clear Processed Dialog */}
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>清理已处理申诉</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              清理所有已批准和已拒绝的申诉记录。待审核的申诉不会被删除。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>清理范围（可选）</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="输入天数，如：30（只清理30天前的记录），留空则清理所有"
+                value={clearDays}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClearDays(val === '' ? '' : parseInt(val) || 0);
+                }}
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-slate-500">
+                输入天数阈值，只清理该天数前已处理的申诉。留空则清理所有已处理的申诉。
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>取消</Button>
+            <Button onClick={clearProcessedAppeals} disabled={clearingLoading} variant="destructive">
+              {clearingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认清理</>}
             </Button>
           </DialogFooter>
         </DialogContent>

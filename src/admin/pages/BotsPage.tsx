@@ -12,13 +12,16 @@ import { API_BASE } from '../types';
 import { toast } from 'sonner';
 
 export function BotsPage() {
-  const { token, adminLevel, bots, botsLoading, fetchBots } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, adminInfo, bots, botsLoading, fetchBots } = useOutletContext<AdminDataContext>();
   
   // Permissions
+  // 等级4可以管理所有Bot，等级1只能管理自己的Bot
   const canCreateBot = adminLevel >= 4;
   const canViewToken = adminLevel >= 4;
-  const canEditBot = adminLevel >= 1;  // All levels can edit
-  const canDeleteBot = adminLevel >= 1; // All levels can delete
+  const canEditAnyBot = adminLevel >= 4;
+  const canDeleteAnyBot = adminLevel >= 4;
+  // 等级1+可以查看列表，但只能修改/删除自己的Bot（后端校验）
+  const canManageOwnBot = adminLevel >= 1;
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -241,22 +244,26 @@ export function BotsPage() {
                           <Eye className="w-4 h-4" />
                         </Button>
                       )}
-                      {canEditBot && (
+                      {/* 等级4可以编辑任何Bot，等级1只能编辑自己的Bot */}
+                      {(canEditAnyBot || (canManageOwnBot && bot.owner === adminInfo?.admin_id)) && (
                         <Button
                           onClick={() => openEditDialog(bot)}
                           variant="ghost"
                           size="sm"
                           className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                          title={canEditAnyBot ? '编辑 Bot' : '编辑我的 Bot'}
                         >
                           <Edit3 className="w-4 h-4" />
                         </Button>
                       )}
-                      {canDeleteBot && (
+                      {/* 等级4可以删除任何Bot，等级1只能删除自己的Bot */}
+                      {(canDeleteAnyBot || (canManageOwnBot && bot.owner === adminInfo?.admin_id)) && (
                         <Button
                           onClick={() => { setDeletingBot(bot); setDeleteDialogOpen(true); }}
                           variant="ghost"
                           size="sm"
                           className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                          title={canDeleteAnyBot ? '删除 Bot' : '删除我的 Bot'}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

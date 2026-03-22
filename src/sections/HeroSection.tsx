@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, AlertCircle, Shield, User } from 'lucide-react';
+import { Search, AlertCircle, Shield, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
@@ -17,7 +17,9 @@ interface BlacklistResult {
 
 export function HeroSection() {
   const [userId, setUserId] = useState('');
+  const [userType, setUserType] = useState<'user' | 'group'>('user');
   const [searchedUserId, setSearchedUserId] = useState('');
+  const [searchedUserType, setSearchedUserType] = useState<'user' | 'group'>('user');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BlacklistResult | null>(null);
   const [queryTime, setQueryTime] = useState<string>('');
@@ -80,6 +82,7 @@ export function HeroSection() {
   const executeSearch = useCallback(async (geetestData: GeetestResult | null) => {
     // 保存查询的QQ号和时间，防止输入框修改时结果跟着变
     setSearchedUserId(userId.trim());
+    setSearchedUserType(userType);
     setQueryTime(new Date().toLocaleString());
     
     // 防止重复查询
@@ -98,7 +101,7 @@ export function HeroSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           user_id: userId.trim(),
-          user_type: 'user',
+          user_type: userType,
           geetest: geetestData 
         }),
       });
@@ -140,7 +143,7 @@ export function HeroSection() {
 
   const handleSearch = async () => {
     if (!userId.trim()) {
-      setError('请输入QQ号');
+      setError(userType === 'group' ? '请输入群号' : '请输入QQ号');
       return;
     }
     
@@ -203,11 +206,39 @@ export function HeroSection() {
           
           {/* Search input */}
           <div ref={inputRef} className="space-y-4 overflow-hidden">
+            {/* User Type Selector */}
+            <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setUserType('user')}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                  userType === 'user'
+                    ? 'bg-brand text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                个人QQ
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserType('group')}
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                  userType === 'group'
+                    ? 'bg-brand text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                群号
+              </button>
+            </div>
+            
             <div className="relative">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="输入QQ号查询..."
+                placeholder={userType === 'group' ? '输入群号查询...' : '输入QQ号查询...'}
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -259,9 +290,14 @@ export function HeroSection() {
                 {/* 内容 */}
                 <div className="relative z-10 flex-1">
                   <h3 className="font-bold text-2xl md:text-3xl text-white">
-                    {result.in_blacklist ? '该用户在黑名单中' : '该用户不在黑名单中'}
+                    {searchedUserType === 'group' 
+                      ? (result.in_blacklist ? '该群聊在黑名单中' : '该群聊不在黑名单中')
+                      : (result.in_blacklist ? '该用户在黑名单中' : '该用户不在黑名单中')
+                    }
                   </h3>
-                  <p className="text-white/80 text-base md:text-lg mt-2">{searchedUserId}</p>
+                  <p className="text-white/80 text-base md:text-lg mt-2">
+                    {searchedUserType === 'group' ? '群号: ' : 'QQ: '}{searchedUserId}
+                  </p>
                   
                   {result.in_blacklist && result.data && (
                     <div className="mt-6 space-y-2 text-base">
