@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ClarityNotice } from '@/components/ClarityNotice';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -270,6 +271,7 @@ function App() {
   return (
     <BrowserRouter>
       <ImageViewerProvider>
+      <ClarityNotice />
       <WelcomeAlert />
       <Routes>
         <Route path="/" element={<HomePage />} />
