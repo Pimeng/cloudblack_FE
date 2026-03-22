@@ -56,9 +56,14 @@ export function AdminLayout() {
   // Only redirect after initialization is complete
   useEffect(() => {
     if (isInitialized && !token) {
-      navigate('/admin');
+      // 保存当前路径到 goto 参数，登录后可以跳转回来
+      const currentPath = location.pathname + location.search;
+      const gotoParam = currentPath !== '/admin' && currentPath !== '/admin/' 
+        ? `?goto=${encodeURIComponent(currentPath)}` 
+        : '';
+      navigate(`/admin${gotoParam}`);
     }
-  }, [isInitialized, token, navigate]);
+  }, [isInitialized, token, navigate, location]);
 
   // Stats is already fetched in useAdminData on initialization
   // No need to fetch again here to avoid duplicate requests

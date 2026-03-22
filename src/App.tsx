@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
+import { FileText, ArrowUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HeroSection } from './sections/HeroSection';
 import { FeaturesSection } from './sections/FeaturesSection';
 import { ProcessSection } from './sections/ProcessSection';
@@ -166,6 +168,45 @@ function HomePage() {
     <div className="relative h-screen overflow-hidden">
       <FluidBackground />
       <PageDots currentIndex={currentIndex} onGoTo={goTo} />
+
+      {/* Quick Access Button - 快速前往申诉中心 / 回到顶部 */}
+      <AnimatePresence mode="wait">
+        {currentIndex !== 4 ? (
+          <motion.button
+            key="appeal-btn"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            onClick={() => goTo(4)}
+            className="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-5 py-3 
+                       bg-brand/90 hover:bg-brand text-white rounded-full 
+                       shadow-lg shadow-brand/30 backdrop-blur-md
+                       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-brand/40
+                       border border-white/10"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="font-medium text-sm">申诉中心</span>
+          </motion.button>
+        ) : (
+          <motion.button
+            key="top-btn"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            onClick={() => goTo(0)}
+            className="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-5 py-3 
+                       bg-slate-700/90 hover:bg-slate-600 text-white rounded-full 
+                       shadow-lg shadow-slate-900/30 backdrop-blur-md
+                       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-slate-900/40
+                       border border-white/10"
+          >
+            <ArrowUp className="w-5 h-5" />
+            <span className="font-medium text-sm">回到顶部</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Fullpage slider */}
       <div

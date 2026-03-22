@@ -28,12 +28,16 @@ export function BotsPage() {
   const [newBotName, setNewBotName] = useState('');
   const [newBotOwner, setNewBotOwner] = useState('');
   const [newBotDescription, setNewBotDescription] = useState('');
+  const [newBotToken, setNewBotToken] = useState('');
+  const [useCustomToken, setUseCustomToken] = useState(false);
   const [addingLoading, setAddingLoading] = useState(false);
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBot, setEditingBot] = useState<BotToken | null>(null);
   const [editOwner, setEditOwner] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editToken, setEditToken] = useState('');
+  const [editChangeToken, setEditChangeToken] = useState(false);
   const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -55,17 +59,22 @@ export function BotsPage() {
     
     setAddingLoading(true);
     try {
+      const body: any = {
+        bot_name: newBotName,
+        owner: newBotOwner,
+        description: newBotDescription,
+      };
+      if (useCustomToken && newBotToken.trim()) {
+        body.token = newBotToken.trim();
+      }
+
       const response = await fetch(`${API_BASE}/api/admin/bots`, {
         method: 'POST',
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          bot_name: newBotName,
-          owner: newBotOwner,
-          description: newBotDescription,
-        }),
+        body: JSON.stringify(body),
       });
       
       const data = await response.json();
@@ -75,6 +84,8 @@ export function BotsPage() {
         setNewBotName('');
         setNewBotOwner('');
         setNewBotDescription('');
+        setNewBotToken('');
+        setUseCustomToken(false);
         fetchBots();
       } else {
         toast.error(data.message || '创建失败');
@@ -94,6 +105,7 @@ export function BotsPage() {
       const body: any = {};
       if (editOwner !== editingBot.owner) body.owner = editOwner;
       if (editDescription !== (editingBot.description || '')) body.description = editDescription;
+      if (editChangeToken && editToken.trim()) body.token = editToken.trim();
       
       if (Object.keys(body).length === 0) {
         toast.info('没有修改内容');
@@ -185,6 +197,8 @@ export function BotsPage() {
     setEditingBot(bot);
     setEditOwner(bot.owner);
     setEditDescription(bot.description || '');
+    setEditToken('');
+    setEditChangeToken(false);
     setEditDialogOpen(true);
   };
 
@@ -296,7 +310,28 @@ export function BotsPage() {
             </div>
             <div className="space-y-2">
               <Label>描述</Label>
-              <Textarea value={newBotDescription} onChange={(e) => setNewBotDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[100px]" />
+              <Textarea value={newBotDescription} onChange={(e) => setNewBotDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[80px]" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="useCustomToken"
+                  checked={useCustomToken}
+                  onChange={(e) => setUseCustomToken(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                />
+                <Label htmlFor="useCustomToken" className="cursor-pointer">自定义 Token（可选）</Label>
+              </div>
+              {useCustomToken && (
+                <Input
+                  value={newBotToken}
+                  onChange={(e) => setNewBotToken(e.target.value)}
+                  placeholder="请输入自定义 Token"
+                  className="bg-slate-800 border-slate-700 font-mono text-sm"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">不勾选则系统自动生成随机 Token</p>
             </div>
           </div>
 
@@ -328,7 +363,28 @@ export function BotsPage() {
             </div>
             <div className="space-y-2">
               <Label>描述</Label>
-              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[100px]" />
+              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[80px]" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editChangeToken"
+                  checked={editChangeToken}
+                  onChange={(e) => setEditChangeToken(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                />
+                <Label htmlFor="editChangeToken" className="cursor-pointer text-yellow-500">修改 Token</Label>
+              </div>
+              {editChangeToken && (
+                <Input
+                  value={editToken}
+                  onChange={(e) => setEditToken(e.target.value)}
+                  placeholder="请输入新的 Token"
+                  className="bg-slate-800 border-slate-700 font-mono text-sm"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">修改 Token 后原 Token 将立即失效</p>
             </div>
           </div>
 

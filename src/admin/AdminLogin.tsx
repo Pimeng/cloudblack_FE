@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shield, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ export function AdminLogin() {
   const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
   
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const gotoPath = searchParams.get('goto') || '/admin/dashboard';
 
   // 使用 bind 模式的极验验证
   const { 
@@ -86,8 +88,8 @@ export function AdminLogin() {
         avatar: data.data.avatar || '',
       }));
       
-      // 导航到后台首页
-      navigate('/admin/dashboard');
+      // 导航到原页面或后台首页
+      navigate(gotoPath);
       
       // 异步获取管理员列表来更新完整信息（不阻塞导航）
       try {
@@ -116,7 +118,7 @@ export function AdminLogin() {
       resetGeetest();
       setGeetestResult(null);
     }
-  }, [adminId, password, isEnabled, navigate, resetGeetest]);
+  }, [adminId, password, isEnabled, navigate, resetGeetest, gotoPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
