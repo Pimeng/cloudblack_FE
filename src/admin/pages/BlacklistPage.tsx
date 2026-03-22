@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye } from 'lucide-react';
+import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BlacklistItem } from '../types';
 import { API_BASE } from '../types';
@@ -26,6 +27,7 @@ import {
   LoadingButton,
   FormInput,
   FormTextarea,
+  FormSelect,
   AnimationLayer,
   DetailView,
   DetailInfoItem,
@@ -42,13 +44,19 @@ export function BlacklistPage() {
   const [newUserId, setNewUserId] = useState('');
   const [newUserType, setNewUserType] = useState<'user' | 'group'>('user');
   const [newReason, setNewReason] = useState('');
+  const [newLevel, setNewLevel] = useState(1);
   const [addingLoading, setAddingLoading] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    confirmation_id: string;
+    user_id: string;
+  } | null>(null);
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BlacklistItem | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editUserId, setEditUserId] = useState('');
   const [editUserType, setEditUserType] = useState<'user' | 'group'>('user');
+  const [editLevel, setEditLevel] = useState(1);
   const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -85,6 +93,7 @@ export function BlacklistPage() {
     if (!newUserId.trim() || !newReason.trim() || !token) return;
     
     setAddingLoading(true);
+    setPendingConfirmation(null);
     try {
       const response = await fetch(`${API_BASE}/api/admin/blacklist`, {
         method: 'POST',
@@ -92,17 +101,32 @@ export function BlacklistPage() {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user_id: newUserId, user_type: newUserType, reason: newReason }),
+        body: JSON.stringify({ 
+          user_id: newUserId, 
+          user_type: newUserType, 
+          reason: newReason,
+          level: newLevel,
+        }),
       });
       
       const data = await response.json();
       if (data.success) {
-        toast.success('已添加到黑名单');
-        setAddDialogOpen(false);
-        setNewUserId('');
-        setNewUserType('user');
-        setNewReason('');
-        fetchBlacklist();
+        // Level 4 需要二次确认
+        if (data.data?.status === 'pending' && newLevel === 4) {
+          setPendingConfirmation({
+            confirmation_id: data.data.confirmation_id,
+            user_id: newUserId,
+          });
+          toast.success('严重违规记录已提交，需要另一名管理员确认');
+        } else {
+          toast.success('已添加到黑名单');
+          setAddDialogOpen(false);
+          setNewUserId('');
+          setNewUserType('user');
+          setNewReason('');
+          setNewLevel(1);
+          fetchBlacklist();
+        }
       } else {
         toast.error(data.message || '添加失败');
       }
@@ -122,6 +146,7 @@ export function BlacklistPage() {
       if (editReason !== editingItem.reason) body.reason = editReason;
       if (editUserId !== editingItem.user_id) body.new_user_id = editUserId;
       if (editUserType !== editingItem.user_type) body.user_type = editUserType;
+      if (editLevel !== (editingItem.level || 1)) body.level = editLevel;
       
       if (Object.keys(body).length === 0) {
         toast.info('没有修改内容');
@@ -158,6 +183,7 @@ export function BlacklistPage() {
     setEditReason(item.reason);
     setEditUserId(item.user_id);
     setEditUserType(item.user_type || 'user');
+    setEditLevel(item.level || 1);
     setEditDialogOpen(true);
   };
 
@@ -272,6 +298,7 @@ export function BlacklistPage() {
               <thead className="bg-slate-800/50">
                 <tr>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">ID</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">等级</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">封禁原因</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">添加时间</th>
@@ -294,6 +321,15 @@ export function BlacklistPage() {
                           {getUserTypeLabel(item.user_type || 'user')}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-4 md:px-6 py-4">
+                      <Badge className={
+                        item.level === 4 ? 'bg-red-500' :
+                        item.level === 3 ? 'bg-orange-500' :
+                        item.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
+                      }>
+                        等级 {item.level || 1}
+                      </Badge>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by}</td>
@@ -377,6 +413,26 @@ export function BlacklistPage() {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserId(e.target.value)}
               placeholder={`请输入${newUserType === 'group' ? '群号' : 'QQ号'}`}
             />
+            <FormSelect
+              label="违规等级"
+              value={String(newLevel)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewLevel(parseInt(e.target.value))}
+              options={[
+                { value: '1', label: '等级 1 - 轻微违规' },
+                { value: '2', label: '等级 2 - 一般违规' },
+                { value: '3', label: '等级 3 - 严重违规' },
+                { value: '4', label: '等级 4 - 极其严重（需双管理员确认）' },
+              ]}
+              hint={newLevel === 4 ? '等级4需要另一名管理员确认后才能生效' : undefined}
+            />
+            {newLevel === 4 && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+                <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">
+                  等级4（极其严重）需要双管理员确认机制。提交后需要另一名管理员确认才能正式生效。
+                </p>
+              </div>
+            )}
             <FormTextarea
               label="封禁原因"
               value={newReason}
@@ -384,19 +440,37 @@ export function BlacklistPage() {
               placeholder="请输入封禁原因..."
               textareaClassName="min-h-[100px]"
             />
+            
+            {pendingConfirmation && (
+              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                <p className="text-sm text-yellow-400 mb-2">
+                  <strong>待确认记录已创建</strong>
+                </p>
+                <p className="text-sm text-slate-400">
+                  记录ID: {pendingConfirmation.confirmation_id}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  需要另一名管理员在「严重违规审核」页面确认后才能生效。
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>取消</Button>
-            <LoadingButton
-              onClick={addToBlacklist}
-              loading={addingLoading}
-              icon={Ban}
-              disabled={!newUserId.trim() || !newReason.trim()}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              确认添加
-            </LoadingButton>
+            <Button variant="outline" onClick={() => { setAddDialogOpen(false); setPendingConfirmation(null); }}>
+              {pendingConfirmation ? '关闭' : '取消'}
+            </Button>
+            {!pendingConfirmation && (
+              <LoadingButton
+                onClick={addToBlacklist}
+                loading={addingLoading}
+                icon={Ban}
+                disabled={!newUserId.trim() || !newReason.trim()}
+                className={newLevel === 4 ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700'}
+              >
+                {newLevel === 4 ? '提交审核' : '确认添加'}
+              </LoadingButton>
+            )}
           </DialogFooter>
         </AdminDialogContent>
       </Dialog>
@@ -429,6 +503,26 @@ export function BlacklistPage() {
               placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`}
               hint={`如需修改${editUserType === 'group' ? '群号' : 'QQ号'}，请输入新的号码`}
             />
+            <FormSelect
+              label="违规等级"
+              value={String(editLevel)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditLevel(parseInt(e.target.value))}
+              options={[
+                { value: '1', label: '等级 1 - 轻微违规' },
+                { value: '2', label: '等级 2 - 一般违规' },
+                { value: '3', label: '等级 3 - 严重违规' },
+                { value: '4', label: '等级 4 - 极其严重（需双管理员确认）' },
+              ]}
+              hint={editLevel === 4 && editingItem?.level !== 4 ? '升级到等级4需要另一名管理员确认' : undefined}
+            />
+            {editLevel === 4 && editingItem?.level !== 4 && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+                <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">
+                  升级到等级4需要双管理员确认机制。保存后需要另一名管理员确认才能正式生效。
+                </p>
+              </div>
+            )}
             <FormTextarea
               label="封禁原因"
               value={editReason}
@@ -509,6 +603,15 @@ export function BlacklistPage() {
               </DetailInfoItem>
               <DetailInfoItem label="ID">
                 <p className="text-white font-mono">{viewingItem.user_id}</p>
+              </DetailInfoItem>
+              <DetailInfoItem label="违规等级">
+                <Badge className={
+                  viewingItem.level === 4 ? 'bg-red-500' :
+                  viewingItem.level === 3 ? 'bg-orange-500' :
+                  viewingItem.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
+                }>
+                  等级 {viewingItem.level || 1}
+                </Badge>
               </DetailInfoItem>
               {viewingItem.added_by && (
                 <DetailInfoItem label="操作者">

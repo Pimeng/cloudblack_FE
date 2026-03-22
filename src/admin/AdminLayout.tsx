@@ -14,6 +14,7 @@ import {
   Database,
   Edit3,
   RefreshCw,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -27,6 +28,7 @@ const navItems = [
   { id: 'dashboard', label: '仪表盘', icon: LayoutDashboard, path: '', minLevel: 1 },
   { id: 'appeals', label: '申诉管理', icon: FileText, path: '/appeals', minLevel: 1 },
   { id: 'blacklist', label: '黑名单', icon: Users, path: '/blacklist', minLevel: 1 },
+  { id: 'level4-pending', label: '严重违规审核', icon: ShieldAlert, path: '/level4-pending', minLevel: 3 },
   { id: 'admins', label: '管理员', icon: UserCog, path: '/admins', minLevel: 4 },
   { id: 'bots', label: 'Bot Token', icon: Bot, path: '/bots', minLevel: 2 },
   { id: 'logs', label: '审计日志', icon: ScrollText, path: '/logs', minLevel: 2 },
@@ -186,9 +188,10 @@ export function AdminLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50 transition-transform duration-300 md:translate-x-0 flex flex-col ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* Header Logo */}
+        <div className="p-6 pb-4 shrink-0">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
               <LayoutDashboard className="w-5 h-5 text-brand" />
             </div>
@@ -197,31 +200,33 @@ export function AdminLayout() {
               <p className="text-xs text-muted-foreground">云黑库系统</p>
             </div>
           </div>
-
-          <nav className="space-y-2">
-            {visibleNavItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  activeTab === item.id 
-                    ? 'bg-brand/20 text-brand' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                {item.label}
-                {item.id === 'appeals' && stats && stats.pending_appeals > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {stats.pending_appeals}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-800 space-y-2">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-auto px-6 py-2 space-y-2">
+          {visibleNavItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleNavClick(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                activeTab === item.id 
+                  ? 'bg-brand/20 text-brand' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+              {item.id === 'appeals' && stats && stats.pending_appeals > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {stats.pending_appeals}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer - Fixed at bottom */}
+        <div className="shrink-0 p-6 border-t border-slate-800 space-y-2">
           <button
             onClick={() => { data.refreshAll(); setMobileMenuOpen(false); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"

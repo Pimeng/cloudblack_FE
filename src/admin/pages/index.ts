@@ -6,3 +6,4 @@ export { BotsPage } from './BotsPage';
 export { LogsPage } from './LogsPage';
 export { SettingsPage } from './SettingsPage';
 export { BackupPage } from './BackupPage';
+export { Level4PendingPage } from './Level4PendingPage';

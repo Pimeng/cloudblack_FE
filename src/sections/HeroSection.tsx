@@ -300,7 +300,7 @@ export function HeroSection() {
                   </p>
                   
                   {result.in_blacklist && result.data && (
-                    <div className="mt-6 space-y-2 text-base">
+                    <div className="mt-6 space-y-2 text-base pr-20 md:pr-28">
                       <p className="text-white/90">
                         <span className="text-white/60">封禁原因:</span> {result.data.reason}
                       </p>

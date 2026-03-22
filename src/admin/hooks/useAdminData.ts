@@ -46,6 +46,7 @@ import type {
   BackupItem,
   BackupStatus,
   BackupConfig,
+  Level4PendingItem,
 } from '../types';
 import { API_BASE } from '../types';
 
@@ -106,6 +107,13 @@ export function useAdminData() {
   const [backupConfig, setBackupConfig] = useState<BackupConfig | null>(null);
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupConfigLoading, setBackupConfigLoading] = useState(false);
+  
+  // Level4 Pending
+  const [level4Pending, setLevel4Pending] = useState<Level4PendingItem[]>([]);
+  const [level4PendingLoading, setLevel4PendingLoading] = useState(false);
+  const [level4PendingPage, setLevel4PendingPage] = useState(1);
+  const [level4PendingTotal, setLevel4PendingTotal] = useState(0);
+  const [level4PendingStatus, setLevel4PendingStatus] = useState<'pending' | 'confirmed' | 'cancelled' | 'all'>('pending');
   
   // Initialization state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -482,6 +490,41 @@ export function useAdminData() {
     }
   }, []);
 
+  const fetchLevel4Pending = useCallback(async (
+    authToken: string,
+    page = level4PendingPage,
+    status = level4PendingStatus,
+    perPage = 20
+  ) => {
+    setLevel4PendingLoading(true);
+    try {
+      const params = new URLSearchParams({
+        status,
+        page: page.toString(),
+        per_page: perPage.toString(),
+      });
+      
+      const response = await fetch(`${API_BASE}/api/admin/blacklist/level4-pending?${params}`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setLevel4Pending(data.data.items);
+        setLevel4PendingTotal(data.data.total);
+      }
+    } catch (err) {
+      toast.error('获取等级4待确认列表失败');
+    } finally {
+      setLevel4PendingLoading(false);
+    }
+  }, [level4PendingPage, level4PendingStatus, handleAuthError]);
+
   // 强制刷新所有数据（清除缓存后重新获取）
   const refreshAll = useCallback(() => {
     if (token) {
@@ -582,6 +625,17 @@ export function useAdminData() {
     fetchBackupStatus: () => fetchBackupStatus(token),
     fetchBackups: () => fetchBackups(token),
     fetchBackupConfig: () => fetchBackupConfig(token),
+    
+    // Level4 Pending
+    level4Pending,
+    setLevel4Pending,
+    level4PendingLoading,
+    level4PendingPage,
+    setLevel4PendingPage,
+    level4PendingTotal,
+    level4PendingStatus,
+    setLevel4PendingStatus,
+    fetchLevel4Pending: () => fetchLevel4Pending(token),
     
     // Common
     loading,

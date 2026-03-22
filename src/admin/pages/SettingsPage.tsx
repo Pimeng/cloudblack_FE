@@ -21,6 +21,7 @@ import {
   AdminDialogContent,
   LoadingButton,
   InlineSpinner,
+  PageHeader,
 } from '../components';
 
 export function SettingsPage() {
@@ -149,10 +150,19 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">系统设置</h2>
-        <p className="text-sm text-muted-foreground">管理系统配置和服务器状态</p>
-      </div>
+      <PageHeader title="系统设置" description="管理系统配置和服务器状态">
+        <button
+          onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+            showSensitiveInfo
+              ? 'bg-brand hover:bg-brand-dark text-white'
+              : 'bg-slate-700/50 hover:bg-slate-700 text-slate-300'
+          }`}
+        >
+          {showSensitiveInfo ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          {showSensitiveInfo ? '隐藏敏感信息' : '显示敏感信息'}
+        </button>
+      </PageHeader>
 
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="bg-slate-800 flex-wrap h-auto">
@@ -173,19 +183,10 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Server className="w-5 h-5 text-brand" />
-                  基础配置
-                </h3>
-                <button
-                  onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-sm text-slate-300 transition-colors"
-                >
-                  {showSensitiveInfo ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  {showSensitiveInfo ? '隐藏敏感信息' : '显示敏感信息'}
-                </button>
-              </div>
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Server className="w-5 h-5 text-brand" />
+                基础配置
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>监听地址</Label>
