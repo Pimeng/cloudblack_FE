@@ -47,7 +47,7 @@ export function BlacklistPage() {
   const [newLevel, setNewLevel] = useState(1);
   const [addingLoading, setAddingLoading] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
-    confirmation_id: string;
+    confirmation_id: number;
     user_id: string;
   } | null>(null);
   

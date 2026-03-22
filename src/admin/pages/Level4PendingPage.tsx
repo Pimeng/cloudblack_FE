@@ -86,7 +86,7 @@ export function Level4PendingPage() {
           'Authorization': token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ confirmation_id: confirmingItem.confirmation_id }),
+        body: JSON.stringify({ confirmation_id: confirmingItem.id }),
       });
       
       const data = await response.json();
@@ -113,7 +113,7 @@ export function Level4PendingPage() {
       if (cancelReason.trim()) params.append('reason', cancelReason.trim());
       
       const response = await fetch(
-        `${API_BASE}/api/admin/blacklist/level4-pending/${cancellingItem.confirmation_id}?${params}`,
+        `${API_BASE}/api/admin/blacklist/level4-pending/${cancellingItem.id}?${params}`,
         {
           method: 'DELETE',
           headers: { 'Authorization': token },
@@ -238,7 +238,7 @@ export function Level4PendingPage() {
           <div className="space-y-4">
             {pendingItems.map((item) => (
               <div
-                key={item.confirmation_id}
+                key={item.id}
                 className={`glass rounded-2xl p-6 ${
                   item.status === 'pending' ? 'border-yellow-500/20' : ''
                 } ${item.first_admin_id === adminInfo?.admin_id ? 'bg-slate-800/30' : ''}`}

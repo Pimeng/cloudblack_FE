@@ -45,11 +45,10 @@ export interface BlacklistItem {
 
 // Level 4 待确认记录
 export interface Level4PendingItem {
-  confirmation_id: string;
+  id: number;
   user_id: string;
   user_type: 'user' | 'group';
   reason: string;
-  level: 4;
   first_admin_id: string;
   first_admin_name: string;
   first_confirmed_at: string;
@@ -58,8 +57,8 @@ export interface Level4PendingItem {
   second_confirmed_at?: string;
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
+  updated_at: string;
   cancelled_by?: string;
-  cancelled_at?: string;
   cancel_reason?: string;
 }
 
