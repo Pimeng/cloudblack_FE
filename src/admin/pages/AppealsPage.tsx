@@ -17,7 +17,7 @@ export function AppealsPage() {
   const { 
     token, adminLevel,
     appeals, appealPage, setAppealPage, appealTotal, appealFilter, setAppealFilter,
-    fetchAppeals, loading 
+    appealsPerPage, setAppealsPerPage, fetchAppeals, loading 
   } = useOutletContext<AdminDataContext>();
   
   const { openImage } = useImageViewer();
@@ -48,14 +48,14 @@ export function AppealsPage() {
 
   useEffect(() => {
     if (token) fetchAppeals();
-  }, [token, appealPage, appealFilter]);
+  }, [token, appealPage, appealFilter, appealsPerPage]);
 
   const canReviewAppeals = adminLevel >= 2;
   const canManageBlacklist = adminLevel >= 3;
   const canClearProcessed = adminLevel >= 4;  // 仅超级管理员可操作
   const canRefreshAI = adminLevel >= 2;
   const canDeleteAI = adminLevel >= 3;
-  const appealTotalPages = Math.ceil(appealTotal / 20);
+  const appealTotalPages = appealsPerPage > 0 ? Math.ceil(appealTotal / appealsPerPage) : 0;
   
   // Clear processed dialog state
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
@@ -475,14 +475,31 @@ export function AppealsPage() {
           </div>
 
           {appealTotalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button onClick={() => setAppealPage(p => Math.max(1, p - 1))} disabled={appealPage === 1} variant="outline" size="icon">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">第 {appealPage} / {appealTotalPages} 页</span>
-              <Button onClick={() => setAppealPage(p => Math.min(appealTotalPages, p + 1))} disabled={appealPage === appealTotalPages} variant="outline" size="icon">
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">每页显示</span>
+                <select
+                  value={appealsPerPage}
+                  onChange={(e) => { setAppealsPerPage(Number(e.target.value)); setAppealPage(1); }}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-sm text-muted-foreground">条</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setAppealPage(p => Math.max(1, p - 1))} disabled={appealPage === 1} variant="outline" size="icon">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">第 {appealPage} / {appealTotalPages || 1} 页</span>
+                <Button onClick={() => setAppealPage(p => Math.min(appealTotalPages, p + 1))} disabled={appealPage === appealTotalPages || appealTotalPages === 0} variant="outline" size="icon">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
         </>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Users, Search, RefreshCw, Ban, Edit3, Trash2 } from 'lucide-react';
+import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -13,7 +13,7 @@ import { API_BASE } from '../types';
 import { toast } from 'sonner';
 
 export function BlacklistPage() {
-  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, blacklistTypeFilter, setBlacklistTypeFilter, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -33,13 +33,29 @@ export function BlacklistPage() {
   const [deletingItem, setDeletingItem] = useState<BlacklistItem | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
+  
+  // Detail view state (similar to AppealsPage)
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState<BlacklistItem | null>(null);
+  
+  // Animation state
+  const [animating, setAnimating] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<'initial' | 'expanding' | 'content' | 'closing-start' | 'closing'>('initial');
+  const [cardRect, setCardRect] = useState<DOMRect | null>(null);
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
   useEffect(() => {
     if (token) fetchBlacklist();
-  }, [token, blacklistPage, blacklistSearch]);
+  }, [token, blacklistPage, blacklistSearch, blacklistTypeFilter]);
 
   const canManageBlacklist = adminLevel >= 3;
   const blacklistTotalPages = Math.ceil(blacklistTotal / 50);
+
+  const typeTabs = [
+    { key: 'all', label: '全部', icon: Users },
+    { key: 'user', label: '用户', icon: User },
+    { key: 'group', label: '群聊', icon: UsersRound },
+  ] as const;
 
   const addToBlacklist = async () => {
     if (!newUserId.trim() || !newReason.trim() || !token) return;
@@ -153,6 +169,60 @@ export function BlacklistPage() {
     }
   };
 
+  const openDetail = useCallback((item: BlacklistItem) => {
+    const rowKey = `${item.user_id}-${item.user_type || 'user'}`;
+    const rowEl = rowRefs.current.get(rowKey);
+    if (rowEl) {
+      const rect = rowEl.getBoundingClientRect();
+      
+      setViewingItem(item);
+      setCardRect({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      } as DOMRect);
+      setAnimating(true);
+      setAnimationPhase('initial');
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setAnimationPhase('expanding');
+        });
+      });
+      
+      setTimeout(() => {
+        setDetailOpen(true);
+      }, 250);
+      
+      setTimeout(() => {
+        setAnimationPhase('content');
+      }, 350);
+    } else {
+      setViewingItem(item);
+      setDetailOpen(true);
+    }
+  }, []);
+  
+  const closeDetail = useCallback(() => {
+    setAnimationPhase('closing-start');
+    
+    requestAnimationFrame(() => {
+      setAnimationPhase('closing');
+    });
+    
+    setTimeout(() => {
+      setDetailOpen(false);
+    }, 150);
+    
+    setTimeout(() => {
+      setAnimationPhase('initial');
+      setAnimating(false);
+      setCardRect(null);
+      setViewingItem(null);
+    }, 350);
+  }, []);
+
   const getUserTypeLabel = (type: 'user' | 'group') => {
     return type === 'group' ? '群聊' : '用户';
   };
@@ -168,9 +238,33 @@ export function BlacklistPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">黑名单管理</h2>
-          <p className="text-sm text-muted-foreground">查看和管理黑名单用户/群聊</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">查看和管理黑名单用户/群聊</p>
+            <div className="flex bg-slate-800/50 rounded-lg p-1 gap-1">
+              {typeTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => {
+                      setBlacklistTypeFilter(tab.key as typeof blacklistTypeFilter);
+                      setBlacklistPage(1);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                      blacklistTypeFilter === tab.key
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <div className="relative flex-1 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -205,10 +299,9 @@ export function BlacklistPage() {
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">类型</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">ID</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">封禁原因</th>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
@@ -218,18 +311,34 @@ export function BlacklistPage() {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {blacklist.map((item) => (
-                  <tr key={`${item.user_id}-${item.user_type || 'user'}`} className="hover:bg-slate-800/30">
+                  <tr 
+                    key={`${item.user_id}-${item.user_type || 'user'}`} 
+                    ref={(el) => {
+                      if (el) rowRefs.current.set(`${item.user_id}-${item.user_type || 'user'}`, el);
+                    }}
+                    className="hover:bg-slate-800/30"
+                  >
                     <td className="px-4 md:px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
-                        {getUserTypeLabel(item.user_type || 'user')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-mono">{item.user_id}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
+                          {getUserTypeLabel(item.user_type || 'user')}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-white font-mono">{item.user_id}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(item.added_at).toLocaleString()}</td>
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={() => openDetail(item)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                         {canManageBlacklist && (
                           <>
                             <Button
@@ -387,6 +496,81 @@ export function BlacklistPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Animation Layer */}
+      {animating && cardRect && animationPhase !== 'content' && (
+        (() => {
+          const isMobile = window.innerWidth < 768;
+          const fullLeft = isMobile ? 0 : 256;
+          const fullWidth = isMobile ? '100%' : 'calc(100% - 256px)';
+          const isAtRowPosition = animationPhase === 'initial' || animationPhase === 'closing';
+          
+          return (
+            <div 
+              className="fixed z-40 bg-slate-900/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50"
+              style={{
+                left: isAtRowPosition ? cardRect.left : fullLeft,
+                top: isAtRowPosition ? cardRect.top : 0,
+                width: isAtRowPosition ? cardRect.width : fullWidth,
+                height: isAtRowPosition ? cardRect.height : '100%',
+                transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            />
+          );
+        })()
+      )}
+      
+      {/* Detail View - Similar to AppealsPage */}
+      {detailOpen && (
+        <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <h2 className="text-xl font-semibold text-white">黑名单详情</h2>
+            <Button variant="ghost" size="icon" onClick={closeDetail} className="text-slate-400 hover:text-white hover:bg-slate-800">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {viewingItem && (
+              <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">类型:</span>
+                    <div className="mt-1">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
+                        {getUserTypeLabel(viewingItem.user_type || 'user')}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">ID:</span>
+                    <p className="text-white font-mono">{viewingItem.user_id}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">操作者:</span>
+                    <p className="text-white">{viewingItem.added_by}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">添加时间:</span>
+                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <span className="text-muted-foreground text-sm">封禁原因:</span>
+                  <div className="mt-2 bg-slate-800 rounded-lg p-4">
+                    <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

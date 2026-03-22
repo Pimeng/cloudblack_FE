@@ -162,19 +162,19 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 z-50 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center">
-            <LayoutDashboard className="w-4 h-4 text-brand" />
-          </div>
-          <h1 className="font-bold text-white">管理后台</h1>
-        </div>
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 z-50 flex items-center px-4 gap-3">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center">
+            <LayoutDashboard className="w-4 h-4 text-brand" />
+          </div>
+          <h1 className="font-bold text-white">管理后台</h1>
+        </div>
       </header>
 
       {/* Mobile Menu Overlay */}

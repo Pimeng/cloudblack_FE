@@ -66,6 +66,7 @@ export function useAdminData() {
   const [appealPage, setAppealPage] = useState(1);
   const [appealTotal, setAppealTotal] = useState(0);
   const [appealFilter, setAppealFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [appealsPerPage, setAppealsPerPage] = useState(20);
   const [loading, setLoading] = useState(false);
   
   // Blacklist
@@ -73,6 +74,7 @@ export function useAdminData() {
   const [blacklistPage, setBlacklistPage] = useState(1);
   const [blacklistTotal, setBlacklistTotal] = useState(0);
   const [blacklistSearch, setBlacklistSearch] = useState('');
+  const [blacklistTypeFilter, setBlacklistTypeFilter] = useState<'all' | 'user' | 'group'>('all');
   
   // Admins
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -186,12 +188,12 @@ export function useAdminData() {
     return requestPromise;
   }, [handleAuthError]);
 
-  const fetchAppeals = useCallback(async (authToken: string, page = appealPage, filter = appealFilter) => {
+  const fetchAppeals = useCallback(async (authToken: string, page = appealPage, filter = appealFilter, perPage = appealsPerPage) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        per_page: '20',
+        per_page: perPage.toString(),
       });
       if (filter !== 'all') {
         params.append('status', filter);
@@ -236,9 +238,9 @@ export function useAdminData() {
     } finally {
       setLoading(false);
     }
-  }, [appealPage, appealFilter, handleAuthError]);
+  }, [appealPage, appealFilter, appealsPerPage, handleAuthError]);
 
-  const fetchBlacklist = useCallback(async (authToken: string, page = blacklistPage, search = blacklistSearch) => {
+  const fetchBlacklist = useCallback(async (authToken: string, page = blacklistPage, search = blacklistSearch, typeFilter = blacklistTypeFilter) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -247,6 +249,9 @@ export function useAdminData() {
       });
       if (search) {
         params.append('search', search);
+      }
+      if (typeFilter !== 'all') {
+        params.append('user_type', typeFilter);
       }
       
       const response = await fetch(`${API_BASE}/api/admin/blacklist?${params}`, {
@@ -268,7 +273,7 @@ export function useAdminData() {
     } finally {
       setLoading(false);
     }
-  }, [blacklistPage, blacklistSearch, handleAuthError]);
+  }, [blacklistPage, blacklistSearch, blacklistTypeFilter, handleAuthError]);
 
   const fetchAdmins = useCallback(async (authToken: string) => {
     setAdminLoading(true);
@@ -508,6 +513,8 @@ export function useAdminData() {
     appealTotal,
     appealFilter,
     setAppealFilter,
+    appealsPerPage,
+    setAppealsPerPage,
     fetchAppeals: () => fetchAppeals(token),
     
     // Blacklist
@@ -517,6 +524,8 @@ export function useAdminData() {
     blacklistTotal,
     blacklistSearch,
     setBlacklistSearch,
+    blacklistTypeFilter,
+    setBlacklistTypeFilter,
     fetchBlacklist: () => fetchBlacklist(token),
     
     // Admins
