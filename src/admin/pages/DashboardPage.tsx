@@ -2,25 +2,19 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Clock, FileText, CheckCircle, TrendingUp, UserX, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AdminDataContext } from '../hooks/useAdminData';
+import { LoadingSpinner, PageHeader } from '../components';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { stats } = useOutletContext<AdminDataContext>();
 
   if (!stats) {
-    return (
-      <div className="text-center py-20">
-        <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-      </div>
-    );
+    return <LoadingSpinner text="" />;
   }
 
   return (
     <div className="space-y-6 md:space-y-8">
-      <div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">仪表盘</h2>
-        <p className="text-sm text-muted-foreground">系统概览与统计数据</p>
-      </div>
+      <PageHeader title="仪表盘" description="系统概览与统计数据" />
 
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
         <div className="glass rounded-2xl p-6">

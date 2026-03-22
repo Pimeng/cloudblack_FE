@@ -2,14 +2,26 @@ import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Bot, Plus, Edit3, Trash2, Eye, EyeOff, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BotToken } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import {
+  LoadingSpinner,
+  EmptyState,
+  AdminDialogContent,
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  LoadingButton,
+  PageHeader,
+  ConfirmDialog,
+  FormInput,
+  FormTextarea,
+} from '../components';
 
 export function BotsPage() {
   const { token, adminLevel, adminInfo, bots, botsLoading, fetchBots } = useOutletContext<AdminDataContext>();
@@ -204,29 +216,19 @@ export function BotsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Bot Token 管理</h2>
-          <p className="text-sm text-muted-foreground">管理 Bot Token，用于 Bot 自动化操作</p>
-        </div>
+      <PageHeader title="Bot Token 管理" description="管理 Bot Token，用于 Bot 自动化操作">
         {canCreateBot && (
           <Button onClick={() => setAddDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
             <Plus className="w-4 h-4 mr-2" />
             创建 Bot Token
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {botsLoading ? (
-        <div className="text-center py-20">
-          <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-          <p className="text-muted-foreground mt-4">加载中...</p>
-        </div>
+        <LoadingSpinner />
       ) : bots.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Bot className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">暂无 Bot Token</p>
-        </div>
+        <EmptyState icon={Bot} description="暂无 Bot Token" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full min-w-[600px]">
@@ -293,25 +295,32 @@ export function BotsPage() {
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>创建 Bot Token</DialogTitle>
             <DialogDescription className="text-slate-400">创建新的 Bot Token 用于自动化操作</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Bot 名称</Label>
-              <Input value={newBotName} onChange={(e) => setNewBotName(e.target.value)} placeholder="请输入 Bot 名称" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>所有者</Label>
-              <Input value={newBotOwner} onChange={(e) => setNewBotOwner(e.target.value)} placeholder="请输入所有者名称" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>描述</Label>
-              <Textarea value={newBotDescription} onChange={(e) => setNewBotDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[80px]" />
-            </div>
+            <FormInput
+              label="Bot 名称"
+              value={newBotName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewBotName(e.target.value)}
+              placeholder="请输入 Bot 名称"
+            />
+            <FormInput
+              label="所有者"
+              value={newBotOwner}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewBotOwner(e.target.value)}
+              placeholder="请输入所有者名称"
+            />
+            <FormTextarea
+              label="描述"
+              value={newBotDescription}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewBotDescription(e.target.value)}
+              placeholder="请输入描述（可选）"
+              textareaClassName="min-h-[80px]"
+            />
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <input
@@ -321,14 +330,14 @@ export function BotsPage() {
                   onChange={(e) => setUseCustomToken(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
                 />
-                <Label htmlFor="useCustomToken" className="cursor-pointer">自定义 Token（可选）</Label>
+                <label htmlFor="useCustomToken" className="text-sm cursor-pointer">自定义 Token（可选）</label>
               </div>
               {useCustomToken && (
-                <Input
+                <FormInput
                   value={newBotToken}
-                  onChange={(e) => setNewBotToken(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewBotToken(e.target.value)}
                   placeholder="请输入自定义 Token"
-                  className="bg-slate-800 border-slate-700 font-mono text-sm"
+                  inputClassName="font-mono text-sm"
                 />
               )}
               <p className="text-xs text-muted-foreground">不勾选则系统自动生成随机 Token</p>
@@ -337,34 +346,46 @@ export function BotsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>取消</Button>
-            <Button onClick={createBot} disabled={!newBotName.trim() || !newBotOwner.trim() || addingLoading} className="bg-brand hover:bg-brand-dark">
-              {addingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Plus className="w-4 h-4 mr-2" />创建</>}
-            </Button>
+            <LoadingButton
+              onClick={createBot}
+              loading={addingLoading}
+              icon={Plus}
+              disabled={!newBotName.trim() || !newBotOwner.trim()}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              创建
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>编辑 Bot Token</DialogTitle>
             <DialogDescription className="text-slate-400">{editingBot && `编辑 ${editingBot.bot_name} 的信息`}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Bot 名称</Label>
-              <Input value={editingBot?.bot_name || ''} disabled className="bg-slate-800/50 border-slate-700 text-muted-foreground" />
-            </div>
-            <div className="space-y-2">
-              <Label>所有者</Label>
-              <Input value={editOwner} onChange={(e) => setEditOwner(e.target.value)} placeholder="请输入所有者名称" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>描述</Label>
-              <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="请输入描述（可选）" className="bg-slate-800 border-slate-700 min-h-[80px]" />
-            </div>
+            <FormInput
+              label="Bot 名称"
+              value={editingBot?.bot_name || ''}
+              disabled
+            />
+            <FormInput
+              label="所有者"
+              value={editOwner}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditOwner(e.target.value)}
+              placeholder="请输入所有者名称"
+            />
+            <FormTextarea
+              label="描述"
+              value={editDescription}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
+              placeholder="请输入描述（可选）"
+              textareaClassName="min-h-[80px]"
+            />
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <input
@@ -374,14 +395,14 @@ export function BotsPage() {
                   onChange={(e) => setEditChangeToken(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
                 />
-                <Label htmlFor="editChangeToken" className="cursor-pointer text-yellow-500">修改 Token</Label>
+                <label htmlFor="editChangeToken" className="cursor-pointer text-sm text-yellow-500">修改 Token</label>
               </div>
               {editChangeToken && (
-                <Input
+                <FormInput
                   value={editToken}
-                  onChange={(e) => setEditToken(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditToken(e.target.value)}
                   placeholder="请输入新的 Token"
-                  className="bg-slate-800 border-slate-700 font-mono text-sm"
+                  inputClassName="font-mono text-sm"
                 />
               )}
               <p className="text-xs text-muted-foreground">修改 Token 后原 Token 将立即失效</p>
@@ -390,33 +411,33 @@ export function BotsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
-            <Button onClick={updateBot} disabled={updatingLoading} className="bg-brand hover:bg-brand-dark">
-              {updatingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Edit3 className="w-4 h-4 mr-2" />保存</>}
-            </Button>
+            <LoadingButton
+              onClick={updateBot}
+              loading={updatingLoading}
+              icon={Edit3}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              保存
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
-          <DialogHeader>
-            <DialogTitle>删除 Bot Token</DialogTitle>
-            <DialogDescription className="text-slate-400">{deletingBot && `确定要删除 ${deletingBot.bot_name} 吗？此操作不可恢复。`}</DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
-            <Button onClick={deleteBot} disabled={deletingLoading} variant="destructive">
-              {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认删除</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="删除 Bot Token"
+        description={deletingBot && `确定要删除 ${deletingBot.bot_name} 吗？此操作不可恢复。`}
+        onConfirm={deleteBot}
+        loading={deletingLoading}
+        icon={Trash2}
+        confirmText="确认删除"
+      />
 
       {/* View Token Dialog */}
       <Dialog open={viewTokenDialogOpen} onOpenChange={setViewTokenDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>查看 Bot Token</DialogTitle>
             <DialogDescription className="text-slate-400">{viewingBot && `${viewingBot.bot_name} 的 Token`}</DialogDescription>
@@ -424,9 +445,7 @@ export function BotsPage() {
 
           <div className="py-4">
             {tokenLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="w-6 h-6 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-              </div>
+              <LoadingSpinner size="sm" text="" className="py-8" />
             ) : (
               <div className="space-y-4">
                 <div className="relative">
@@ -462,7 +481,7 @@ export function BotsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewTokenDialogOpen(false)}>关闭</Button>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

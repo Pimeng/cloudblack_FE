@@ -1,16 +1,38 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, X } from 'lucide-react';
+import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BlacklistItem } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import {
+  LoadingSpinner,
+  EmptyState,
+  AdminDialogContent,
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  LoadingButton,
+  FormInput,
+  FormTextarea,
+  AnimationLayer,
+  DetailView,
+  DetailInfoItem,
+  DetailInfoGrid,
+  DetailContentBlock,
+} from '../components';
+import { useExpandableDetail } from '../hooks';
 
 export function BlacklistPage() {
   const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, blacklistTypeFilter, setBlacklistTypeFilter, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
@@ -34,15 +56,17 @@ export function BlacklistPage() {
   const [deleteReason, setDeleteReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
   
-  // Detail view state (similar to AppealsPage)
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [viewingItem, setViewingItem] = useState<BlacklistItem | null>(null);
-  
-  // Animation state
-  const [animating, setAnimating] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<'initial' | 'expanding' | 'content' | 'closing-start' | 'closing'>('initial');
-  const [cardRect, setCardRect] = useState<DOMRect | null>(null);
-  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
+  // Use expandable detail hook
+  const {
+    isOpen: detailOpen,
+    viewingItem,
+    animating,
+    animationPhase,
+    cardRect,
+    refs: rowRefs,
+    openDetail,
+    closeDetail,
+  } = useExpandableDetail<BlacklistItem>();
 
   useEffect(() => {
     if (token) fetchBlacklist();
@@ -169,59 +193,10 @@ export function BlacklistPage() {
     }
   };
 
-  const openDetail = useCallback((item: BlacklistItem) => {
+  const handleOpenDetail = (item: BlacklistItem) => {
     const rowKey = `${item.user_id}-${item.user_type || 'user'}`;
-    const rowEl = rowRefs.current.get(rowKey);
-    if (rowEl) {
-      const rect = rowEl.getBoundingClientRect();
-      
-      setViewingItem(item);
-      setCardRect({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      } as DOMRect);
-      setAnimating(true);
-      setAnimationPhase('initial');
-      
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setAnimationPhase('expanding');
-        });
-      });
-      
-      setTimeout(() => {
-        setDetailOpen(true);
-      }, 250);
-      
-      setTimeout(() => {
-        setAnimationPhase('content');
-      }, 350);
-    } else {
-      setViewingItem(item);
-      setDetailOpen(true);
-    }
-  }, []);
-  
-  const closeDetail = useCallback(() => {
-    setAnimationPhase('closing-start');
-    
-    requestAnimationFrame(() => {
-      setAnimationPhase('closing');
-    });
-    
-    setTimeout(() => {
-      setDetailOpen(false);
-    }, 150);
-    
-    setTimeout(() => {
-      setAnimationPhase('initial');
-      setAnimating(false);
-      setCardRect(null);
-      setViewingItem(null);
-    }, 350);
-  }, []);
+    openDetail(item, rowKey);
+  };
 
   const getUserTypeLabel = (type: 'user' | 'group') => {
     return type === 'group' ? '群聊' : '用户';
@@ -287,15 +262,9 @@ export function BlacklistPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-20">
-          <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-          <p className="text-muted-foreground mt-4">加载中...</p>
-        </div>
+        <LoadingSpinner />
       ) : blacklist.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">黑名单为空</p>
-        </div>
+        <EmptyState icon={Users} description="黑名单为空" />
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
@@ -332,7 +301,7 @@ export function BlacklistPage() {
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Button
-                          onClick={() => openDetail(item)}
+                          onClick={() => handleOpenDetail(item)}
                           variant="ghost"
                           size="sm"
                           className="text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
@@ -383,7 +352,7 @@ export function BlacklistPage() {
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>添加黑名单</DialogTitle>
             <DialogDescription className="text-slate-400">将用户或群聊添加到黑名单</DialogDescription>
@@ -391,7 +360,7 @@ export function BlacklistPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>类型</Label>
+              <label className="text-sm font-medium">类型</label>
               <Select value={newUserType} onValueChange={(value: 'user' | 'group') => setNewUserType(value)}>
                 <SelectTrigger className="bg-slate-800 border-slate-700">
                   <SelectValue placeholder="选择类型" />
@@ -402,28 +371,39 @@ export function BlacklistPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{newUserType === 'group' ? '群号' : '用户ID (QQ号)'}</Label>
-              <Input value={newUserId} onChange={(e) => setNewUserId(e.target.value)} placeholder={`请输入${newUserType === 'group' ? '群号' : 'QQ号'}`} className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>封禁原因</Label>
-              <Textarea value={newReason} onChange={(e) => setNewReason(e.target.value)} placeholder="请输入封禁原因..." className="bg-slate-800 border-slate-700 min-h-[100px]" />
-            </div>
+            <FormInput
+              label={newUserType === 'group' ? '群号' : '用户ID (QQ号)'}
+              value={newUserId}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserId(e.target.value)}
+              placeholder={`请输入${newUserType === 'group' ? '群号' : 'QQ号'}`}
+            />
+            <FormTextarea
+              label="封禁原因"
+              value={newReason}
+              onChange={(e) => setNewReason(e.target.value)}
+              placeholder="请输入封禁原因..."
+              textareaClassName="min-h-[100px]"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>取消</Button>
-            <Button onClick={addToBlacklist} disabled={!newUserId.trim() || !newReason.trim() || addingLoading} className="bg-red-600 hover:bg-red-700">
-              {addingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Ban className="w-4 h-4 mr-2" />确认添加</>}
-            </Button>
+            <LoadingButton
+              onClick={addToBlacklist}
+              loading={addingLoading}
+              icon={Ban}
+              disabled={!newUserId.trim() || !newReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              确认添加
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>修改黑名单条目</DialogTitle>
             <DialogDescription className="text-slate-400">修改黑名单中的用户/群聊信息</DialogDescription>
@@ -431,7 +411,7 @@ export function BlacklistPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>类型</Label>
+              <label className="text-sm font-medium">类型</label>
               <Select value={editUserType} onValueChange={(value: 'user' | 'group') => setEditUserType(value)}>
                 <SelectTrigger className="bg-slate-800 border-slate-700">
                   <SelectValue placeholder="选择类型" />
@@ -442,29 +422,39 @@ export function BlacklistPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>{editUserType === 'group' ? '群号' : '用户ID (QQ号)'}</Label>
-              <Input value={editUserId} onChange={(e) => setEditUserId(e.target.value)} placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`} className="bg-slate-800 border-slate-700" />
-              <p className="text-xs text-muted-foreground">如需修改{editUserType === 'group' ? '群号' : 'QQ号'}，请输入新的号码</p>
-            </div>
-            <div className="space-y-2">
-              <Label>封禁原因</Label>
-              <Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="请输入封禁原因..." className="bg-slate-800 border-slate-700 min-h-[100px]" />
-            </div>
+            <FormInput
+              label={editUserType === 'group' ? '群号' : '用户ID (QQ号)'}
+              value={editUserId}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditUserId(e.target.value)}
+              placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`}
+              hint={`如需修改${editUserType === 'group' ? '群号' : 'QQ号'}，请输入新的号码`}
+            />
+            <FormTextarea
+              label="封禁原因"
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+              placeholder="请输入封禁原因..."
+              textareaClassName="min-h-[100px]"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
-            <Button onClick={updateBlacklistItem} disabled={updatingLoading} className="bg-brand hover:bg-brand-dark">
-              {updatingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Edit3 className="w-4 h-4 mr-2" />保存修改</>}
-            </Button>
+            <LoadingButton
+              onClick={updateBlacklistItem}
+              loading={updatingLoading}
+              icon={Edit3}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              保存修改
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>移除黑名单</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -477,102 +467,65 @@ export function BlacklistPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>移除原因（可选）</Label>
-              <Textarea 
-                value={deleteReason} 
-                onChange={(e) => setDeleteReason(e.target.value)} 
-                placeholder="请输入移除原因，如：误封已处理..." 
-                className="bg-slate-800 border-slate-700 min-h-[80px]" 
-              />
-            </div>
+            <FormTextarea
+              label="移除原因（可选）"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="请输入移除原因，如：误封已处理..."
+              textareaClassName="min-h-[80px]"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
-            <Button onClick={deleteBlacklistItem} disabled={deletingLoading} variant="destructive">
-              {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认移除</>}
-            </Button>
+            <LoadingButton
+              onClick={deleteBlacklistItem}
+              loading={deletingLoading}
+              icon={Trash2}
+              variant="destructive"
+            >
+              确认移除
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Animation Layer */}
-      {animating && cardRect && animationPhase !== 'content' && (
-        (() => {
-          const isMobile = window.innerWidth < 768;
-          const fullLeft = isMobile ? 0 : 256;
-          const fullWidth = isMobile ? '100%' : 'calc(100% - 256px)';
-          const isAtRowPosition = animationPhase === 'initial' || animationPhase === 'closing';
-          
-          return (
-            <div 
-              className="fixed z-40 bg-slate-900/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50"
-              style={{
-                left: isAtRowPosition ? cardRect.left : fullLeft,
-                top: isAtRowPosition ? cardRect.top : 0,
-                width: isAtRowPosition ? cardRect.width : fullWidth,
-                height: isAtRowPosition ? cardRect.height : '100%',
-                transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            />
-          );
-        })()
-      )}
+      <AnimationLayer
+        animating={animating}
+        cardRect={cardRect}
+        animationPhase={animationPhase}
+      />
       
-      {/* Detail View - Similar to AppealsPage */}
-      {detailOpen && (
-        <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-            <h2 className="text-xl font-semibold text-white">黑名单详情</h2>
-            <Button variant="ghost" size="icon" onClick={closeDetail} className="text-slate-400 hover:text-white hover:bg-slate-800">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            {viewingItem && (
-              <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
-                {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">类型:</span>
-                    <div className="mt-1">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
-                        {getUserTypeLabel(viewingItem.user_type || 'user')}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">ID:</span>
-                    <p className="text-white font-mono">{viewingItem.user_id}</p>
-                  </div>
-                  {viewingItem.added_by && (
-                    <div>
-                      <span className="text-muted-foreground">操作者:</span>
-                      <p className="text-white">{viewingItem.added_by}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">添加时间:</span>
-                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
-                  </div>
-                </div>
+      {/* Detail View */}
+      <DetailView isOpen={detailOpen} title="黑名单详情" onClose={closeDetail}>
+        {viewingItem && (
+          <>
+            <DetailInfoGrid>
+              <DetailInfoItem label="类型">
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
+                  {getUserTypeLabel(viewingItem.user_type || 'user')}
+                </span>
+              </DetailInfoItem>
+              <DetailInfoItem label="ID">
+                <p className="text-white font-mono">{viewingItem.user_id}</p>
+              </DetailInfoItem>
+              {viewingItem.added_by && (
+                <DetailInfoItem label="操作者">
+                  <p className="text-white">{viewingItem.added_by}</p>
+                </DetailInfoItem>
+              )}
+              <DetailInfoItem label="添加时间">
+                <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+              </DetailInfoItem>
+            </DetailInfoGrid>
 
-                {/* Reason */}
-                <div>
-                  <span className="text-muted-foreground text-sm">封禁原因:</span>
-                  <div className="mt-2 bg-slate-800 rounded-lg p-4">
-                    <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            <DetailContentBlock label="封禁原因">
+              <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
+            </DetailContentBlock>
+          </>
+        )}
+      </DetailView>
     </div>
   );
 }

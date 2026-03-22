@@ -3,14 +3,26 @@ import { useOutletContext } from 'react-router-dom';
 import { Database, RefreshCw, Plus, Trash2, Edit3, Download, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BackupItem } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import {
+  LoadingSpinner,
+  EmptyState,
+  AdminDialogContent,
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  LoadingButton,
+  PageHeader,
+  ConfirmDialog,
+  FormInput,
+  FormTextarea,
+  FormBooleanSelect,
+} from '../components';
 
 export function BackupPage() {
   const { token, adminLevel, backups, backupStatus, backupConfig, backupLoading, fetchBackups, fetchBackupStatus, fetchBackupConfig } = useOutletContext<AdminDataContext>();
@@ -194,11 +206,7 @@ export function BackupPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">数据库备份</h2>
-          <p className="text-sm text-muted-foreground">管理数据库自动备份和手动备份</p>
-        </div>
+      <PageHeader title="数据库备份" description="管理数据库自动备份和手动备份">
         <div className="flex flex-wrap gap-2">
           {canCreateBackup && (
             <Button onClick={() => setCreateDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
@@ -216,7 +224,7 @@ export function BackupPage() {
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {backupStatus && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -258,15 +266,9 @@ export function BackupPage() {
       )}
 
       {backupLoading ? (
-        <div className="text-center py-20">
-          <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-          <p className="text-muted-foreground mt-4">加载中...</p>
-        </div>
+        <LoadingSpinner />
       ) : backups.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Database className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-muted-foreground mb-2">暂无备份文件</p>
-        </div>
+        <EmptyState icon={Database} description="暂无备份文件" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full min-w-[700px]">
@@ -333,55 +335,51 @@ export function BackupPage() {
 
       {/* Create Backup Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>创建备份</DialogTitle>
             <DialogDescription className="text-slate-400">手动创建数据库备份</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>备注（可选）</Label>
-              <Textarea
-                value={createRemark}
-                onChange={(e) => setCreateRemark(e.target.value)}
-                placeholder="输入备份备注..."
-                className="bg-slate-800 border-slate-700 min-h-[100px]"
-              />
-            </div>
+            <FormTextarea
+              label="备注（可选）"
+              value={createRemark}
+              onChange={(e) => setCreateRemark(e.target.value)}
+              placeholder="输入备份备注..."
+              textareaClassName="min-h-[100px]"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>取消</Button>
-            <Button onClick={createBackup} disabled={creatingLoading} className="bg-brand hover:bg-brand-dark">
-              {creatingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Database className="w-4 h-4 mr-2" />创建备份</>}
-            </Button>
+            <LoadingButton
+              onClick={createBackup}
+              loading={creatingLoading}
+              icon={Database}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              创建备份
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Delete Backup Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
-          <DialogHeader>
-            <DialogTitle>删除备份</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              {deletingBackup && `确定要删除 ${deletingBackup.filename} 吗？此操作不可恢复。`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
-            <Button onClick={deleteBackup} disabled={deletingLoading} variant="destructive">
-              {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认删除</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="删除备份"
+        description={deletingBackup && `确定要删除 ${deletingBackup.filename} 吗？此操作不可恢复。`}
+        onConfirm={deleteBackup}
+        loading={deletingLoading}
+        icon={Trash2}
+        confirmText="确认删除"
+      />
 
       {/* Update Remark Dialog */}
       <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>更新备注</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -390,91 +388,81 @@ export function BackupPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>备注</Label>
-              <Textarea
-                value={editRemark}
-                onChange={(e) => setEditRemark(e.target.value)}
-                placeholder="输入备份备注..."
-                className="bg-slate-800 border-slate-700 min-h-[100px]"
-              />
-            </div>
+            <FormTextarea
+              label="备注"
+              value={editRemark}
+              onChange={(e) => setEditRemark(e.target.value)}
+              placeholder="输入备份备注..."
+              textareaClassName="min-h-[100px]"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
-            <Button onClick={updateBackupRemark} disabled={updatingRemarkLoading} className="bg-brand hover:bg-brand-dark">
-              {updatingRemarkLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Edit3 className="w-4 h-4 mr-2" />保存</>}
-            </Button>
+            <LoadingButton
+              onClick={updateBackupRemark}
+              loading={updatingRemarkLoading}
+              icon={Edit3}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              保存
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Backup Config Dialog */}
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>备份设置</DialogTitle>
             <DialogDescription className="text-slate-400">配置自动备份参数</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>启用自动备份</Label>
-              <select
-                value={editBackupConfig.enabled ? 'true' : 'false'}
-                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, enabled: e.target.value === 'true' })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-              >
-                <option value="true">启用</option>
-                <option value="false">禁用</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Cron 表达式</Label>
-              <Input
-                value={editBackupConfig.cron}
-                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, cron: e.target.value })}
-                className="bg-slate-800 border-slate-700"
-                placeholder="0 3 * * *"
-              />
-              <p className="text-xs text-muted-foreground">默认每天凌晨3点执行</p>
-            </div>
-            <div className="space-y-2">
-              <Label>备份目录</Label>
-              <Input
-                value={editBackupConfig.backup_dir}
-                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, backup_dir: e.target.value })}
-                className="bg-slate-800 border-slate-700"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>最大备份数</Label>
-              <Input
-                type="number"
-                value={editBackupConfig.max_backups}
-                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, max_backups: parseInt(e.target.value) || 10 })}
-                className="bg-slate-800 border-slate-700"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>保留天数</Label>
-              <Input
-                type="number"
-                value={editBackupConfig.retention_days}
-                onChange={(e) => setEditBackupConfig({ ...editBackupConfig, retention_days: parseInt(e.target.value) || 30 })}
-                className="bg-slate-800 border-slate-700"
-              />
-            </div>
+            <FormBooleanSelect
+              label="启用自动备份"
+              value={editBackupConfig.enabled}
+              onChange={(value) => setEditBackupConfig({ ...editBackupConfig, enabled: value })}
+            />
+            <FormInput
+              label="Cron 表达式"
+              value={editBackupConfig.cron}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBackupConfig({ ...editBackupConfig, cron: e.target.value })}
+              placeholder="0 3 * * *"
+              hint="默认每天凌晨3点执行"
+            />
+            <FormInput
+              label="备份目录"
+              value={editBackupConfig.backup_dir}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBackupConfig({ ...editBackupConfig, backup_dir: e.target.value })}
+            />
+            <FormInput
+              label="最大备份数"
+              type="number"
+              value={editBackupConfig.max_backups}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBackupConfig({ ...editBackupConfig, max_backups: parseInt(e.target.value) || 10 })}
+            />
+            <FormInput
+              label="保留天数"
+              type="number"
+              value={editBackupConfig.retention_days}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBackupConfig({ ...editBackupConfig, retention_days: parseInt(e.target.value) || 30 })}
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>取消</Button>
-            <Button onClick={updateBackupConfig} disabled={updatingConfigLoading} className="bg-brand hover:bg-brand-dark">
-              {updatingConfigLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Clock className="w-4 h-4 mr-2" />保存设置</>}
-            </Button>
+            <LoadingButton
+              onClick={updateBackupConfig}
+              loading={updatingConfigLoading}
+              icon={Clock}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              保存设置
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

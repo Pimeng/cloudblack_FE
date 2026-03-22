@@ -3,13 +3,25 @@ import { useOutletContext } from 'react-router-dom';
 import { UserCog, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { Admin } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import {
+  LoadingSpinner,
+  EmptyState,
+  AdminDialogContent,
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  LoadingButton,
+  PageHeader,
+  ConfirmDialog,
+  FormInput,
+  FormSelect,
+} from '../components';
 
 export function AdminsPage() {
   const { token, adminLevel, adminInfo, admins, adminLoading, fetchAdmins } = useOutletContext<AdminDataContext>();
@@ -179,29 +191,19 @@ export function AdminsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">管理员管理</h2>
-          <p className="text-sm text-muted-foreground">管理系统管理员账号</p>
-        </div>
+      <PageHeader title="管理员管理" description="管理系统管理员账号">
         {canCreateAdmin && (
           <Button onClick={() => setAddDialogOpen(true)} className="bg-brand hover:bg-brand-dark">
             <UserCog className="w-4 h-4 mr-2" />
             添加管理员
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {adminLoading ? (
-        <div className="text-center py-20">
-          <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-          <p className="text-muted-foreground mt-4">加载中...</p>
-        </div>
+        <LoadingSpinner />
       ) : admins.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <UserCog className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">暂无管理员</p>
-        </div>
+        <EmptyState icon={UserCog} description="暂无管理员" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full min-w-[500px]">
@@ -268,100 +270,121 @@ export function AdminsPage() {
 
       {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>添加管理员</DialogTitle>
             <DialogDescription className="text-slate-400">创建新的管理员账号</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>管理员ID</Label>
-              <Input value={newAdminId} onChange={(e) => setNewAdminId(e.target.value)} placeholder="请输入管理员唯一ID" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>显示名称</Label>
-              <Input value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} placeholder="请输入显示名称" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>密码</Label>
-              <Input type="password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} placeholder="请输入密码（至少6位）" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>权限等级</Label>
-              <select value={newAdminLevel} onChange={(e) => setNewAdminLevel(parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white">
-                <option value={3}>普通管理员 (等级3)</option>
-                <option value={2}>申诉审核员 (等级2)</option>
-                <option value={1}>Bot持有者 (等级1)</option>
-              </select>
-              <p className="text-xs text-muted-foreground">等级4超级管理员只能由现有超级管理员手动在配置文件中设置</p>
-            </div>
+            <FormInput
+              label="管理员ID"
+              value={newAdminId}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAdminId(e.target.value)}
+              placeholder="请输入管理员唯一ID"
+            />
+            <FormInput
+              label="显示名称"
+              value={newAdminName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAdminName(e.target.value)}
+              placeholder="请输入显示名称"
+            />
+            <FormInput
+              label="密码"
+              type="password"
+              value={newAdminPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewAdminPassword(e.target.value)}
+              placeholder="请输入密码（至少6位）"
+            />
+            <FormSelect
+              label="权限等级"
+              value={String(newAdminLevel)}
+              onChange={(e) => setNewAdminLevel(parseInt(e.target.value))}
+              options={[
+                { value: '3', label: '普通管理员 (等级3)' },
+                { value: '2', label: '申诉审核员 (等级2)' },
+                { value: '1', label: 'Bot持有者 (等级1)' },
+              ]}
+              hint="等级4超级管理员只能由现有超级管理员手动在配置文件中设置"
+            />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>取消</Button>
-            <Button onClick={addAdmin} disabled={addingLoading} className="bg-brand hover:bg-brand-dark">
-              {addingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><UserCog className="w-4 h-4 mr-2" />创建管理员</>}
-            </Button>
+            <LoadingButton
+              onClick={addAdmin}
+              loading={addingLoading}
+              icon={UserCog}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              创建管理员
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>修改管理员</DialogTitle>
             <DialogDescription className="text-slate-400">{editingAdmin && `修改管理员 ${editingAdmin.admin_id} 的信息`}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>显示名称</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="请输入显示名称" className="bg-slate-800 border-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <Label>新密码（留空则不修改）</Label>
-              <Input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="请输入新密码（至少6位）" className="bg-slate-800 border-slate-700" />
-            </div>
+            <FormInput
+              label="显示名称"
+              value={editName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditName(e.target.value)}
+              placeholder="请输入显示名称"
+            />
+            <FormInput
+              label="新密码（留空则不修改）"
+              type="password"
+              value={editPassword}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditPassword(e.target.value)}
+              placeholder="请输入新密码（至少6位）"
+            />
             {adminLevel >= 4 && (
-              <div className="space-y-2">
-                <Label>权限等级</Label>
-                <select value={editLevel} onChange={(e) => setEditLevel(parseInt(e.target.value))} className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white">
-                  <option value={4}>超级管理员 (等级4)</option>
-                  <option value={3}>普通管理员 (等级3)</option>
-                  <option value={2}>申诉审核员 (等级2)</option>
-                  <option value={1}>Bot持有者 (等级1)</option>
-                </select>
-              </div>
+              <FormSelect
+                label="权限等级"
+                value={String(editLevel)}
+                onChange={(e) => setEditLevel(parseInt(e.target.value))}
+                options={[
+                  { value: '4', label: '超级管理员 (等级4)' },
+                  { value: '3', label: '普通管理员 (等级3)' },
+                  { value: '2', label: '申诉审核员 (等级2)' },
+                  { value: '1', label: 'Bot持有者 (等级1)' },
+                ]}
+              />
             )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>取消</Button>
-            <Button onClick={updateAdmin} disabled={updatingLoading} className="bg-brand hover:bg-brand-dark">
-              {updatingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Edit3 className="w-4 h-4 mr-2" />保存修改</>}
-            </Button>
+            <LoadingButton
+              onClick={updateAdmin}
+              loading={updatingLoading}
+              icon={Edit3}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              保存修改
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
-          <DialogHeader>
-            <DialogTitle>删除管理员</DialogTitle>
-            <DialogDescription className="text-slate-400">{deletingAdmin && `确定要删除管理员 ${deletingAdmin.admin_id} (${deletingAdmin.name}) 吗？此操作不可恢复。`}</DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>取消</Button>
-            <Button onClick={deleteAdmin} disabled={deletingLoading} variant="destructive">
-              {deletingLoading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Trash2 className="w-4 h-4 mr-2" />确认删除</>}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="删除管理员"
+        description={deletingAdmin && `确定要删除管理员 ${deletingAdmin.admin_id} (${deletingAdmin.name}) 吗？此操作不可恢复。`}
+        onConfirm={deleteAdmin}
+        loading={deletingLoading}
+        icon={Trash2}
+        confirmText="确认删除"
+      />
     </div>
   );
 }

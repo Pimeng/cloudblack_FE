@@ -3,16 +3,25 @@ import { useOutletContext } from 'react-router-dom';
 import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import type { AdminDataContext } from '../hooks/useAdminData';
-
 import { formatBytes, formatUptime } from '../utils';
 import type { SystemConfig } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import {
+  AdminDialogContent,
+  LoadingButton,
+  InlineSpinner,
+} from '../components';
 
 export function SettingsPage() {
   const { token, adminLevel, config, setConfig, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
@@ -767,7 +776,7 @@ export function SettingsPage() {
       {/* Save Button */}
       <div className="flex gap-2 pt-4">
         <Button onClick={updateConfig} disabled={updatingConfig} className="bg-brand hover:bg-brand-dark">
-          {updatingConfig && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />}
+          {updatingConfig && <InlineSpinner className="mr-2" />}
           保存配置
         </Button>
         <Button onClick={() => setRestartDialogOpen(true)} variant="destructive">
@@ -778,7 +787,7 @@ export function SettingsPage() {
 
       {/* Restart Dialog */}
       <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>重启服务器</DialogTitle>
             <DialogDescription className="text-slate-400">
@@ -788,11 +797,16 @@ export function SettingsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setRestartDialogOpen(false)}>取消</Button>
-            <Button onClick={restartServer} disabled={restarting} variant="destructive">
-              {restarting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <><Power className="w-4 h-4 mr-2" />确认重启</>}
-            </Button>
+            <LoadingButton
+              onClick={restartServer}
+              loading={restarting}
+              icon={Power}
+              variant="destructive"
+            >
+              确认重启
+            </LoadingButton>
           </DialogFooter>
-        </DialogContent>
+        </AdminDialogContent>
       </Dialog>
     </div>
   );

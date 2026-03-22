@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ScrollText, RefreshCw, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ScrollText, RefreshCw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
+import {
+  LoadingSpinner,
+  EmptyState,
+  PageHeader,
+  DetailView,
+  DetailInfoItem,
+  DetailInfoGrid,
+  DetailContentBlock,
+} from '../components';
 
 interface LogDetails {
   // 黑名单相关
@@ -275,11 +284,7 @@ export function LogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">审计日志</h2>
-          <p className="text-sm text-muted-foreground">查看系统操作记录，点击行可展开详细信息</p>
-        </div>
+      <PageHeader title="审计日志" description="查看系统操作记录，点击行可展开详细信息">
         <div className="flex flex-wrap gap-2">
           <select
             value={logFilterAction}
@@ -304,7 +309,7 @@ export function LogsPage() {
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {logStats && (
         <div className="glass rounded-2xl p-6">
@@ -320,15 +325,9 @@ export function LogsPage() {
       )}
 
       {logsLoading ? (
-        <div className="text-center py-20">
-          <span className="w-8 h-8 border-2 border-brand/30 border-t-brand rounded-full animate-spin inline-block" />
-          <p className="text-muted-foreground mt-4">加载中...</p>
-        </div>
+        <LoadingSpinner />
       ) : logs.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <ScrollText className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">暂无日志记录</p>
-        </div>
+        <EmptyState icon={ScrollText} description="暂无日志记录" />
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
@@ -424,83 +423,60 @@ export function LogsPage() {
       )}
 
       {/* Detail Dialog */}
-      {detailDialogOpen && selectedLog && (
-        <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-            <h2 className="text-xl font-semibold text-white">日志详情</h2>
-            <Button variant="ghost" size="icon" onClick={closeDetailDialog} className="text-slate-400 hover:text-white hover:bg-slate-800">
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">时间:</span>
-                  <p className="text-white">{selectedLog.timestamp}</p>
+      <DetailView
+        isOpen={detailDialogOpen}
+        title="日志详情"
+        onClose={closeDetailDialog}
+      >
+        {selectedLog && (
+          <>
+            <DetailInfoGrid>
+              <DetailInfoItem label="时间">
+                <p className="text-white">{selectedLog.timestamp}</p>
+              </DetailInfoItem>
+              <DetailInfoItem label="操作类型">
+                <p className="text-white">{actionTypes[selectedLog.action_type] || selectedLog.action_type}</p>
+              </DetailInfoItem>
+              <DetailInfoItem label="操作者">
+                <div className="flex items-center gap-2">
+                  <span className="text-white">{selectedLog.operator_id}</span>
+                  {selectedLog.operator_type === 'admin' && selectedLog.operator_level !== undefined && (
+                    <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
+                      L{selectedLog.operator_level}
+                    </Badge>
+                  )}
+                  {selectedLog.operator_type === 'admin' && selectedLog.operator_level === undefined && (
+                    <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
+                  )}
+                  {selectedLog.operator_type === 'bot' && (
+                    <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
+                  )}
                 </div>
-                <div>
-                  <span className="text-muted-foreground">操作类型:</span>
-                  <p className="text-white">{actionTypes[selectedLog.action_type] || selectedLog.action_type}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">操作者:</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-white">{selectedLog.operator_id}</span>
-                    {selectedLog.operator_type === 'admin' && selectedLog.operator_level !== undefined && (
-                      <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
-                        L{selectedLog.operator_level}
-                      </Badge>
-                    )}
-                    {selectedLog.operator_type === 'admin' && selectedLog.operator_level === undefined && (
-                      <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                    )}
-                    {selectedLog.operator_type === 'bot' && (
-                      <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">IP地址:</span>
-                  <p className="text-white font-mono">{selectedLog.ip}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">状态:</span>
-                  <div className="mt-1">
-                    {selectedLog.status === 'success' ? (
-                      <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                    ) : (
-                      <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
+              </DetailInfoItem>
+              <DetailInfoItem label="IP地址">
+                <p className="text-white font-mono">{selectedLog.ip}</p>
+              </DetailInfoItem>
+              <DetailInfoItem label="状态">
+                {selectedLog.status === 'success' ? (
+                  <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
+                ) : (
+                  <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
+                )}
+              </DetailInfoItem>
+            </DetailInfoGrid>
 
-              {/* Summary */}
-              {extractLogSummary(selectedLog) && (
-                <div>
-                  <span className="text-muted-foreground text-sm">摘要:</span>
-                  <div className="mt-2 bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
-                    <p className="text-slate-300">{extractLogSummary(selectedLog)}</p>
-                  </div>
-                </div>
-              )}
+            {extractLogSummary(selectedLog) && (
+              <DetailContentBlock label="摘要">
+                <p className="text-slate-300">{extractLogSummary(selectedLog)}</p>
+              </DetailContentBlock>
+            )}
 
-              {/* Details */}
-              <div>
-                <span className="text-muted-foreground text-sm">详细信息:</span>
-                <div className="mt-2 bg-slate-800 rounded-lg p-4">
-                  {renderDetails(selectedLog.details)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            <DetailContentBlock label="详细信息">
+              {renderDetails(selectedLog.details)}
+            </DetailContentBlock>
+          </>
+        )}
+      </DetailView>
     </div>
   );
 }
