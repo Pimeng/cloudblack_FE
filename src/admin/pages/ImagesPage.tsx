@@ -557,12 +557,7 @@ export function ImagesPage() {
                 className="w-full max-h-[70vh] object-contain bg-black"
               />
             )}
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
           </div>
           {previewImage && (
             <div className="p-4 space-y-2">
