@@ -21,6 +21,7 @@ import {
   SettingsPage, 
   BackupPage,
   Level4PendingPage,
+  ImagesPage,
 } from './admin/pages';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -287,6 +288,7 @@ function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="backup" element={<BackupPage />} />
           <Route path="level4-pending" element={<Level4PendingPage />} />
+          <Route path="images" element={<ImagesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

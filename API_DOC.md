@@ -61,6 +61,10 @@
    - [4.36 更新备份配置](#436-更新备份配置)
    - [4.37 验证CRON表达式](#437-验证cron表达式)
    - [4.38 更新备份备注](#438-更新备份备注)
+   - [4.39 获取图片列表](#439-获取图片列表)
+   - [4.40 上传图片](#440-上传图片)
+   - [4.41 删除图片](#441-删除图片)
+   - [4.42 获取图片子目录列表](#442-获取图片子目录列表)
 5. [审计日志系统](#5-审计日志系统)
    - [5.1 日志字段说明](#51-日志字段说明)
    - [5.2 操作类型列表](#52-操作类型列表)
@@ -2864,6 +2868,165 @@ bot-blacklist-api/
     "message": "更新失败，文件可能不存在"
 }
 ```
+
+---
+
+### 4.39 获取图片列表
+
+获取已上传图片的列表，仅返回相对路径，前端可手动拼接完整 URL。
+
+- **接口地址**: `/api/admin/images`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 3+
+- **请求参数**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `subfolder` | string | 否 | 子目录名称，默认 `appeals` |
+  | `page` | int | 否 | 页码，默认 1 |
+  | `per_page` | int | 否 | 每页数量，默认 50，最大 200 |
+  | `search` | string | 否 | 搜索关键词（按文件名模糊匹配） |
+- **响应示例**:
+  ```json
+  {
+      "success": true,
+      "data": {
+          "items": [
+              {
+                  "filename": "20260323_abc123def456.jpg",
+                  "path": "appeals/20260323_abc123def456.jpg",
+                  "size": 2048576,
+                  "created_at": "2026-03-23 10:30:00",
+                  "modified_at": "2026-03-23 10:30:00"
+              }
+          ],
+          "total": 128,
+          "page": 1,
+          "per_page": 50,
+          "pages": 3,
+          "subfolder": "appeals"
+      }
+  }
+  ```
+- **字段说明**:
+  | 字段名 | 类型 | 说明 |
+  | :--- | :--- | :--- |
+  | `filename` | string | 文件名 |
+  | `path` | string | 相对路径（可用于拼接完整 URL，如 `/uploads/appeals/xxx.jpg`） |
+  | `size` | int | 文件大小（字节） |
+  | `created_at` | string | 创建时间 |
+  | `modified_at` | string | 最后修改时间 |
+
+### 4.40 上传图片
+
+管理员手动上传图片到指定子目录。
+
+- **接口地址**: `/api/admin/images`
+- **请求方法**: `POST`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 3+
+- **Content-Type**: `multipart/form-data`
+- **请求参数**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `file` | File | 是 | 图片文件（最大 5MB） |
+  | `subfolder` | string | 否 | 子目录名称，默认 `appeals` |
+- **文件限制**:
+  - 文件大小：最大 5MB
+  - 文件类型：png, jpg, jpeg, gif, webp
+  - 系统会自动检测重复图片（基于 MD5 哈希）
+- **响应示例**（上传成功）:
+  ```json
+  {
+      "success": true,
+      "message": "上传成功",
+      "data": {
+          "filename": "20260323_abc123def456.jpg",
+          "path": "appeals/20260323_abc123def456.jpg",
+          "size": 2048576,
+          "existing": false
+      }
+  }
+  ```
+- **响应示例**（文件已存在）:
+  ```json
+  {
+      "success": true,
+      "message": "文件已存在",
+      "data": {
+          "filename": "20260322_xyz789abc123.jpg",
+          "path": "appeals/20260322_xyz789abc123.jpg",
+          "size": 2048576,
+          "existing": true
+      }
+  }
+  ```
+
+### 4.41 删除图片
+
+删除指定的上传图片。
+
+- **接口地址**: `/api/admin/images/{filepath}`
+- **请求方法**: `DELETE`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 3+
+- **路径参数**:
+  | 参数名 | 类型 | 必填 | 说明 |
+  | :--- | :--- | :--- | :--- |
+  | `filepath` | string | 是 | 文件的相对路径（如 `appeals/20260323_xxx.jpg`） |
+- **响应示例**（成功）:
+  ```json
+  {
+      "success": true,
+      "message": "文件已删除",
+      "data": {
+          "filepath": "appeals/20260323_xxx.jpg",
+          "filename": "20260323_xxx.jpg"
+      }
+  }
+  ```
+- **响应示例**（文件不存在）:
+  ```json
+  {
+      "success": false,
+      "message": "文件不存在"
+  }
+  ```
+- **安全说明**:
+  - 系统会检查路径合法性，防止目录遍历攻击
+  - 只能删除 uploads 目录下的文件
+
+### 4.42 获取图片子目录列表
+
+获取所有图片子目录的列表。
+
+- **接口地址**: `/api/admin/images/subfolders`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 3+
+- **响应示例**:
+  ```json
+  {
+      "success": true,
+      "data": {
+          "subfolders": [
+              {
+                  "name": "appeals",
+                  "file_count": 128
+              },
+              {
+                  "name": "avatars",
+                  "file_count": 15
+              }
+          ]
+      }
+  }
+  ```
+- **字段说明**:
+  | 字段名 | 类型 | 说明 |
+  | :--- | :--- | :--- |
+  | `name` | string | 子目录名称 |
+  | `file_count` | int | 目录中的文件数量 |
 
 ---
 

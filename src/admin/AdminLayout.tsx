@@ -15,6 +15,7 @@ import {
   Edit3,
   RefreshCw,
   ShieldAlert,
+  Image,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -29,6 +30,7 @@ const navItems = [
   { id: 'appeals', label: '申诉管理', icon: FileText, path: '/appeals', minLevel: 1 },
   { id: 'blacklist', label: '黑名单', icon: Users, path: '/blacklist', minLevel: 1 },
   { id: 'level4-pending', label: '严重违规审核', icon: ShieldAlert, path: '/level4-pending', minLevel: 3 },
+  { id: 'images', label: '图片管理', icon: Image, path: '/images', minLevel: 3 },
   { id: 'admins', label: '管理员', icon: UserCog, path: '/admins', minLevel: 4 },
   { id: 'bots', label: 'Bot Token', icon: Bot, path: '/bots', minLevel: 2 },
   { id: 'logs', label: '审计日志', icon: ScrollText, path: '/logs', minLevel: 2 },

@@ -2,7 +2,7 @@
 
 export const API_BASE = 'https://cloudblack-api.07210700.xyz';
 
-export type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings' | 'backup';
+export type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings' | 'backup' | 'images';
 
 export interface Stats {
   pending_appeals: number;
