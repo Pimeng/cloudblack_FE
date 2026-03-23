@@ -25,6 +25,12 @@ interface AppealItem {
   };
 }
 
+// 待上传的图片文件
+interface PendingImage {
+  file: File;
+  preview: string;
+}
+
 export function AppealSection({ active }: { active?: boolean }) {
   const [activeTab, setActiveTab] = useState<'submit' | 'query'>('submit');
   const [formData, setFormData] = useState({
@@ -33,8 +39,8 @@ export function AppealSection({ active }: { active?: boolean }) {
     content: '',
     contact_email: '',
   });
-  const [images, setImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  // 改用 PendingImage 存储文件和预览
+  const [images, setImages] = useState<PendingImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -81,30 +87,30 @@ export function AppealSection({ active }: { active?: boolean }) {
     );
   }, [active]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     if (images.length + files.length > 3) { setError('最多只能上传3张图片'); return; }
-    setUploading(true);
     setError('');
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 5 * 1024 * 1024) { setError('图片大小不能超过5MB'); continue; }
-      try {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.success) setImages(prev => [...prev, data.data.url]);
-        else setError(data.message || '上传失败');
-      } catch {
-        setImages(prev => [...prev, URL.createObjectURL(file)]);
-      }
+      // 本地预览，不立即上传
+      const preview = URL.createObjectURL(file);
+      setImages(prev => [...prev, { file, preview }]);
     }
-    setUploading(false);
+    // 清空 input 以便可以再次选择相同文件
+    e.target.value = '';
   };
 
-  const removeImage = (index: number) => setImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = (index: number) => {
+    setImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      // 释放预览 URL
+      URL.revokeObjectURL(prev[index].preview);
+      return newImages;
+    });
+  };
 
   const queryAppeals = async () => {
     if (!queryUserId.trim()) { setError('请输入QQ号或群号'); return; }
@@ -126,7 +132,7 @@ export function AppealSection({ active }: { active?: boolean }) {
     return null;
   };
 
-  // 实际提交申诉的逻辑
+  // 实际提交申诉的逻辑 - 使用表单上传
   const executeSubmit = useCallback(async (geetestData: GeetestResult | null) => {
     // 防重检查：如果正在处理中，直接返回
     if (isProcessingRef.current) {
@@ -153,17 +159,30 @@ export function AppealSection({ active }: { active?: boolean }) {
         resetGeetest();
         return;
       }
+      
+      // 使用 FormData 一次性提交所有数据（包括图片）
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('user_id', formData.user_id);
+      formDataToSubmit.append('user_type', formData.user_type);
+      formDataToSubmit.append('content', formData.content);
+      formDataToSubmit.append('contact_email', formData.contact_email);
+      
+      // 添加图片文件
+      images.forEach((img) => {
+        formDataToSubmit.append('files', img.file);
+      });
+      
+      // 添加极验验证数据（表单方式）
+      if (geetestData) {
+        formDataToSubmit.append('geetest_lot_number', geetestData.lot_number);
+        formDataToSubmit.append('geetest_captcha_output', geetestData.captcha_output);
+        formDataToSubmit.append('geetest_pass_token', geetestData.pass_token);
+        formDataToSubmit.append('geetest_gen_time', geetestData.gen_time);
+      }
+      
       const res = await fetch(`${API_BASE}/api/appeals`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          user_id: formData.user_id, 
-          user_type: formData.user_type, 
-          content: formData.content, 
-          contact_email: formData.contact_email, 
-          images, 
-          geetest: geetestData 
-        }),
+        body: formDataToSubmit, // 不使用 Content-Type header，让浏览器自动设置
       });
       const data = await res.json();
       if (!data.success) { 
@@ -172,6 +191,11 @@ export function AppealSection({ active }: { active?: boolean }) {
         setSubmitting(false); 
         return; 
       }
+      
+      // 清理预览 URL
+      images.forEach(img => URL.revokeObjectURL(img.preview));
+      setImages([]);
+      
       setSubmitted(true);
       gsap.fromTo('.success-message', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
     } catch { 
@@ -298,10 +322,10 @@ export function AppealSection({ active }: { active?: boolean }) {
               <div className="space-y-2">
                 <Label>相关截图（可选，最多3张）</Label>
                 <div className="flex flex-wrap gap-3">
-                  {images.map((url, index) => (
+                  {images.map((img, index) => (
                     <div key={index} className="relative w-16 h-16 rounded-lg overflow-hidden group cursor-pointer"
-                      onClick={() => openImage(url.startsWith('http') ? url : `${API_BASE}${url}`)}>
-                      <img src={url.startsWith('http') ? url : `${API_BASE}${url}`} alt={`上传图片 ${index + 1}`} className="w-full h-full object-cover" />
+                      onClick={() => openImage(img.preview)}>
+                      <img src={img.preview} alt={`待上传图片 ${index + 1}`} className="w-full h-full object-cover" />
                       <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(index); }}
                         className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <X className="w-4 h-4 text-white" />
@@ -310,14 +334,13 @@ export function AppealSection({ active }: { active?: boolean }) {
                   ))}
                   {images.length < 3 && (
                     <label className="w-16 h-16 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 hover:bg-brand/5 transition-colors">
-                      <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
-                      {uploading
-                        ? <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
-                        : <><ImageIcon className="w-4 h-4 text-muted-foreground mb-1" /><span className="text-xs text-muted-foreground">上传</span></>}
+                      <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" multiple className="hidden" onChange={handleImageUpload} />
+                      <ImageIcon className="w-4 h-4 text-muted-foreground mb-1" />
+                      <span className="text-xs text-muted-foreground">选择</span>
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大5MB</p>
+                <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大5MB，提交时一并上传</p>
               </div>
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
