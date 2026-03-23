@@ -33,6 +33,7 @@ import {
   PageHeader,
   ConfirmDialog,
 } from '../components';
+import { DialogContent } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -52,15 +53,6 @@ interface ImageItem {
 interface Subfolder {
   name: string;
   file_count: number;
-}
-
-interface ImagesResponse {
-  items: ImageItem[];
-  total: number;
-  page: number;
-  per_page: number;
-  pages: number;
-  subfolder: string;
 }
 
 export function ImagesPage() {
