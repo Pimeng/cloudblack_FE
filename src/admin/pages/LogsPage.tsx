@@ -353,7 +353,16 @@ export function LogsPage() {
           <h3 className="text-sm font-medium text-muted-foreground mb-4">最近7天操作统计</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(logStats.action_counts || {}).map(([action, count]) => (
-              <Badge key={action} variant="secondary" className="bg-slate-800">
+              <Badge 
+                key={action} 
+                variant="secondary" 
+                className={`cursor-pointer transition-colors ${logFilterAction === action ? 'bg-brand/30 text-brand border-brand/50' : 'bg-slate-800 hover:bg-slate-700'}`}
+                onClick={() => { 
+                  setLogFilterAction(logFilterAction === action ? '' : action); 
+                  setLogsPage(1); 
+                }}
+                title={logFilterAction === action ? '点击取消筛选' : '点击筛选此操作'}
+              >
                 {getActionTypeLabel(action)}: {count as number}
               </Badge>
             ))}
