@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BookOpen, X, Copy, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { ExternalLinkDialog, useExternalLink } from './ExternalLinkDialog';
+import { openExternalLink } from './ExternalLinkProvider';
 
 const STORAGE_KEY = 'doc_reminder_closed';
 const DOC_URL = 'https://cloudblack.apifox.cn';
@@ -11,9 +11,6 @@ export function DocReminder() {
   const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  
-  // 外链警告对话框
-  const { isOpen, pendingUrl, openExternalLink, closeDialog, confirmNavigation } = useExternalLink();
 
   const checkVisibility = useCallback(() => {
     const hasClosed = localStorage.getItem(STORAGE_KEY);
@@ -140,14 +137,6 @@ export function DocReminder() {
           <ChevronUp className="w-4 h-4" />
         )}
       </button>
-
-      {/* 外链跳转警告对话框 */}
-      <ExternalLinkDialog
-        isOpen={isOpen}
-        url={pendingUrl}
-        onConfirm={confirmNavigation}
-        onCancel={closeDialog}
-      />
     </div>
   );
 }

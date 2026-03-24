@@ -32,4 +32,4 @@ export {
   BackupTypeBadge,
 } from './StatusBadge';
 export { DocReminder } from './DocReminder';
-export { ExternalLinkDialog, useExternalLink } from './ExternalLinkDialog';
+export { ExternalLinkProvider, openExternalLink } from './ExternalLinkProvider';
