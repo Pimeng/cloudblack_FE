@@ -19,7 +19,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
               <Clock className="w-6 h-6 text-yellow-500" />
             </div>
             <div>
@@ -31,7 +31,7 @@ export function DashboardPage() {
 
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
               <FileText className="w-6 h-6 text-blue-500" />
             </div>
             <div>
@@ -43,7 +43,7 @@ export function DashboardPage() {
 
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
               <CheckCircle className="w-6 h-6 text-indigo-500" />
             </div>
             <div>
@@ -55,7 +55,7 @@ export function DashboardPage() {
 
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6 text-green-500" />
             </div>
             <div>
@@ -67,7 +67,7 @@ export function DashboardPage() {
 
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
               <Clock className="w-6 h-6 text-orange-500" />
             </div>
             <div>
@@ -79,7 +79,7 @@ export function DashboardPage() {
 
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
               <UserX className="w-6 h-6 text-red-500" />
             </div>
             <div>
