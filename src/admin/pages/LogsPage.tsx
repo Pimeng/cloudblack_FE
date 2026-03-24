@@ -331,7 +331,7 @@ export function LogsPage() {
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table className="w-full" style={{ tableLayout: 'auto' }}>
               <thead className="bg-slate-800/50">
                 <tr>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 w-10"></th>
@@ -359,9 +359,9 @@ export function LogsPage() {
                         <Eye className="w-4 h-4" />
                       </Button>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{log.timestamp}</td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{log.timestamp}</td>
                     <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
-                    <td className="px-4 md:px-6 py-4 text-slate-300">
+                    <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span>{log.operator_id}</span>
                         {log.operator_type === 'admin' && log.operator_level !== undefined && (
@@ -377,7 +377,7 @@ export function LogsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono">{log.ip}</td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono whitespace-nowrap">{log.ip}</td>
                     <td className="px-4 md:px-6 py-4">
                       {log.status === 'success' ? (
                         <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>

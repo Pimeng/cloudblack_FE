@@ -206,7 +206,7 @@ export function AdminsPage() {
         <EmptyState icon={UserCog} description="暂无管理员" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
-          <table className="w-full min-w-[500px]">
+          <table className="w-full" style={{ tableLayout: 'auto' }}>
             <thead className="bg-slate-800/50">
               <tr>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">头像</th>
@@ -232,7 +232,7 @@ export function AdminsPage() {
                   <td className="px-4 md:px-6 py-4 text-white font-mono">{admin.admin_id}</td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{admin.name}</td>
                   <td className="px-4 md:px-6 py-4">{getLevelBadge(admin.level)}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(admin.created_at).toLocaleString()}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(admin.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {/* 等级4可以编辑任何管理员，等级3只能编辑自己 */}

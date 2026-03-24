@@ -266,7 +266,7 @@ export function BackupPage() {
         <EmptyState icon={Database} description="暂无备份文件" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full" style={{ tableLayout: 'auto' }}>
             <thead className="bg-slate-800/50">
               <tr>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">文件名</th>
@@ -287,8 +287,8 @@ export function BackupPage() {
                     </Badge>
                   </td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{backup.size_human}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{backup.created_at_str}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate">{backup.remark || '-'}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{backup.created_at_str}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-300">{backup.remark || '-'}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canUpdateBackupRemark && (

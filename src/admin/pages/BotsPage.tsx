@@ -231,7 +231,7 @@ export function BotsPage() {
         <EmptyState icon={Bot} description="暂无 Bot Token" />
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full" style={{ tableLayout: 'auto' }}>
             <thead className="bg-slate-800/50">
               <tr>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">Bot 名称</th>
@@ -246,8 +246,8 @@ export function BotsPage() {
                 <tr key={bot.bot_name} className="hover:bg-slate-800/30">
                   <td className="px-4 md:px-6 py-4 text-white font-mono">{bot.bot_name}</td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{bot.owner}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 max-w-[200px] truncate">{bot.description || '-'}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(bot.created_at).toLocaleString()}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-400">{bot.description || '-'}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(bot.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canViewToken && (
