@@ -8,7 +8,7 @@ export interface Stats {
   pending_appeals: number;
   total_appeals: number;
   blacklist_count: number;
-  processed_appeals: number;
+  total_approved: number;
   success_rate: number;
   avg_processing_hours: number;
 }

@@ -48,7 +48,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">已处理申诉</p>
-              <p className="text-3xl font-bold text-white">{stats.total_processed ?? 0}</p>
+              <p className="text-3xl font-bold text-white">{stats.total_approved ?? 0}</p>
             </div>
           </div>
         </div>
