@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, RefreshCw, Trash2, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, Eye, Sparkles, ZoomIn } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useImageViewer } from '@/hooks/useImageViewer';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { Appeal } from '../types';
@@ -23,8 +23,15 @@ import {
   FormTextarea,
   AnimationLayer,
   DetailView,
+  Pagination,
+  AppealStatusBadge,
+  AIRecommendationBadge,
 } from '../components';
-import { useExpandableDetail } from '../hooks';
+import { useExpandableDetail, useApiMutation } from '../hooks';
+
+interface ClearProcessedResponse {
+  deleted_count?: number;
+}
 
 export function AppealsPage() {
   const { 
@@ -41,13 +48,11 @@ export function AppealsPage() {
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewReason, setReviewReason] = useState('');
   const [removeFromBlacklist, setRemoveFromBlacklist] = useState(true);
-  const [submittingReview, setSubmittingReview] = useState(false);
   
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState<Appeal | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
-  const [deletingLoading, setDeletingLoading] = useState(false);
   
   // viewingItem is now from useExpandableDetail hook
   
@@ -77,20 +82,25 @@ export function AppealsPage() {
   // Clear processed dialog state
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearDays, setClearDays] = useState<number | ''>('');
-  const [clearingLoading, setClearingLoading] = useState(false);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="border-yellow-500/50 text-yellow-500"><Clock className="w-3 h-3 mr-1" />待审核</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="border-green-500/50 text-green-500"><CheckCircle className="w-3 h-3 mr-1" />已通过</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="border-red-500/50 text-red-500"><XCircle className="w-3 h-3 mr-1" />已拒绝</Badge>;
-      default:
-        return null;
-    }
-  };
+  // API mutations
+  const { mutate: submitReviewMutate, loading: submittingReview } = useApiMutation(token, {
+    successMessage: '',
+    showSuccessToast: false,
+  });
+  const { mutate: deleteAppealMutate, loading: deletingLoading } = useApiMutation(token, {
+    successMessage: '申诉已删除',
+  });
+  const { mutate: clearProcessedMutate, loading: clearingLoading } = useApiMutation<ClearProcessedResponse>(token, {
+    successMessage: '',
+    showSuccessToast: false,
+  });
+  const { mutate: refreshAIMutate } = useApiMutation(token, {
+    successMessage: 'AI 分析已刷新',
+  });
+  const { mutate: deleteAIMutate } = useApiMutation(token, {
+    successMessage: 'AI 分析已删除',
+  });
 
   const openReviewDialog = (appeal: Appeal, action: 'approve' | 'reject') => {
     setSelectedAppeal(appeal);
@@ -109,149 +119,80 @@ export function AppealsPage() {
   };
 
   const submitReview = async () => {
-    if (!selectedAppeal || !reviewReason.trim() || !token) return;
+    if (!selectedAppeal || !reviewReason.trim()) return;
     
-    setSubmittingReview(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/appeals/${selectedAppeal.appeal_id}/review`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: reviewAction,
-          reason: reviewReason,
-          remove_from_blacklist: removeFromBlacklist,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success(reviewAction === 'approve' ? '申诉已通过' : '申诉已拒绝');
-        setReviewDialogOpen(false);
-        fetchAppeals();
-      } else {
-        toast.error(data.message || '操作失败');
+    const result = await submitReviewMutate(
+      `/api/admin/appeals/${selectedAppeal.appeal_id}/review`,
+      { method: 'POST' },
+      {
+        action: reviewAction,
+        reason: reviewReason,
+        remove_from_blacklist: removeFromBlacklist,
       }
-    } catch (err) {
-      toast.error('提交审核失败');
-    } finally {
-      setSubmittingReview(false);
+    );
+    
+    if (result) {
+      toast.success(reviewAction === 'approve' ? '申诉已通过' : '申诉已拒绝');
+      setReviewDialogOpen(false);
+      fetchAppeals();
     }
   };
 
   const deleteAppeal = async () => {
-    if (!deletingAppeal || !token) return;
+    if (!deletingAppeal) return;
     
-    setDeletingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/appeals/${deletingAppeal.appeal_id}`, {
+    const result = await deleteAppealMutate(
+      `/api/admin/appeals/${deletingAppeal.appeal_id}`,
+      { 
         method: 'DELETE',
-        headers: { 
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          delete_reason: deleteReason.trim() || undefined 
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('申诉已删除');
-        setDeleteDialogOpen(false);
-        setDeleteReason('');
-        fetchAppeals();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除失败');
-    } finally {
-      setDeletingLoading(false);
+        headers: { 'Content-Type': 'application/json' },
+      },
+      { delete_reason: deleteReason.trim() || undefined }
+    );
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      setDeleteReason('');
+      fetchAppeals();
     }
   };
 
   const refreshAIAnalysis = async (appealId: string) => {
-    if (!token) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/appeals/${appealId}/ai-analysis`, {
-        method: 'POST',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('AI 分析已刷新');
-        fetchAppeals();
-      } else {
-        toast.error(data.message || '刷新失败');
-      }
-    } catch (err) {
-      toast.error('刷新失败');
-    }
+    const result = await refreshAIMutate(`/api/admin/appeals/${appealId}/ai-analysis`, {
+      method: 'POST',
+    });
+    if (result) fetchAppeals();
   };
 
   const deleteAIAnalysis = async (appealId: string) => {
-    if (!token) return;
-    
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/appeals/${appealId}/ai-analysis`, {
-        method: 'DELETE',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('AI 分析已删除');
-        fetchAppeals();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除失败');
-    }
+    const result = await deleteAIMutate(`/api/admin/appeals/${appealId}/ai-analysis`, {
+      method: 'DELETE',
+    });
+    if (result) fetchAppeals();
   };
   
   const clearProcessedAppeals = async () => {
-    if (!token) return;
+    const body: { days?: number } = {};
+    if (clearDays !== '' && clearDays > 0) {
+      body.days = clearDays;
+    }
     
-    setClearingLoading(true);
-    try {
-      const body: { days?: number } = {};
-      if (clearDays !== '' && clearDays > 0) {
-        body.days = clearDays;
-      }
-      
-      const response = await fetch(`${API_BASE}/api/admin/appeals/clear-processed`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        const deletedCount = data.data?.deleted_count || 0;
-        if (deletedCount > 0) {
-          toast.success(`已清理 ${deletedCount} 条已处理申诉`);
-        } else {
-          toast.info('没有需要清理的已处理申诉');
-        }
-        setClearDialogOpen(false);
-        setClearDays('');
-        fetchAppeals();
+    const result = await clearProcessedMutate(
+      '/api/admin/appeals/clear-processed',
+      { method: 'POST' },
+      body
+    );
+    
+    if (result) {
+      const deletedCount = result?.deleted_count || 0;
+      if (deletedCount > 0) {
+        toast.success(`已清理 ${deletedCount} 条已处理申诉`);
       } else {
-        toast.error(data.message || '清理失败');
+        toast.info('没有需要清理的已处理申诉');
       }
-    } catch (err) {
-      toast.error('清理失败');
-    } finally {
-      setClearingLoading(false);
+      setClearDialogOpen(false);
+      setClearDays('');
+      fetchAppeals();
     }
   };
 
@@ -310,7 +251,7 @@ export function AppealsPage() {
                       <span className="font-semibold text-white">
                         {appeal.user_type === 'group' ? '群号' : 'QQ'}: {appeal.user_id}
                       </span>
-                      {getStatusBadge(appeal.status)}
+                      <AppealStatusBadge status={appeal.status} />
                     </div>
                     <p className="text-sm text-muted-foreground">
                       提交时间: {new Date(appeal.created_at).toLocaleString()}
@@ -359,15 +300,9 @@ export function AppealsPage() {
                       <Sparkles className="w-4 h-4 text-purple-500" />
                       <span className="text-sm text-purple-400">AI 建议</span>
                       {(appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) ? (
-                        <Badge className={
-                          ((appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) || '').includes('通过') 
-                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                            : ((appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) || '').includes('拒绝')
-                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                            : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                        }>
-                          {appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation}
-                        </Badge>
+                        <AIRecommendationBadge 
+                          recommendation={appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || ''} 
+                        />
                       ) : (
                         <span className="text-xs text-slate-500">分析完成</span>
                       )}
@@ -415,34 +350,14 @@ export function AppealsPage() {
             ))}
           </div>
 
-          {appealTotalPages > 1 && (
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">每页显示</span>
-                <select
-                  value={appealsPerPage}
-                  onChange={(e) => { setAppealsPerPage(Number(e.target.value)); setAppealPage(1); }}
-                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-muted-foreground">条</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setAppealPage(p => Math.max(1, p - 1))} disabled={appealPage === 1} variant="outline" size="icon">
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">第 {appealPage} / {appealTotalPages || 1} 页</span>
-                <Button onClick={() => setAppealPage(p => Math.min(appealTotalPages, p + 1))} disabled={appealPage === appealTotalPages || appealTotalPages === 0} variant="outline" size="icon">
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={appealPage}
+            totalPages={appealTotalPages}
+            onPageChange={(page) => setAppealPage(page)}
+            perPage={appealsPerPage}
+            onPerPageChange={(perPage) => { setAppealsPerPage(perPage); setAppealPage(1); }}
+            showPerPage
+          />
         </>
       )}
 
@@ -584,7 +499,7 @@ export function AppealsPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">状态:</span>
-                  <div className="mt-1">{getStatusBadge(viewingItem.status)}</div>
+                  <div className="mt-1"><AppealStatusBadge status={viewingItem.status} /></div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">用户类型:</span>

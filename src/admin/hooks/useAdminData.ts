@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 // 全局请求锁，防止重复请求
@@ -55,6 +55,7 @@ export type AdminDataContext = ReturnType<typeof useAdminData>;
 
 export function useAdminData() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [token, setToken] = useState('');
   const [adminLevel, setAdminLevel] = useState<number>(0);
   const [adminInfo, setAdminInfo] = useState<Admin | null>(null);
@@ -125,7 +126,10 @@ export function useAdminData() {
     const storedToken = localStorage.getItem('admin_token');
     const storedAdminInfo = localStorage.getItem('admin_info');
     if (!storedToken) {
-      navigate('/admin');
+      // 记录当前页面路径到 goto 参数
+      const currentPath = location.pathname + location.search;
+      const gotoParam = currentPath !== '/admin' ? `?goto=${encodeURIComponent(currentPath)}` : '';
+      navigate(`/admin${gotoParam}`);
       setIsInitialized(true);
       return;
     }
@@ -149,8 +153,11 @@ export function useAdminData() {
     toast.error('登录已过期，请重新登录');
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_info');
-    navigate('/admin');
-  }, [navigate]);
+    // 记录当前页面路径到 goto 参数，登录后可以返回
+    const currentPath = location.pathname + location.search;
+    const gotoParam = currentPath !== '/admin' ? `?goto=${encodeURIComponent(currentPath)}` : '';
+    navigate(`/admin${gotoParam}`);
+  }, [navigate, location]);
 
   const fetchStats = useCallback(async (authToken: string, forceRefresh = false) => {
     const cacheKey = `stats-${authToken}`;

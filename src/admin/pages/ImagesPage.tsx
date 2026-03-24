@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import {
   Image,
   RefreshCw,
@@ -8,8 +8,6 @@ import {
   FolderOpen,
   Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   FileImage,
   Folder,
   Eye,
@@ -32,6 +30,7 @@ import {
   LoadingButton,
   PageHeader,
   ConfirmDialog,
+  SelectPagination,
 } from '../components';
 import { DialogContent } from '@/components/ui/dialog';
 import {
@@ -41,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useApiMutation } from '../hooks';
 
 interface ImageItem {
   filename: string;
@@ -57,6 +57,8 @@ interface Subfolder {
 
 export function ImagesPage() {
   const { token, adminLevel } = useOutletContext<AdminDataContext>();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Permissions - 等级3+可以查看和操作
   const canUploadImage = adminLevel >= 3;
@@ -77,13 +79,17 @@ export function ImagesPage() {
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingImage, setDeletingImage] = useState<ImageItem | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [uploadLoading, _setUploadLoading] = useState(false);
+  
+  // API mutations
+  const { mutate: deleteMutate, loading: deleteLoading } = useApiMutation(token, {
+    successMessage: '文件已删除',
+  });
 
   const fetchImages = useCallback(async () => {
     if (!token) return;
@@ -104,6 +110,11 @@ export function ImagesPage() {
 
       if (response.status === 401 || response.status === 403) {
         toast.error('登录已过期，请重新登录');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_info');
+        // 记录当前页面路径到 goto 参数，登录后可以返回
+        const currentPath = location.pathname + location.search;
+        navigate(`/admin?goto=${encodeURIComponent(currentPath)}`);
         return;
       }
 
@@ -178,18 +189,18 @@ export function ImagesPage() {
   };
 
   const uploadImage = async () => {
-    if (!uploadFile || !token) return;
+    if (!uploadFile) return;
 
-    setUploadLoading(true);
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+    formData.append('subfolder', subfolder);
+
+    // Custom fetch for FormData (multipart/form-data)
     try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('subfolder', subfolder);
-
       const response = await fetch(`${API_BASE}/api/admin/images`, {
         method: 'POST',
         headers: {
-          'Authorization': token,
+          'Authorization': token || '',
         },
         body: formData,
       });
@@ -209,38 +220,22 @@ export function ImagesPage() {
       }
     } catch (err) {
       toast.error('上传失败');
-    } finally {
-      setUploadLoading(false);
     }
   };
 
   const deleteImage = async () => {
-    if (!deletingImage || !token) return;
+    if (!deletingImage) return;
 
-    setDeleteLoading(true);
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/admin/images/${encodeURIComponent(deletingImage.path)}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': token },
-        }
-      );
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success('文件已删除');
-        setDeleteDialogOpen(false);
-        setDeletingImage(null);
-        fetchImages();
-        fetchSubfolders();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除失败');
-    } finally {
-      setDeleteLoading(false);
+    const result = await deleteMutate(
+      `/api/admin/images/${encodeURIComponent(deletingImage.path)}`,
+      { method: 'DELETE' }
+    );
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      setDeletingImage(null);
+      fetchImages();
+      fetchSubfolders();
     }
   };
 
@@ -387,43 +382,14 @@ export function ImagesPage() {
           </div>
 
           {/* Pagination */}
-          {pages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-4">
-              <Button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                variant="outline"
-                size="sm"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-slate-400">
-                {page} / {pages}
-              </span>
-              <Button
-                onClick={() => setPage(p => Math.min(pages, p + 1))}
-                disabled={page >= pages}
-                variant="outline"
-                size="sm"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Select
-                value={perPage.toString()}
-                onValueChange={(v) => { setPerPage(parseInt(v)); setPage(1); }}
-              >
-                <SelectTrigger className="w-[100px] bg-slate-800 border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="10">10/页</SelectItem>
-                  <SelectItem value="20">20/页</SelectItem>
-                  <SelectItem value="50">50/页</SelectItem>
-                  <SelectItem value="100">100/页</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <SelectPagination
+            page={page}
+            totalPages={pages}
+            onPageChange={(newPage) => setPage(newPage)}
+            perPage={perPage}
+            onPerPageChange={(newPerPage) => { setPerPage(newPerPage); setPage(1); }}
+            className="pt-4"
+          />
         </>
       )}
 

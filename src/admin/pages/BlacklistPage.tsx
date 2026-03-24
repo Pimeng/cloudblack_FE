@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BlacklistItem } from '../types';
-import { API_BASE } from '../types';
 import { toast } from 'sonner';
 import {
   LoadingSpinner,
@@ -33,8 +32,16 @@ import {
   DetailInfoItem,
   DetailInfoGrid,
   DetailContentBlock,
+  SimplePagination,
+  UserTypeBadge,
+  ViolationLevelBadge,
 } from '../components';
-import { useExpandableDetail } from '../hooks';
+import { useExpandableDetail, useApiMutation } from '../hooks';
+
+interface AddBlacklistResponse {
+  status?: string;
+  confirmation_id: number;
+}
 
 export function BlacklistPage() {
   const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, blacklistTypeFilter, setBlacklistTypeFilter, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
@@ -45,7 +52,6 @@ export function BlacklistPage() {
   const [newUserType, setNewUserType] = useState<'user' | 'group'>('user');
   const [newReason, setNewReason] = useState('');
   const [newLevel, setNewLevel] = useState(1);
-  const [addingLoading, setAddingLoading] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     confirmation_id: number;
     user_id: string;
@@ -57,15 +63,25 @@ export function BlacklistPage() {
   const [editUserId, setEditUserId] = useState('');
   const [editUserType, setEditUserType] = useState<'user' | 'group'>('user');
   const [editLevel, setEditLevel] = useState(1);
-  const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<BlacklistItem | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
-  const [deletingLoading, setDeletingLoading] = useState(false);
   
   // Detail edit mode states
   const [isEditingDetail, setIsEditingDetail] = useState(false);
+  
+  // API mutations
+  const { mutate: addToBlacklistMutate, loading: addingLoading } = useApiMutation<AddBlacklistResponse>(token, {
+    successMessage: '',
+    showSuccessToast: false,
+  });
+  const { mutate: updateBlacklistMutate, loading: updatingLoading } = useApiMutation(token, {
+    successMessage: '黑名单条目已更新',
+  });
+  const { mutate: deleteBlacklistMutate, loading: deletingLoading } = useApiMutation(token, {
+    successMessage: '已移出黑名单',
+  });
   
   // Use expandable detail hook
   const {
@@ -93,91 +109,63 @@ export function BlacklistPage() {
   ] as const;
 
   const addToBlacklist = async () => {
-    if (!newUserId.trim() || !newReason.trim() || !token) return;
+    if (!newUserId.trim() || !newReason.trim()) return;
     
-    setAddingLoading(true);
     setPendingConfirmation(null);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/blacklist`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          user_id: newUserId, 
-          user_type: newUserType, 
-          reason: newReason,
-          level: newLevel,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        // Level 4 需要二次确认
-        if (data.data?.status === 'pending' && newLevel === 4) {
-          setPendingConfirmation({
-            confirmation_id: data.data.confirmation_id,
-            user_id: newUserId,
-          });
-          toast.success('严重违规记录已提交，需要另一名管理员确认');
-        } else {
-          toast.success('已添加到黑名单');
-          setAddDialogOpen(false);
-          setNewUserId('');
-          setNewUserType('user');
-          setNewReason('');
-          setNewLevel(1);
-          fetchBlacklist();
-        }
-      } else {
-        toast.error(data.message || '添加失败');
+    const result = await addToBlacklistMutate(
+      '/api/admin/blacklist',
+      { method: 'POST' },
+      {
+        user_id: newUserId,
+        user_type: newUserType,
+        reason: newReason,
+        level: newLevel,
       }
-    } catch (err) {
-      toast.error('添加失败');
-    } finally {
-      setAddingLoading(false);
+    );
+    
+    if (result) {
+      // Level 4 需要二次确认
+      if (result.status === 'pending' && newLevel === 4) {
+        setPendingConfirmation({
+          confirmation_id: result.confirmation_id,
+          user_id: newUserId,
+        });
+        toast.success('严重违规记录已提交，需要另一名管理员确认');
+      } else {
+        toast.success('已添加到黑名单');
+        setAddDialogOpen(false);
+        setNewUserId('');
+        setNewUserType('user');
+        setNewReason('');
+        setNewLevel(1);
+        fetchBlacklist();
+      }
     }
   };
 
   const updateBlacklistItem = async () => {
-    if (!editingItem || !token) return;
+    if (!editingItem) return;
     
-    setUpdatingLoading(true);
-    try {
-      const body: any = {};
-      if (editReason !== editingItem.reason) body.reason = editReason;
-      if (editUserId !== editingItem.user_id) body.new_user_id = editUserId;
-      if (editUserType !== editingItem.user_type) body.user_type = editUserType;
-      if (editLevel !== (editingItem.level || 1)) body.level = editLevel;
-      
-      if (Object.keys(body).length === 0) {
-        toast.info('没有修改内容');
-        setUpdatingLoading(false);
-        return;
-      }
+    const body: Record<string, unknown> = {};
+    if (editReason !== editingItem.reason) body.reason = editReason;
+    if (editUserId !== editingItem.user_id) body.new_user_id = editUserId;
+    if (editUserType !== editingItem.user_type) body.user_type = editUserType;
+    if (editLevel !== (editingItem.level || 1)) body.level = editLevel;
+    
+    if (Object.keys(body).length === 0) {
+      toast.info('没有修改内容');
+      return;
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/blacklist/${editingItem.user_id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('黑名单条目已更新');
-        setEditDialogOpen(false);
-        fetchBlacklist();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新失败');
-    } finally {
-      setUpdatingLoading(false);
+    const result = await updateBlacklistMutate(
+      `/api/admin/blacklist/${editingItem.user_id}`,
+      { method: 'PUT' },
+      body
+    );
+    
+    if (result) {
+      setEditDialogOpen(false);
+      fetchBlacklist();
     }
   };
 
@@ -207,74 +195,48 @@ export function BlacklistPage() {
   };
 
   const saveDetailEdit = async () => {
-    if (!viewingItem || !token) return;
+    if (!viewingItem) return;
     
-    setUpdatingLoading(true);
-    try {
-      const body: { reason?: string; user_type?: 'user' | 'group'; level?: number } = {};
-      if (editReason.trim() !== viewingItem.reason) body.reason = editReason.trim();
-      if (editUserType !== viewingItem.user_type) body.user_type = editUserType;
-      if (editLevel !== viewingItem.level) body.level = editLevel;
-      
-      if (Object.keys(body).length === 0) {
-        toast.info('没有需要更新的内容');
-        setIsEditingDetail(false);
-        return;
-      }
+    const body: { reason?: string; user_type?: 'user' | 'group'; level?: number } = {};
+    if (editReason.trim() !== viewingItem.reason) body.reason = editReason.trim();
+    if (editUserType !== viewingItem.user_type) body.user_type = editUserType;
+    if (editLevel !== viewingItem.level) body.level = editLevel;
+    
+    if (Object.keys(body).length === 0) {
+      toast.info('没有需要更新的内容');
+      setIsEditingDetail(false);
+      return;
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/blacklist/${viewingItem.user_id}?user_type=${viewingItem.user_type || 'user'}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('黑名单条目已更新');
-        setIsEditingDetail(false);
-        fetchBlacklist();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新失败');
-    } finally {
-      setUpdatingLoading(false);
+    const result = await updateBlacklistMutate(
+      `/api/admin/blacklist/${viewingItem.user_id}?user_type=${viewingItem.user_type || 'user'}`,
+      { method: 'PUT' },
+      body
+    );
+    
+    if (result) {
+      setIsEditingDetail(false);
+      fetchBlacklist();
     }
   };
 
   const deleteBlacklistItem = async () => {
-    if (!deletingItem || !token) return;
+    if (!deletingItem) return;
     
-    setDeletingLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.append('user_type', deletingItem.user_type || 'user');
-      if (deleteReason.trim()) {
-        params.append('reason', deleteReason.trim());
-      }
+    const params = new URLSearchParams();
+    params.append('user_type', deletingItem.user_type || 'user');
+    if (deleteReason.trim()) {
+      params.append('reason', deleteReason.trim());
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/blacklist/${deletingItem.user_id}?${params}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('已移出黑名单');
-        setDeleteDialogOpen(false);
-        setDeleteReason('');
-        fetchBlacklist();
-      } else {
-        toast.error(data.message || '移除失败');
-      }
-    } catch (err) {
-      toast.error('移除失败');
-    } finally {
-      setDeletingLoading(false);
+    const result = await deleteBlacklistMutate(`/api/admin/blacklist/${deletingItem.user_id}?${params}`, {
+      method: 'DELETE',
+    });
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      setDeleteReason('');
+      fetchBlacklist();
     }
   };
 
@@ -382,13 +344,7 @@ export function BlacklistPage() {
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-4">
-                      <Badge className={
-                        item.level === 4 ? 'bg-red-500' :
-                        item.level === 3 ? 'bg-orange-500' :
-                        item.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
-                      }>
-                        等级 {item.level || 1}
-                      </Badge>
+                      <ViolationLevelBadge level={item.level || 1} />
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[300px] truncate" title={item.reason}>{item.reason}</td>
                     <td className="px-4 md:px-6 py-4 whitespace-nowrap">
@@ -441,17 +397,12 @@ export function BlacklistPage() {
             </table>
           </div>
 
-          {blacklistTotalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button onClick={() => setBlacklistPage(p => Math.max(1, p - 1))} disabled={blacklistPage === 1} variant="outline" size="icon">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              </Button>
-              <span className="text-sm text-muted-foreground">第 {blacklistPage} / {blacklistTotalPages} 页</span>
-              <Button onClick={() => setBlacklistPage(p => Math.min(blacklistTotalPages, p + 1))} disabled={blacklistPage === blacklistTotalPages} variant="outline" size="icon">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </Button>
-            </div>
-          )}
+          <SimplePagination
+            page={blacklistPage}
+            totalPages={blacklistTotalPages}
+            onPageChange={(page) => setBlacklistPage(page)}
+            className="pt-4"
+          />
         </>
       )}
 
@@ -755,21 +706,13 @@ export function BlacklistPage() {
               <>
                 <DetailInfoGrid>
                   <DetailInfoItem label="类型">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
-                      {getUserTypeLabel(viewingItem.user_type || 'user')}
-                    </span>
+                    <UserTypeBadge type={viewingItem.user_type || 'user'} />
                   </DetailInfoItem>
                   <DetailInfoItem label="ID">
                     <p className="text-white font-mono">{viewingItem.user_id}</p>
                   </DetailInfoItem>
                   <DetailInfoItem label="违规等级">
-                    <Badge className={
-                      viewingItem.level === 4 ? 'bg-red-500' :
-                      viewingItem.level === 3 ? 'bg-orange-500' :
-                      viewingItem.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
-                    }>
-                      等级 {viewingItem.level || 1}
-                    </Badge>
+                    <ViolationLevelBadge level={viewingItem.level || 1} />
                   </DetailInfoItem>
                   {viewingItem.added_by && (
                     <DetailInfoItem label="操作者">

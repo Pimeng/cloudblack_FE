@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Database, RefreshCw, Plus, Trash2, Edit3, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BackupItem } from '../types';
-import { API_BASE } from '../types';
-import { toast } from 'sonner';
+
 import {
   LoadingSpinner,
   EmptyState,
@@ -22,7 +20,9 @@ import {
   FormInput,
   FormTextarea,
   FormBooleanSelect,
+  BackupTypeBadge,
 } from '../components';
+import { useApiMutation } from '../hooks';
 
 export function BackupPage() {
   const { token, adminLevel, backups, backupStatus, backupConfig, backupLoading, fetchBackups, fetchBackupStatus, fetchBackupConfig } = useOutletContext<AdminDataContext>();
@@ -36,16 +36,13 @@ export function BackupPage() {
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createRemark, setCreateRemark] = useState('');
-  const [creatingLoading, setCreatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingBackup, setDeletingBackup] = useState<BackupItem | null>(null);
-  const [deletingLoading, setDeletingLoading] = useState(false);
   
   const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
   const [editingRemarkBackup, setEditingRemarkBackup] = useState<BackupItem | null>(null);
   const [editRemark, setEditRemark] = useState('');
-  const [updatingRemarkLoading, setUpdatingRemarkLoading] = useState(false);
   
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [editBackupConfig, setEditBackupConfig] = useState({
@@ -55,7 +52,20 @@ export function BackupPage() {
     max_backups: 10,
     retention_days: 30,
   });
-  const [updatingConfigLoading, setUpdatingConfigLoading] = useState(false);
+  
+  // API mutations
+  const { mutate: createBackupMutate, loading: creatingLoading } = useApiMutation(token, {
+    successMessage: '备份创建成功',
+  });
+  const { mutate: deleteBackupMutate, loading: deletingLoading } = useApiMutation(token, {
+    successMessage: '备份已删除',
+  });
+  const { mutate: updateRemarkMutate, loading: updatingRemarkLoading } = useApiMutation(token, {
+    successMessage: '备注已更新',
+  });
+  const { mutate: updateConfigMutate, loading: updatingConfigLoading } = useApiMutation(token, {
+    successMessage: '备份配置已更新',
+  });
 
   useEffect(() => {
     if (token) {
@@ -78,118 +88,61 @@ export function BackupPage() {
   }, [backupConfig]);
 
   const createBackup = async () => {
-    if (!token) return;
+    const result = await createBackupMutate(
+      '/api/admin/backup',
+      { method: 'POST' },
+      { remark: createRemark || undefined }
+    );
     
-    setCreatingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/backup`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ remark: createRemark || undefined }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('备份创建成功');
-        setCreateDialogOpen(false);
-        setCreateRemark('');
-        fetchBackups();
-        fetchBackupStatus();
-      } else {
-        toast.error(data.message || '创建失败');
-      }
-    } catch (err) {
-      toast.error('创建备份失败');
-    } finally {
-      setCreatingLoading(false);
+    if (result) {
+      setCreateDialogOpen(false);
+      setCreateRemark('');
+      fetchBackups();
+      fetchBackupStatus();
     }
   };
 
   const deleteBackup = async () => {
-    if (!deletingBackup || !token) return;
+    if (!deletingBackup) return;
     
-    setDeletingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/backup/${encodeURIComponent(deletingBackup.filename)}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('备份已删除');
-        setDeleteDialogOpen(false);
-        fetchBackups();
-        fetchBackupStatus();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除备份失败');
-    } finally {
-      setDeletingLoading(false);
+    const result = await deleteBackupMutate(
+      `/api/admin/backup/${encodeURIComponent(deletingBackup.filename)}`,
+      { method: 'DELETE' }
+    );
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      fetchBackups();
+      fetchBackupStatus();
     }
   };
 
   const updateBackupRemark = async () => {
-    if (!editingRemarkBackup || !token) return;
+    if (!editingRemarkBackup) return;
     
-    setUpdatingRemarkLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/backup/${encodeURIComponent(editingRemarkBackup.filename)}/remark`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ remark: editRemark }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('备注已更新');
-        setRemarkDialogOpen(false);
-        fetchBackups();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新备注失败');
-    } finally {
-      setUpdatingRemarkLoading(false);
+    const result = await updateRemarkMutate(
+      `/api/admin/backup/${encodeURIComponent(editingRemarkBackup.filename)}/remark`,
+      { method: 'PUT' },
+      { remark: editRemark }
+    );
+    
+    if (result) {
+      setRemarkDialogOpen(false);
+      fetchBackups();
     }
   };
 
   const updateBackupConfig = async () => {
-    if (!token) return;
+    const result = await updateConfigMutate(
+      '/api/admin/backup/config',
+      { method: 'PUT' },
+      editBackupConfig
+    );
     
-    setUpdatingConfigLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editBackupConfig),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('备份配置已更新');
-        setConfigDialogOpen(false);
-        fetchBackupConfig();
-        fetchBackupStatus();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新配置失败');
-    } finally {
-      setUpdatingConfigLoading(false);
+    if (result) {
+      setConfigDialogOpen(false);
+      fetchBackupConfig();
+      fetchBackupStatus();
     }
   };
 
@@ -282,9 +235,7 @@ export function BackupPage() {
                 <tr key={backup.filename} className="hover:bg-slate-800/30">
                   <td className="px-4 md:px-6 py-4 text-white font-mono text-sm">{backup.filename}</td>
                   <td className="px-4 md:px-6 py-4">
-                    <Badge className={backup.is_auto ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}>
-                      {backup.is_auto ? '自动' : '手动'}
-                    </Badge>
+                    <BackupTypeBadge isAuto={backup.is_auto} />
                   </td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{backup.size_human}</td>
                   <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{backup.created_at_str}</td>

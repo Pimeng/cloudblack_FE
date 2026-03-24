@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ShieldAlert, CheckCircle, XCircle, Clock, UserCheck, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ShieldAlert, CheckCircle, XCircle, UserCheck, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { Level4PendingItem } from '../types';
-import { API_BASE } from '../types';
 import { toast } from 'sonner';
+import { API_BASE } from '../types';
 import {
   LoadingSpinner,
   EmptyState,
@@ -19,7 +19,11 @@ import {
   LoadingButton,
   PageHeader,
   FormTextarea,
+  SimplePagination,
+  Level4StatusBadge,
+  UserTypeBadge,
 } from '../components';
+import { useApiMutation } from '../hooks';
 
 export function Level4PendingPage() {
   const { token, adminInfo, adminLevel } = useOutletContext<AdminDataContext>();
@@ -34,13 +38,18 @@ export function Level4PendingPage() {
   // Confirm dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmingItem, setConfirmingItem] = useState<Level4PendingItem | null>(null);
-  const [confirmingLoading, setConfirmingLoading] = useState(false);
-  
   // Cancel dialog
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancellingItem, setCancellingItem] = useState<Level4PendingItem | null>(null);
   const [cancelReason, setCancelReason] = useState('');
-  const [cancellingLoading, setCancellingLoading] = useState(false);
+  
+  // API mutations
+  const { mutate: confirmMutate, loading: confirmingLoading } = useApiMutation(token, {
+    successMessage: '确认成功，该用户已正式加入黑名单',
+  });
+  const { mutate: cancelMutate, loading: cancellingLoading } = useApiMutation(token, {
+    successMessage: '待确认记录已取消',
+  });
 
   const canConfirm = adminLevel >= 3;
   const canCancel = adminLevel >= 3;
@@ -76,63 +85,35 @@ export function Level4PendingPage() {
   };
 
   const confirmLevel4 = async () => {
-    if (!confirmingItem || !token) return;
+    if (!confirmingItem) return;
     
-    setConfirmingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/blacklist/level4-confirm`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ confirmation_id: confirmingItem.id }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('确认成功，该用户已正式加入黑名单');
-        setConfirmDialogOpen(false);
-        fetchPendingItems();
-      } else {
-        toast.error(data.message || '确认失败');
-      }
-    } catch (err) {
-      toast.error('确认失败');
-    } finally {
-      setConfirmingLoading(false);
+    const result = await confirmMutate(
+      '/api/admin/blacklist/level4-confirm',
+      { method: 'POST' },
+      { confirmation_id: confirmingItem.id }
+    );
+    
+    if (result) {
+      setConfirmDialogOpen(false);
+      fetchPendingItems();
     }
   };
 
   const cancelLevel4 = async () => {
-    if (!cancellingItem || !token) return;
+    if (!cancellingItem) return;
     
-    setCancellingLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (cancelReason.trim()) params.append('reason', cancelReason.trim());
-      
-      const response = await fetch(
-        `${API_BASE}/api/admin/blacklist/level4-pending/${cancellingItem.id}?${params}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': token },
-        }
-      );
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('待确认记录已取消');
-        setCancelDialogOpen(false);
-        setCancelReason('');
-        fetchPendingItems();
-      } else {
-        toast.error(data.message || '取消失败');
-      }
-    } catch (err) {
-      toast.error('取消失败');
-    } finally {
-      setCancellingLoading(false);
+    const params = new URLSearchParams();
+    if (cancelReason.trim()) params.append('reason', cancelReason.trim());
+    
+    const result = await cancelMutate(
+      `/api/admin/blacklist/level4-pending/${cancellingItem.id}?${params}`,
+      { method: 'DELETE' }
+    );
+    
+    if (result) {
+      setCancelDialogOpen(false);
+      setCancelReason('');
+      fetchPendingItems();
     }
   };
 
@@ -156,33 +137,7 @@ export function Level4PendingPage() {
     setCancelDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge variant="outline" className="border-yellow-500/50 text-yellow-500">
-            <Clock className="w-3 h-3 mr-1" />
-            待确认
-          </Badge>
-        );
-      case 'confirmed':
-        return (
-          <Badge variant="outline" className="border-green-500/50 text-green-500">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            已确认
-          </Badge>
-        );
-      case 'cancelled':
-        return (
-          <Badge variant="outline" className="border-red-500/50 text-red-500">
-            <XCircle className="w-3 h-3 mr-1" />
-            已取消
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
+
 
   const totalPages = Math.ceil(total / perPage);
 
@@ -247,7 +202,7 @@ export function Level4PendingPage() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Badge className="bg-red-500">等级 4</Badge>
-                      {getStatusBadge(item.status)}
+                      <Level4StatusBadge status={item.status} />
                       {item.first_admin_id === adminInfo?.admin_id && (
                         <Badge variant="outline" className="border-blue-500/50 text-blue-400">
                           我提交的
@@ -263,7 +218,7 @@ export function Level4PendingPage() {
                       <div>
                         <span className="text-slate-500">类型:</span>
                         <span className="text-white ml-2">
-                          {item.user_type === 'group' ? '群聊' : '用户'}
+                          <UserTypeBadge type={item.user_type} className="ml-2" />
                         </span>
                       </div>
                       <div className="col-span-2">
@@ -338,33 +293,11 @@ export function Level4PendingPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                variant="outline"
-                size="icon"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                第 {page} / {totalPages} 页
-              </span>
-              <Button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                variant="outline"
-                size="icon"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Button>
-            </div>
-          )}
+          <SimplePagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={(newPage) => setPage(newPage)}
+          />
         </>
       )}
 

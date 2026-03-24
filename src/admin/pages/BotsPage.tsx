@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { BotToken } from '../types';
-import { API_BASE } from '../types';
 import { toast } from 'sonner';
 import {
   LoadingSpinner,
@@ -22,6 +21,7 @@ import {
   FormInput,
   FormTextarea,
 } from '../components';
+import { useApiMutation, useGetMutation } from '../hooks';
 
 export function BotsPage() {
   const { token, adminLevel, adminInfo, bots, botsLoading, fetchBots } = useOutletContext<AdminDataContext>();
@@ -42,7 +42,6 @@ export function BotsPage() {
   const [newBotDescription, setNewBotDescription] = useState('');
   const [newBotToken, setNewBotToken] = useState('');
   const [useCustomToken, setUseCustomToken] = useState(false);
-  const [addingLoading, setAddingLoading] = useState(false);
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBot, setEditingBot] = useState<BotToken | null>(null);
@@ -50,153 +49,103 @@ export function BotsPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editToken, setEditToken] = useState('');
   const [editChangeToken, setEditChangeToken] = useState(false);
-  const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingBot, setDeletingBot] = useState<BotToken | null>(null);
-  const [deletingLoading, setDeletingLoading] = useState(false);
   
   const [viewTokenDialogOpen, setViewTokenDialogOpen] = useState(false);
   const [viewingBot, setViewingBot] = useState<BotToken | null>(null);
   const [viewingToken, setViewingToken] = useState('');
-  const [tokenLoading, setTokenLoading] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  
+  // API mutations
+  const { mutate: createBotMutate, loading: addingLoading } = useApiMutation(token, {
+    successMessage: 'Bot Token 创建成功',
+  });
+  const { mutate: updateBotMutate, loading: updatingLoading } = useApiMutation(token, {
+    successMessage: 'Bot Token 已更新',
+  });
+  const { mutate: deleteBotMutate, loading: deletingLoading } = useApiMutation(token, {
+    successMessage: 'Bot Token 已删除',
+  });
+  const { get: getTokenMutate, loading: tokenLoading } = useGetMutation<{ token: string }>(token);
 
   useEffect(() => {
     if (token) fetchBots();
   }, [token]);
 
   const createBot = async () => {
-    if (!newBotName.trim() || !newBotOwner.trim() || !token) return;
+    if (!newBotName.trim() || !newBotOwner.trim()) return;
     
-    setAddingLoading(true);
-    try {
-      const body: any = {
-        bot_name: newBotName,
-        owner: newBotOwner,
-        description: newBotDescription,
-      };
-      if (useCustomToken && newBotToken.trim()) {
-        body.token = newBotToken.trim();
-      }
+    const body: Record<string, unknown> = {
+      bot_name: newBotName,
+      owner: newBotOwner,
+      description: newBotDescription,
+    };
+    if (useCustomToken && newBotToken.trim()) {
+      body.token = newBotToken.trim();
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/bots`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Bot Token 创建成功');
-        setAddDialogOpen(false);
-        setNewBotName('');
-        setNewBotOwner('');
-        setNewBotDescription('');
-        setNewBotToken('');
-        setUseCustomToken(false);
-        fetchBots();
-      } else {
-        toast.error(data.message || '创建失败');
-      }
-    } catch (err) {
-      toast.error('创建失败');
-    } finally {
-      setAddingLoading(false);
+    const result = await createBotMutate('/api/admin/bots', { method: 'POST' }, body);
+    
+    if (result) {
+      setAddDialogOpen(false);
+      setNewBotName('');
+      setNewBotOwner('');
+      setNewBotDescription('');
+      setNewBotToken('');
+      setUseCustomToken(false);
+      fetchBots();
     }
   };
 
   const updateBot = async () => {
-    if (!editingBot || !token) return;
+    if (!editingBot) return;
     
-    setUpdatingLoading(true);
-    try {
-      const body: any = {};
-      if (editOwner !== editingBot.owner) body.owner = editOwner;
-      if (editDescription !== (editingBot.description || '')) body.description = editDescription;
-      if (editChangeToken && editToken.trim()) body.token = editToken.trim();
-      
-      if (Object.keys(body).length === 0) {
-        toast.info('没有修改内容');
-        setUpdatingLoading(false);
-        return;
-      }
+    const body: Record<string, unknown> = {};
+    if (editOwner !== editingBot.owner) body.owner = editOwner;
+    if (editDescription !== (editingBot.description || '')) body.description = editDescription;
+    if (editChangeToken && editToken.trim()) body.token = editToken.trim();
+    
+    if (Object.keys(body).length === 0) {
+      toast.info('没有修改内容');
+      return;
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/bots/${editingBot.bot_name}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Bot Token 已更新');
-        setEditDialogOpen(false);
-        fetchBots();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新失败');
-    } finally {
-      setUpdatingLoading(false);
+    const result = await updateBotMutate(
+      `/api/admin/bots/${editingBot.bot_name}`,
+      { method: 'PUT' },
+      body
+    );
+    
+    if (result) {
+      setEditDialogOpen(false);
+      fetchBots();
     }
   };
 
   const deleteBot = async () => {
-    if (!deletingBot || !token) return;
+    if (!deletingBot) return;
     
-    setDeletingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/bots/${deletingBot.bot_name}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Bot Token 已删除');
-        setDeleteDialogOpen(false);
-        fetchBots();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除失败');
-    } finally {
-      setDeletingLoading(false);
+    const result = await deleteBotMutate(
+      `/api/admin/bots/${deletingBot.bot_name}`,
+      { method: 'DELETE' }
+    );
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      fetchBots();
     }
   };
 
   const viewToken = async (bot: BotToken) => {
-    if (!token) return;
-    
     setViewingBot(bot);
     setViewTokenDialogOpen(true);
-    setTokenLoading(true);
     setShowToken(false);
     
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/bots/${bot.bot_name}/token`, {
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setViewingToken(data.data.token);
-      } else {
-        toast.error(data.message || '获取 Token 失败');
-      }
-    } catch (err) {
-      toast.error('获取 Token 失败');
-    } finally {
-      setTokenLoading(false);
+    const result = await getTokenMutate(`/api/admin/bots/${bot.bot_name}/token`);
+    if (result) {
+      setViewingToken(result.token);
     }
   };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { ScrollText, RefreshCw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ScrollText, RefreshCw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
@@ -12,6 +12,9 @@ import {
   DetailInfoItem,
   DetailInfoGrid,
   DetailContentBlock,
+  Pagination,
+  OperatorTypeBadge,
+  OperationStatusBadge,
 } from '../components';
 
 interface LogDetails {
@@ -410,26 +413,15 @@ export function LogsPage() {
                     <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span>{log.operator_id}</span>
-                        {log.operator_type === 'admin' && log.operator_level !== undefined && (
-                          <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
-                            L{log.operator_level}
-                          </Badge>
-                        )}
-                        {log.operator_type === 'admin' && log.operator_level === undefined && (
-                          <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                        )}
-                        {log.operator_type === 'bot' && (
-                          <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
-                        )}
+                        <OperatorTypeBadge 
+                          type={log.operator_type} 
+                          level={log.operator_level} 
+                        />
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono whitespace-nowrap">{log.ip}</td>
                     <td className="px-4 md:px-6 py-4">
-                      {log.status === 'success' ? (
-                        <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                      ) : (
-                        <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
-                      )}
+                      <OperationStatusBadge status={log.status === 'success'} />
                     </td>
                   </tr>
                 ))}
@@ -437,34 +429,14 @@ export function LogsPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">每页显示</span>
-                <select
-                  value={logsPerPage}
-                  onChange={(e) => { setLogsPerPage(Number(e.target.value)); setLogsPage(1); }}
-                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-muted-foreground">条</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button onClick={() => setLogsPage(p => Math.max(1, p - 1))} disabled={logsPage === 1} variant="outline" size="icon">
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">第 {logsPage} / {totalPages} 页</span>
-                <Button onClick={() => setLogsPage(p => Math.min(totalPages, p + 1))} disabled={logsPage === totalPages} variant="outline" size="icon">
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={logsPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setLogsPage(page)}
+            perPage={logsPerPage}
+            onPerPageChange={(perPage) => { setLogsPerPage(perPage); setLogsPage(1); }}
+            showPerPage
+          />
         </>
       )}
 
@@ -486,28 +458,17 @@ export function LogsPage() {
               <DetailInfoItem label="操作者">
                 <div className="flex items-center gap-2">
                   <span className="text-white">{selectedLog.operator_id}</span>
-                  {selectedLog.operator_type === 'admin' && selectedLog.operator_level !== undefined && (
-                    <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">
-                      L{selectedLog.operator_level}
-                    </Badge>
-                  )}
-                  {selectedLog.operator_type === 'admin' && selectedLog.operator_level === undefined && (
-                    <Badge variant="secondary" className="bg-slate-800 text-slate-400 border-slate-700 text-xs">管理员</Badge>
-                  )}
-                  {selectedLog.operator_type === 'bot' && (
-                    <Badge variant="secondary" className="bg-purple-900/30 text-purple-400 border-purple-700/50 text-xs">Bot</Badge>
-                  )}
+                  <OperatorTypeBadge 
+                    type={selectedLog.operator_type} 
+                    level={selectedLog.operator_level} 
+                  />
                 </div>
               </DetailInfoItem>
               <DetailInfoItem label="IP地址">
                 <p className="text-white font-mono">{selectedLog.ip}</p>
               </DetailInfoItem>
               <DetailInfoItem label="状态">
-                {selectedLog.status === 'success' ? (
-                  <Badge className="bg-green-500/20 text-green-500 border-green-500/50">成功</Badge>
-                ) : (
-                  <Badge className="bg-red-500/20 text-red-500 border-red-500/50">失败</Badge>
-                )}
+                <OperationStatusBadge status={selectedLog.status === 'success'} />
               </DetailInfoItem>
             </DetailInfoGrid>
 

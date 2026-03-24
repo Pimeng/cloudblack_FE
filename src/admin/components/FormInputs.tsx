@@ -35,6 +35,7 @@ export function FormInput({
 interface FormSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'className'> {
   label?: string;
   containerClassName?: string;
+  selectClassName?: string;
   options: { value: string; label: string }[];
   hint?: string;
 }
@@ -42,6 +43,7 @@ interface FormSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElem
 export function FormSelect({
   label,
   containerClassName,
+  selectClassName,
   options,
   hint,
   id,
@@ -54,7 +56,10 @@ export function FormSelect({
       {label && <Label htmlFor={selectId}>{label}</Label>}
       <select
         id={selectId}
-        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+        className={cn(
+          "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white",
+          selectClassName
+        )}
         {...props}
       >
         {options.map((opt) => (

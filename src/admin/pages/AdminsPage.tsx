@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { UserCog, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import type { Admin } from '../types';
-import { API_BASE } from '../types';
 import { toast } from 'sonner';
 import {
   LoadingSpinner,
@@ -21,7 +19,9 @@ import {
   ConfirmDialog,
   FormInput,
   FormSelect,
+  AdminLevelBadge,
 } from '../components';
+import { useApiMutation } from '../hooks';
 
 export function AdminsPage() {
   const { token, adminLevel, adminInfo, admins, adminLoading, fetchAdmins } = useOutletContext<AdminDataContext>();
@@ -37,147 +37,106 @@ export function AdminsPage() {
   const [newAdminName, setNewAdminName] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [newAdminLevel, setNewAdminLevel] = useState(3);
-  const [addingLoading, setAddingLoading] = useState(false);
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
   const [editName, setEditName] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editLevel, setEditLevel] = useState(3);
-  const [updatingLoading, setUpdatingLoading] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAdmin, setDeletingAdmin] = useState<Admin | null>(null);
-  const [deletingLoading, setDeletingLoading] = useState(false);
+  
+  // API mutations
+  const { mutate: addAdminMutate, loading: addingLoading } = useApiMutation(token, {
+    successMessage: '管理员创建成功',
+  });
+  const { mutate: updateAdminMutate, loading: updatingLoading } = useApiMutation(token, {
+    successMessage: '管理员信息已更新',
+  });
+  const { mutate: deleteAdminMutate, loading: deletingLoading } = useApiMutation(token, {
+    successMessage: '管理员已删除',
+  });
 
   useEffect(() => {
     if (token) fetchAdmins();
   }, [token]);
 
-  const getLevelBadge = (level: number) => {
-    switch (level) {
-      case 4: return <Badge className="bg-purple-500">超级管理员</Badge>;
-      case 3: return <Badge className="bg-blue-500">普通管理员</Badge>;
-      case 2: return <Badge className="bg-yellow-500">申诉审核员</Badge>;
-      case 1: return <Badge className="bg-gray-500">Bot持有者</Badge>;
-      default: return <Badge>未知</Badge>;
-    }
-  };
+
 
   const addAdmin = async () => {
-    if (!newAdminId.trim() || !newAdminName.trim() || !newAdminPassword.trim() || !token) return;
+    if (!newAdminId.trim() || !newAdminName.trim() || !newAdminPassword.trim()) return;
     
     if (newAdminPassword.length < 6) {
       toast.error('密码至少6位');
       return;
     }
     
-    setAddingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/admins`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          admin_id: newAdminId,
-          name: newAdminName,
-          password: newAdminPassword,
-          level: newAdminLevel,
-        }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('管理员创建成功');
-        setAddDialogOpen(false);
-        setNewAdminId('');
-        setNewAdminName('');
-        setNewAdminPassword('');
-        setNewAdminLevel(3);
-        fetchAdmins();
-      } else {
-        toast.error(data.message || '创建失败');
+    const result = await addAdminMutate(
+      '/api/admin/admins',
+      { method: 'POST' },
+      {
+        admin_id: newAdminId,
+        name: newAdminName,
+        password: newAdminPassword,
+        level: newAdminLevel,
       }
-    } catch (err) {
-      toast.error('创建失败');
-    } finally {
-      setAddingLoading(false);
+    );
+    
+    if (result) {
+      setAddDialogOpen(false);
+      setNewAdminId('');
+      setNewAdminName('');
+      setNewAdminPassword('');
+      setNewAdminLevel(3);
+      fetchAdmins();
     }
   };
 
   const updateAdmin = async () => {
-    if (!editingAdmin || !token) return;
+    if (!editingAdmin) return;
     
-    setUpdatingLoading(true);
-    try {
-      const body: any = {};
-      if (editName !== editingAdmin.name) body.name = editName;
-      if (editPassword) {
-        if (editPassword.length < 6) {
-          toast.error('密码至少6位');
-          setUpdatingLoading(false);
-          return;
-        }
-        body.password = editPassword;
-      }
-      if (editLevel !== editingAdmin.level && adminLevel >= 4) {
-        body.level = editLevel;
-      }
-      
-      if (Object.keys(body).length === 0) {
-        toast.info('没有修改内容');
-        setUpdatingLoading(false);
+    const body: Record<string, unknown> = {};
+    if (editName !== editingAdmin.name) body.name = editName;
+    if (editPassword) {
+      if (editPassword.length < 6) {
+        toast.error('密码至少6位');
         return;
       }
+      body.password = editPassword;
+    }
+    if (editLevel !== editingAdmin.level && adminLevel >= 4) {
+      body.level = editLevel;
+    }
+    
+    if (Object.keys(body).length === 0) {
+      toast.info('没有修改内容');
+      return;
+    }
 
-      const response = await fetch(`${API_BASE}/api/admin/admins/${editingAdmin.admin_id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('管理员信息已更新');
-        setEditDialogOpen(false);
-        fetchAdmins();
-      } else {
-        toast.error(data.message || '更新失败');
-      }
-    } catch (err) {
-      toast.error('更新失败');
-    } finally {
-      setUpdatingLoading(false);
+    const result = await updateAdminMutate(
+      `/api/admin/admins/${editingAdmin.admin_id}`,
+      { method: 'PUT' },
+      body
+    );
+    
+    if (result) {
+      setEditDialogOpen(false);
+      fetchAdmins();
     }
   };
 
   const deleteAdmin = async () => {
-    if (!deletingAdmin || !token) return;
+    if (!deletingAdmin) return;
     
-    setDeletingLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/admin/admins/${deletingAdmin.admin_id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': token },
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('管理员已删除');
-        setDeleteDialogOpen(false);
-        fetchAdmins();
-      } else {
-        toast.error(data.message || '删除失败');
-      }
-    } catch (err) {
-      toast.error('删除失败');
-    } finally {
-      setDeletingLoading(false);
+    const result = await deleteAdminMutate(
+      `/api/admin/admins/${deletingAdmin.admin_id}`,
+      { method: 'DELETE' }
+    );
+    
+    if (result) {
+      setDeleteDialogOpen(false);
+      fetchAdmins();
     }
   };
 
@@ -231,7 +190,7 @@ export function AdminsPage() {
                   </td>
                   <td className="px-4 md:px-6 py-4 text-white font-mono">{admin.admin_id}</td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{admin.name}</td>
-                  <td className="px-4 md:px-6 py-4">{getLevelBadge(admin.level)}</td>
+                  <td className="px-4 md:px-6 py-4"><AdminLevelBadge level={admin.level} /></td>
                   <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(admin.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
