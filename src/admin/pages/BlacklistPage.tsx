@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useUrlState } from '../hooks';
 import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +45,10 @@ interface AddBlacklistResponse {
 }
 
 export function BlacklistPage() {
-  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, blacklistTypeFilter, setBlacklistTypeFilter, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
+  
+  // 从 URL 获取 tab 状态
+  const [blacklistTypeFilter, setBlacklistTypeFilter] = useUrlState<'all' | 'user' | 'group'>('tab', 'all');
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -97,7 +101,8 @@ export function BlacklistPage() {
 
   useEffect(() => {
     if (token) fetchBlacklist();
-  }, [token, blacklistPage, blacklistSearch, blacklistTypeFilter, fetchBlacklist]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, blacklistPage, blacklistSearch, blacklistTypeFilter]);
 
   const canManageBlacklist = adminLevel >= 3;
   const blacklistTotalPages = Math.ceil(blacklistTotal / 50);
@@ -272,6 +277,7 @@ export function BlacklistPage() {
                       setBlacklistTypeFilter(tab.key as typeof blacklistTypeFilter);
                       setBlacklistPage(1);
                     }}
+                    type="button"
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all ${
                       blacklistTypeFilter === tab.key
                         ? 'bg-slate-700 text-white'

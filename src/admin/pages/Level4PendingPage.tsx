@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useUrlState, useUrlStateNumber } from '../hooks';
 import { ShieldAlert, CheckCircle, XCircle, UserCheck, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,10 +31,12 @@ export function Level4PendingPage() {
   
   const [pendingItems, setPendingItems] = useState<Level4PendingItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'pending' | 'confirmed' | 'cancelled' | 'all'>('pending');
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const perPage = 20;
+  
+  // 从 URL 获取状态
+  const [statusFilter, setStatusFilter] = useUrlState<'pending' | 'confirmed' | 'cancelled' | 'all'>('status', 'pending');
+  const [page, setPage] = useUrlStateNumber('page', 1);
   
   // Confirm dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -56,6 +59,7 @@ export function Level4PendingPage() {
 
   useEffect(() => {
     if (token) fetchPendingItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, statusFilter, page]);
 
   const fetchPendingItems = async () => {

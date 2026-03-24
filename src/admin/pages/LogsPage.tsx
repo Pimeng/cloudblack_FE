@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useUrlState, useUrlStateNumber } from '../hooks';
 import { ScrollText, RefreshCw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -98,7 +99,15 @@ interface LogItem {
 }
 
 export function LogsPage() {
-  const { token, logs, logsLoading, logsPage, setLogsPage, logsTotal, logsPerPage, setLogsPerPage, logFilterAction, setLogFilterAction, logFilterStatus, setLogFilterStatus, logStartDate, setLogStartDate, logEndDate, setLogEndDate, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
+  const { token, logs, logsLoading, logsTotal, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
+  
+  // 从 URL 获取状态
+  const [logsPage, setLogsPage] = useUrlStateNumber('page', 1);
+  const [logsPerPage, setLogsPerPage] = useUrlStateNumber('per_page', 50);
+  const [logFilterAction, setLogFilterAction] = useUrlState<string>('action', '');
+  const [logFilterStatus, setLogFilterStatus] = useUrlState<'all' | 'success' | 'failure'>('status', 'all');
+  const [logStartDate, setLogStartDate] = useUrlState<string>('start_date', '');
+  const [logEndDate, setLogEndDate] = useUrlState<string>('end_date', '');
   
   // 本地 action_type 映射补充
   const localActionTypeMap: Record<string, string> = {
@@ -120,6 +129,7 @@ export function LogsPage() {
       fetchActionTypes();
       fetchLogStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate]);
 
   const totalPages = Math.ceil(logsTotal / logsPerPage);

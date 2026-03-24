@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useUrlState } from '../hooks';
 import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,9 +37,12 @@ interface ClearProcessedResponse {
 export function AppealsPage() {
   const { 
     token, adminLevel,
-    appeals, appealPage, setAppealPage, appealTotal, appealFilter, setAppealFilter,
+    appeals, appealPage, setAppealPage, appealTotal,
     appealsPerPage, setAppealsPerPage, fetchAppeals, loading 
   } = useOutletContext<AdminDataContext>();
+  
+  // 从 URL 获取 status 状态
+  const [appealFilter, setAppealFilter] = useUrlState<'all' | 'pending' | 'approved' | 'rejected'>('status', 'all');
   
   const { openImage } = useImageViewer();
   
@@ -70,6 +74,7 @@ export function AppealsPage() {
 
   useEffect(() => {
     if (token) fetchAppeals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, appealPage, appealFilter, appealsPerPage]);
 
   const canReviewAppeals = adminLevel >= 2;

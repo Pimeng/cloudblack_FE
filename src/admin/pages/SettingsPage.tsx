@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useUrlState } from '../hooks';
 import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,6 +34,9 @@ export function SettingsPage() {
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
+  
+  // 从 URL 获取 tab 状态
+  const [activeTab, setActiveTab] = useUrlState<'basic' | 'smtp' | 'ai' | 'security' | 'upload' | 'backup' | 'server'>('tab', 'basic');
 
   useEffect(() => {
     if (token) {
@@ -234,7 +238,7 @@ export function SettingsPage() {
         </button>
       </PageHeader>
 
-      <Tabs defaultValue="basic" className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
         <TabsList className="bg-slate-800 flex-wrap h-auto">
           <TabsTrigger value="basic">基础配置</TabsTrigger>
           <TabsTrigger value="smtp">邮件服务</TabsTrigger>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
+import { useUrlState, useUrlStateNumber } from '../hooks';
 import {
   Image,
   RefreshCw,
@@ -67,14 +68,16 @@ export function ImagesPage() {
   // State
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(20);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
-  const [subfolder, setSubfolder] = useState('appeals');
-  const [search, setSearch] = useState('');
   const [subfolders, setSubfolders] = useState<Subfolder[]>([]);
   const [previewImage, setPreviewImage] = useState<ImageItem | null>(null);
+  
+  // 从 URL 获取状态
+  const [page, setPage] = useUrlStateNumber('page', 1);
+  const [perPage, setPerPage] = useUrlStateNumber('per_page', 20);
+  const [subfolder, setSubfolder] = useUrlState<string>('folder', 'appeals');
+  const [search, setSearch] = useState('');
 
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -157,6 +160,7 @@ export function ImagesPage() {
       fetchImages();
       fetchSubfolders();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, page, perPage, subfolder]);
 
   // Debounced search
