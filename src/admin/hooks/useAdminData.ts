@@ -93,6 +93,8 @@ export function useAdminData() {
   const [logsPerPage, setLogsPerPage] = useState(50);
   const [logFilterAction, setLogFilterAction] = useState('');
   const [logFilterStatus, setLogFilterStatus] = useState<'all' | 'success' | 'failure'>('all');
+  const [logStartDate, setLogStartDate] = useState('');
+  const [logEndDate, setLogEndDate] = useState('');
   const [actionTypes, setActionTypes] = useState<Record<string, string>>({});
   const [logStats, setLogStats] = useState<any>(null);
   
@@ -366,7 +368,7 @@ export function useAdminData() {
     }
   }, []);
 
-  const fetchLogs = useCallback(async (authToken: string, page = logsPage, perPage = logsPerPage, action = logFilterAction, status = logFilterStatus) => {
+  const fetchLogs = useCallback(async (authToken: string, page = logsPage, perPage = logsPerPage, action = logFilterAction, status = logFilterStatus, startDate = logStartDate, endDate = logEndDate) => {
     setLogsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -375,6 +377,8 @@ export function useAdminData() {
       });
       if (action) params.append('action_type', action);
       if (status !== 'all') params.append('status', status);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
 
       const response = await fetch(`${API_BASE}/api/admin/logs?${params}`, {
         headers: { 'Authorization': authToken },
@@ -395,7 +399,7 @@ export function useAdminData() {
     } finally {
       setLogsLoading(false);
     }
-  }, [logsPage, logsPerPage, logFilterAction, logFilterStatus, handleAuthError]);
+  }, [logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate, handleAuthError]);
 
   const fetchActionTypes = useCallback(async (authToken: string) => {
     try {
@@ -599,6 +603,10 @@ export function useAdminData() {
     setLogFilterAction,
     logFilterStatus,
     setLogFilterStatus,
+    logStartDate,
+    setLogStartDate,
+    logEndDate,
+    setLogEndDate,
     actionTypes,
     logStats,
     fetchLogs: () => fetchLogs(token),

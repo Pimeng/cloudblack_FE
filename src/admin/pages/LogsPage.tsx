@@ -95,7 +95,17 @@ interface LogItem {
 }
 
 export function LogsPage() {
-  const { token, logs, logsLoading, logsPage, setLogsPage, logsTotal, logsPerPage, setLogsPerPage, logFilterAction, setLogFilterAction, logFilterStatus, setLogFilterStatus, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
+  const { token, logs, logsLoading, logsPage, setLogsPage, logsTotal, logsPerPage, setLogsPerPage, logFilterAction, setLogFilterAction, logFilterStatus, setLogFilterStatus, logStartDate, setLogStartDate, logEndDate, setLogEndDate, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
+  
+  // 本地 action_type 映射补充
+  const localActionTypeMap: Record<string, string> = {
+    'file_delete': '删除图片',
+  };
+  
+  // 获取 action_type 的中文名称（优先使用本地映射，其次使用后端返回的）
+  const getActionTypeLabel = (actionType: string) => {
+    return localActionTypeMap[actionType] || actionTypes[actionType] || actionType;
+  };
   
   // Detail dialog state
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -107,7 +117,7 @@ export function LogsPage() {
       fetchActionTypes();
       fetchLogStats();
     }
-  }, [token, logsPage, logsPerPage, logFilterAction, logFilterStatus]);
+  }, [token, logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate]);
 
   const totalPages = Math.ceil(logsTotal / logsPerPage);
 
@@ -285,14 +295,14 @@ export function LogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="审计日志" description="查看系统操作记录，点击行可展开详细信息">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <select
             value={logFilterAction}
             onChange={(e) => { setLogFilterAction(e.target.value); setLogsPage(1); }}
             className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
           >
             <option value="">所有操作</option>
-            {Object.entries(actionTypes).map(([key, label]) => (
+            {Object.entries({ ...localActionTypeMap, ...actionTypes }).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
@@ -305,6 +315,33 @@ export function LogsPage() {
             <option value="success">成功</option>
             <option value="failure">失败</option>
           </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="datetime-local"
+              value={logStartDate}
+              onChange={(e) => { setLogStartDate(e.target.value); setLogsPage(1); }}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+              placeholder="开始时间"
+            />
+            <span className="text-slate-400">-</span>
+            <input
+              type="datetime-local"
+              value={logEndDate}
+              onChange={(e) => { setLogEndDate(e.target.value); setLogsPage(1); }}
+              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+              placeholder="结束时间"
+            />
+            {(logStartDate || logEndDate) && (
+              <Button 
+                onClick={() => { setLogStartDate(''); setLogEndDate(''); setLogsPage(1); }}
+                variant="ghost" 
+                size="sm"
+                className="text-slate-400 hover:text-white"
+              >
+                清除
+              </Button>
+            )}
+          </div>
           <Button onClick={() => fetchLogs()} variant="outline" size="icon">
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -317,7 +354,7 @@ export function LogsPage() {
           <div className="flex flex-wrap gap-2">
             {Object.entries(logStats.action_counts || {}).map(([action, count]) => (
               <Badge key={action} variant="secondary" className="bg-slate-800">
-                {actionTypes[action] || action}: {count as number}
+                {getActionTypeLabel(action)}: {count as number}
               </Badge>
             ))}
           </div>
@@ -360,7 +397,7 @@ export function LogsPage() {
                       </Button>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{log.timestamp}</td>
-                    <td className="px-4 md:px-6 py-4 text-white">{actionTypes[log.action_type] || log.action_type}</td>
+                    <td className="px-4 md:px-6 py-4 text-white">{getActionTypeLabel(log.action_type)}</td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span>{log.operator_id}</span>
@@ -435,7 +472,7 @@ export function LogsPage() {
                 <p className="text-white">{selectedLog.timestamp}</p>
               </DetailInfoItem>
               <DetailInfoItem label="操作类型">
-                <p className="text-white">{actionTypes[selectedLog.action_type] || selectedLog.action_type}</p>
+                <p className="text-white">{getActionTypeLabel(selectedLog.action_type)}</p>
               </DetailInfoItem>
               <DetailInfoItem label="操作者">
                 <div className="flex items-center gap-2">
