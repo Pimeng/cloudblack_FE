@@ -15,7 +15,7 @@
   Expires: 0
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.geetest.com https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com https://static.cloudflareinsights.com https://scripts.clarity.ms 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://static.geetest.com https://static.geevisit.com https://static.gsensebot.com; img-src 'self' data: https: blob:; connect-src 'self' https://cloudblack-api.07210700.xyz https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com https://l.clarity.ms; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com;
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.geetest.com https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com https://static.cloudflareinsights.com https://*.clarity.ms https://www.clarity.ms 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://static.geetest.com https://static.geevisit.com https://static.gsensebot.com; img-src 'self' data: https: blob:; connect-src 'self' https://cloudblack-api.07210700.xyz https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com https://l.clarity.ms; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com;
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
