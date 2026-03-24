@@ -27,6 +27,7 @@ import {
 export function SettingsPage() {
   const { token, adminLevel, config, setConfig, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
   const [editConfig, setEditConfig] = useState<Partial<SystemConfig>>({});
+  const [changedFields, setChangedFields] = useState<Set<string>>(new Set());
   const [updatingConfig, setUpdatingConfig] = useState(false);
   const [updateReason, setUpdateReason] = useState('');
   const [restartDialogOpen, setRestartDialogOpen] = useState(false);
@@ -43,20 +44,84 @@ export function SettingsPage() {
   useEffect(() => {
     if (config) {
       setEditConfig(config);
+      setChangedFields(new Set()); // 重置修改记录
     }
   }, [config]);
 
+  // 辅助函数：更新配置并记录修改的字段
+  const updateEditConfig = (field: string, value: any) => {
+    const keys = field.split('.');
+    setEditConfig((prev) => {
+      const newConfig = { ...prev };
+      let current: any = newConfig;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        current[key] = { ...current[key] };
+        current = current[key];
+      }
+      
+      current[keys[keys.length - 1]] = value;
+      return newConfig;
+    });
+    setChangedFields((prev) => new Set(prev).add(field));
+  };
+
+  // 辅助函数：提取修改过的字段
+  const extractChangedFields = (): Partial<SystemConfig> => {
+    const result: Partial<SystemConfig> = {};
+    
+    changedFields.forEach((field) => {
+      const keys = field.split('.');
+      let current: any = result;
+      let source: any = editConfig;
+      
+      // 获取嵌套值
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        if (!(key in current)) {
+          current[key] = {};
+        }
+        current = current[key];
+        source = source?.[key];
+      }
+      
+      const lastKey = keys[keys.length - 1];
+      current[lastKey] = source?.[lastKey];
+    });
+    
+    return result;
+  };
+
   const updateConfig = async () => {
-    if (!config || !token) return;
+    if (!config || !token || changedFields.size === 0) {
+      if (changedFields.size === 0) {
+        toast.info('没有需要更新的配置');
+      }
+      return;
+    }
     
     setUpdatingConfig(true);
     try {
-      let configToUpdate: Partial<SystemConfig>;
-      if (adminLevel >= 4) {
-        configToUpdate = editConfig;
-      } else {
-        const { smtp, geetest, ai_analysis, database_backup, ...allowedConfig } = editConfig;
+      // 只提取修改过的字段
+      let configToUpdate = extractChangedFields();
+      
+      // 非超级管理员需要过滤敏感字段
+      if (adminLevel < 4) {
+        const { smtp, geetest, ai_analysis, database_backup, ...allowedConfig } = configToUpdate;
         configToUpdate = allowedConfig;
+        
+        // 检查是否有尝试修改敏感字段
+        const hasSensitiveChanges = changedFields.has('smtp') || 
+          changedFields.has('geetest') || 
+          changedFields.has('ai_analysis') || 
+          changedFields.has('database_backup');
+        
+        if (hasSensitiveChanges) {
+          toast.error('您没有权限修改敏感配置（SMTP、极验、AI分析、数据库备份）');
+          setUpdatingConfig(false);
+          return;
+        }
       }
       
       // 添加更新原因到请求体
@@ -79,8 +144,13 @@ export function SettingsPage() {
       const data = await response.json();
       if (data.success) {
         toast.success('配置已更新，重启后生效');
-        setConfig({ ...config, ...configToUpdate });
+        // 使用后端返回的完整配置数据
+        if (data.data) {
+          setConfig(data.data);
+          setEditConfig(data.data);
+        }
         setUpdateReason('');
+        setChangedFields(new Set()); // 清空修改记录
       } else {
         toast.error(data.message || '更新失败');
       }
@@ -190,25 +260,25 @@ export function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>监听地址</Label>
-                  {renderConfigInput('host', editConfig.host, (v) => setEditConfig({ ...editConfig, host: v }))}
+                  {renderConfigInput('host', editConfig.host, (v) => updateEditConfig('host', v))}
                 </div>
                 <div className="space-y-2">
                   <Label>端口</Label>
-                  {renderConfigInput('port', editConfig.port, (v) => setEditConfig({ ...editConfig, port: v }))}
+                  {renderConfigInput('port', editConfig.port, (v) => updateEditConfig('port', v))}
                 </div>
                 <div className="space-y-2">
                   <Label>调试模式</Label>
-                  {renderConfigInput('debug', editConfig.debug, (v) => setEditConfig({ ...editConfig, debug: v }))}
+                  {renderConfigInput('debug', editConfig.debug, (v) => updateEditConfig('debug', v))}
                 </div>
                 <div className="space-y-2">
                   <Label>Token有效期（秒）</Label>
-                  {renderConfigInput('temp_token_ttl', editConfig.temp_token_ttl, (v) => setEditConfig({ ...editConfig, temp_token_ttl: v }))}
+                  {renderConfigInput('temp_token_ttl', editConfig.temp_token_ttl, (v) => updateEditConfig('temp_token_ttl', v))}
                 </div>
                 <div className="space-y-2">
                   <Label>时区</Label>
                   <Input
                     value={editConfig.timezone || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, timezone: e.target.value })}
+                    onChange={(e) => updateEditConfig('timezone', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                   />
                 </div>
@@ -216,7 +286,7 @@ export function SettingsPage() {
                   <Label>日志级别</Label>
                   <select
                     value={editConfig.log_level || 'INFO'}
-                    onChange={(e) => setEditConfig({ ...editConfig, log_level: e.target.value })}
+                    onChange={(e) => updateEditConfig('log_level', e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                   >
                     <option value="DEBUG">DEBUG</option>
@@ -229,7 +299,7 @@ export function SettingsPage() {
                   <Label>根域名重定向 URL</Label>
                   <Input
                     value={editConfig.root_redirect_url || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, root_redirect_url: e.target.value })}
+                    onChange={(e) => updateEditConfig('root_redirect_url', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                   />
                 </div>
@@ -237,7 +307,7 @@ export function SettingsPage() {
                   <Label>IP Header</Label>
                   <Input
                     value={editConfig.ip_header || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ip_header: e.target.value })}
+                    onChange={(e) => updateEditConfig('ip_header', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                   />
                 </div>
@@ -267,7 +337,7 @@ export function SettingsPage() {
                   <Label>SMTP 服务器</Label>
                   <Input
                     value={editConfig.smtp?.host || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, host: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.host', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -278,7 +348,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.smtp?.port || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, port: parseInt(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('smtp.port', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -287,7 +357,7 @@ export function SettingsPage() {
                   <Label>用户名</Label>
                   <Input
                     value={editConfig.smtp?.username || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, username: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.username', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -297,7 +367,7 @@ export function SettingsPage() {
                   <Input
                     type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.smtp?.password || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, password: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.password', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -306,7 +376,7 @@ export function SettingsPage() {
                   <Label>发件人邮箱</Label>
                   <Input
                     value={editConfig.smtp?.from || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, from: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.from', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -315,7 +385,7 @@ export function SettingsPage() {
                   <Label>发件人名称</Label>
                   <Input
                     value={editConfig.smtp?.from_name || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, from_name: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.from_name', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -324,7 +394,7 @@ export function SettingsPage() {
                   <Label>安全类型</Label>
                   <select
                     value={editConfig.smtp?.security || 'tls'}
-                    onChange={(e) => setEditConfig({ ...editConfig, smtp: { ...editConfig.smtp, security: e.target.value } })}
+                    onChange={(e) => updateEditConfig('smtp.security', e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                     disabled={!canEditSensitiveConfig}
                   >
@@ -356,7 +426,7 @@ export function SettingsPage() {
                   <Label>启用 AI 分析</Label>
                   <select
                     value={editConfig.ai_analysis?.enabled ? 'true' : 'false'}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, enabled: e.target.value === 'true' } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.enabled', e.target.value === 'true')}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                     disabled={!canEditSensitiveConfig}
                   >
@@ -369,7 +439,7 @@ export function SettingsPage() {
                   <Input
                     type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.ai_analysis?.api_key || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, api_key: e.target.value } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.api_key', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -378,7 +448,7 @@ export function SettingsPage() {
                   <Label>Base URL</Label>
                   <Input
                     value={editConfig.ai_analysis?.base_url || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, base_url: e.target.value } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.base_url', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -387,7 +457,7 @@ export function SettingsPage() {
                   <Label>模型</Label>
                   <Input
                     value={editConfig.ai_analysis?.model || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, model: e.target.value } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.model', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -397,7 +467,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.ai_analysis?.max_tokens || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, max_tokens: parseInt(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.max_tokens', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -410,7 +480,7 @@ export function SettingsPage() {
                     min="0"
                     max="2"
                     value={editConfig.ai_analysis?.temperature || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, temperature: parseFloat(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.temperature', parseFloat(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -420,7 +490,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.ai_analysis?.timeout || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, timeout: parseInt(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.timeout', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -429,7 +499,7 @@ export function SettingsPage() {
                   <Label>缓存文件</Label>
                   <Input
                     value={editConfig.ai_analysis?.cache_file || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, cache_file: e.target.value } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.cache_file', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -438,7 +508,7 @@ export function SettingsPage() {
                   <Label>Public URL</Label>
                   <Input
                     value={editConfig.ai_analysis?.public_url || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, ai_analysis: { ...editConfig.ai_analysis, public_url: e.target.value } })}
+                    onChange={(e) => updateEditConfig('ai_analysis.public_url', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -467,7 +537,7 @@ export function SettingsPage() {
                     <Label>启用极验</Label>
                     <select
                       value={editConfig.geetest?.enabled ? 'true' : 'false'}
-                      onChange={(e) => setEditConfig({ ...editConfig, geetest: { ...editConfig.geetest, enabled: e.target.value === 'true' } })}
+                      onChange={(e) => updateEditConfig('geetest.enabled', e.target.value === 'true')}
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                       disabled={!canEditSensitiveConfig}
                     >
@@ -479,7 +549,7 @@ export function SettingsPage() {
                     <Label>Captcha ID</Label>
                     <Input
                       value={editConfig.geetest?.captcha_id || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, geetest: { ...editConfig.geetest, captcha_id: e.target.value } })}
+                      onChange={(e) => updateEditConfig('geetest.captcha_id', e.target.value)}
                       className="bg-slate-800 border-slate-700"
                       disabled={!canEditSensitiveConfig}
                     />
@@ -489,7 +559,7 @@ export function SettingsPage() {
                     <Input
                       type={showSensitiveInfo ? 'text' : 'password'}
                       value={editConfig.geetest?.captcha_key || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, geetest: { ...editConfig.geetest, captcha_key: e.target.value } })}
+                      onChange={(e) => updateEditConfig('geetest.captcha_key', e.target.value)}
                       className="bg-slate-800 border-slate-700"
                       disabled={!canEditSensitiveConfig}
                     />
@@ -509,7 +579,7 @@ export function SettingsPage() {
                     <Input
                       type="number"
                       value={editConfig.rate_limit_max_requests || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, rate_limit_max_requests: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => updateEditConfig('rate_limit_max_requests', parseInt(e.target.value) || 0)}
                       className="bg-slate-800 border-slate-700"
                     />
                   </div>
@@ -518,7 +588,7 @@ export function SettingsPage() {
                     <Input
                       type="number"
                       value={editConfig.rate_limit_window || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, rate_limit_window: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => updateEditConfig('rate_limit_window', parseInt(e.target.value) || 0)}
                       className="bg-slate-800 border-slate-700"
                     />
                   </div>
@@ -527,7 +597,7 @@ export function SettingsPage() {
                     <Input
                       type="number"
                       value={editConfig.ip_limit_max_attempts || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, ip_limit_max_attempts: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => updateEditConfig('ip_limit_max_attempts', parseInt(e.target.value) || 0)}
                       className="bg-slate-800 border-slate-700"
                     />
                   </div>
@@ -536,7 +606,7 @@ export function SettingsPage() {
                     <Input
                       type="number"
                       value={editConfig.ip_limit_window || ''}
-                      onChange={(e) => setEditConfig({ ...editConfig, ip_limit_window: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => updateEditConfig('ip_limit_window', parseInt(e.target.value) || 0)}
                       className="bg-slate-800 border-slate-700"
                     />
                   </div>
@@ -564,7 +634,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.max_upload_size || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, max_upload_size: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => updateEditConfig('max_upload_size', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                   />
                   <p className="text-xs text-muted-foreground">{formatBytes(editConfig.max_upload_size || 0)}</p>
@@ -573,7 +643,7 @@ export function SettingsPage() {
                   <Label>上传目录</Label>
                   <Input
                     value={editConfig.upload_folder || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, upload_folder: e.target.value })}
+                    onChange={(e) => updateEditConfig('upload_folder', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                   />
                 </div>
@@ -581,7 +651,7 @@ export function SettingsPage() {
                   <Label>允许的文件扩展名</Label>
                   <Input
                     value={editConfig.allowed_extensions?.join(', ') || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, allowed_extensions: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                    onChange={(e) => updateEditConfig('allowed_extensions', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                     className="bg-slate-800 border-slate-700"
                     placeholder="png, jpg, jpeg, gif, webp"
                   />
@@ -609,7 +679,7 @@ export function SettingsPage() {
                   <Label>启用自动备份</Label>
                   <select
                     value={editConfig.database_backup?.enabled ? 'true' : 'false'}
-                    onChange={(e) => setEditConfig({ ...editConfig, database_backup: { ...editConfig.database_backup, enabled: e.target.value === 'true' } })}
+                    onChange={(e) => updateEditConfig('database_backup.enabled', e.target.value === 'true')}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                     disabled={!canEditSensitiveConfig}
                   >
@@ -621,7 +691,7 @@ export function SettingsPage() {
                   <Label>Cron 表达式</Label>
                   <Input
                     value={editConfig.database_backup?.cron || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, database_backup: { ...editConfig.database_backup, cron: e.target.value } })}
+                    onChange={(e) => updateEditConfig('database_backup.cron', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                     placeholder="0 3 * * *"
@@ -631,7 +701,7 @@ export function SettingsPage() {
                   <Label>备份目录</Label>
                   <Input
                     value={editConfig.database_backup?.backup_dir || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, database_backup: { ...editConfig.database_backup, backup_dir: e.target.value } })}
+                    onChange={(e) => updateEditConfig('database_backup.backup_dir', e.target.value)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -641,7 +711,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.database_backup?.max_backups || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, database_backup: { ...editConfig.database_backup, max_backups: parseInt(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('database_backup.max_backups', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
@@ -651,7 +721,7 @@ export function SettingsPage() {
                   <Input
                     type="number"
                     value={editConfig.database_backup?.retention_days || ''}
-                    onChange={(e) => setEditConfig({ ...editConfig, database_backup: { ...editConfig.database_backup, retention_days: parseInt(e.target.value) || 0 } })}
+                    onChange={(e) => updateEditConfig('database_backup.retention_days', parseInt(e.target.value) || 0)}
                     className="bg-slate-800 border-slate-700"
                     disabled={!canEditSensitiveConfig}
                   />
