@@ -332,7 +332,17 @@ export function BlacklistPage() {
                       </Badge>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400">{item.added_by}</td>
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex items-center">
+                        <span className="text-slate-400">{item.added_by?.startsWith('admin:') ? item.added_by.slice(6) : item.added_by}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className={`ml-1.5 text-[10px] px-1.5 py-0 ${item.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                        >
+                          {item.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
+                        </Badge>
+                      </div>
+                    </td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(item.added_at).toLocaleString()}</td>
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
