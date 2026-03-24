@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -40,9 +40,11 @@ export function AppealsPage() {
     appeals, appealPage, setAppealPage, appealTotal,
     appealsPerPage, setAppealsPerPage, fetchAppeals, loading 
   } = useOutletContext<AdminDataContext>();
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  // 从 URL 获取 status 状态
+  // 从 URL 获取 status 状态和详情 ID
   const [appealFilter, setAppealFilter] = useUrlState<'all' | 'pending' | 'approved' | 'rejected'>('status', 'all');
+  const detailId = searchParams.get('id');
   
   const { openImage } = useImageViewer();
   
@@ -115,13 +117,39 @@ export function AppealsPage() {
     setReviewDialogOpen(true);
   };
   
-  const handleOpenDetail = (appeal: Appeal, appealId: string) => {
+  const handleOpenDetail = useCallback((appeal: Appeal, appealId: string) => {
     openDetail(appeal, appealId);
-  };
+    // 更新 URL 添加 id 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('id', appeal.appeal_id);
+      return newParams;
+    });
+  }, [openDetail, setSearchParams]);
   
-  const handleCloseDetail = () => {
+  const handleCloseDetail = useCallback(() => {
     closeDetail();
-  };
+    // 清除 URL 中的 id 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('id');
+      return newParams;
+    });
+  }, [closeDetail, setSearchParams]);
+
+  // 页面加载时检查 URL 参数，自动打开详情
+  useEffect(() => {
+    if (detailId && appeals.length > 0 && !viewingItem) {
+      const appeal = appeals.find((a) => a.appeal_id === detailId);
+      if (appeal) {
+        // 延迟一点执行，确保 DOM 已经渲染
+        setTimeout(() => {
+          openDetail(appeal, appeal.appeal_id);
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailId, appeals, viewingItem]);
 
   const submitReview = async () => {
     if (!selectedAppeal || !reviewReason.trim()) return;

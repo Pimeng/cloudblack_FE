@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,9 +46,12 @@ interface AddBlacklistResponse {
 
 export function BlacklistPage() {
   const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  // 从 URL 获取 tab 状态
+  // 从 URL 获取 tab 状态和详情 ID
   const [blacklistTypeFilter, setBlacklistTypeFilter] = useUrlState<'all' | 'user' | 'group'>('tab', 'all');
+  const detailId = searchParams.get('id');
+  const detailType = searchParams.get('type') as 'user' | 'group' | null;
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -245,10 +248,47 @@ export function BlacklistPage() {
     }
   };
 
-  const handleOpenDetail = (item: BlacklistItem) => {
+  const handleOpenDetail = useCallback((item: BlacklistItem) => {
     const rowKey = `${item.user_id}-${item.user_type || 'user'}`;
     openDetail(item, rowKey);
-  };
+    // 更新 URL 添加 id 和 type 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('id', item.user_id);
+      if (item.user_type && item.user_type !== 'user') {
+        newParams.set('type', item.user_type);
+      }
+      return newParams;
+    });
+  }, [openDetail, setSearchParams]);
+
+  const handleCloseDetail = useCallback(() => {
+    closeDetail();
+    // 清除 URL 中的 id 和 type 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('id');
+      newParams.delete('type');
+      return newParams;
+    });
+  }, [closeDetail, setSearchParams]);
+
+  // 页面加载时检查 URL 参数，自动打开详情
+  useEffect(() => {
+    if (detailId && blacklist.length > 0 && !viewingItem) {
+      const item = blacklist.find(
+        (i) => i.user_id === detailId && (detailType ? i.user_type === detailType : true)
+      );
+      if (item) {
+        const rowKey = `${item.user_id}-${item.user_type || 'user'}`;
+        // 延迟一点执行，确保 DOM 已经渲染
+        setTimeout(() => {
+          openDetail(item, rowKey);
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailId, detailType, blacklist, viewingItem]);
 
   const getUserTypeLabel = (type: 'user' | 'group') => {
     return type === 'group' ? '群聊' : '用户';
@@ -618,7 +658,7 @@ export function BlacklistPage() {
       />
       
       {/* Detail View */}
-      <DetailView isOpen={detailOpen} title={isEditingDetail ? '编辑黑名单' : '黑名单详情'} onClose={closeDetail}>
+      <DetailView isOpen={detailOpen} title={isEditingDetail ? '编辑黑名单' : '黑名单详情'} onClose={handleCloseDetail}>
         {viewingItem && (
           <>
             {isEditingDetail ? (
