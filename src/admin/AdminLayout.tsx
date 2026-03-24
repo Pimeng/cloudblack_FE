@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { useAdminData } from './hooks/useAdminData';
 import { API_BASE } from './types';
 import { toast } from 'sonner';
+import { DocReminder } from './components/DocReminder';
 
 const navItems = [
   { id: 'dashboard', label: '仪表盘', icon: LayoutDashboard, path: '', minLevel: 1 },
@@ -329,6 +330,9 @@ export function AdminLayout() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bot 对接文档提醒 */}
+      <DocReminder />
     </div>
   );
 }

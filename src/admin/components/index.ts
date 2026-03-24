@@ -31,3 +31,5 @@ export {
   AIRecommendationBadge,
   BackupTypeBadge,
 } from './StatusBadge';
+export { DocReminder } from './DocReminder';
+export { ExternalLinkDialog, useExternalLink } from './ExternalLinkDialog';
