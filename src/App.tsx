@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
 import { FileText, ArrowUp } from 'lucide-react';
@@ -9,22 +9,6 @@ import { ProcessSection } from './sections/ProcessSection';
 import { StatsSection } from './sections/StatsSection';
 import { AppealSection } from './sections/AppealSection';
 import { Footer } from './sections/Footer';
-import { AdminLogin } from './admin/AdminLogin';
-import { AdminLayout } from './admin/AdminLayout';
-import { 
-  DashboardPage, 
-  AppealsPage, 
-  BlacklistPage, 
-  AdminsPage, 
-  BotsPage, 
-  LogsPage, 
-  SettingsPage, 
-  BackupPage,
-  Level4PendingPage,
-  ImagesPage,
-} from './admin/pages';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Toaster } from '@/components/ui/sonner';
 import { ImageViewerProvider } from '@/hooks/useImageViewer';
 import {
@@ -37,6 +21,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ClarityNotice } from '@/components/ClarityNotice';
+import { Spinner } from '@/components/ui/spinner';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// 懒加载 Admin 模块
+const AdminLogin = lazy(() => import('./admin/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const AdminLayout = lazy(() => import('./admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const DashboardPage = lazy(() => import('./admin/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const AppealsPage = lazy(() => import('./admin/pages/AppealsPage').then(m => ({ default: m.AppealsPage })));
+const BlacklistPage = lazy(() => import('./admin/pages/BlacklistPage').then(m => ({ default: m.BlacklistPage })));
+const AdminsPage = lazy(() => import('./admin/pages/AdminsPage').then(m => ({ default: m.AdminsPage })));
+const BotsPage = lazy(() => import('./admin/pages/BotsPage').then(m => ({ default: m.BotsPage })));
+const LogsPage = lazy(() => import('./admin/pages/LogsPage').then(m => ({ default: m.LogsPage })));
+const SettingsPage = lazy(() => import('./admin/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const BackupPage = lazy(() => import('./admin/pages/BackupPage').then(m => ({ default: m.BackupPage })));
+const Level4PendingPage = lazy(() => import('./admin/pages/Level4PendingPage').then(m => ({ default: m.Level4PendingPage })));
+const ImagesPage = lazy(() => import('./admin/pages/ImagesPage').then(m => ({ default: m.ImagesPage })));
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,6 +50,18 @@ const PAGE_LABELS: Record<PageKey, string> = {
   stats: '数据统计',
   appeal: '申诉中心',
 };
+
+// Admin 页面加载中的占位组件
+function AdminPageFallback() {
+  return (
+    <div className="flex items-center justify-center h-screen bg-slate-950">
+      <div className="flex flex-col items-center gap-4">
+        <Spinner className="w-10 h-10 text-brand" />
+        <p className="text-slate-400">加载中...</p>
+      </div>
+    </div>
+  );
+}
 
 function PageDots({ currentIndex, onGoTo }: { currentIndex: number; onGoTo: (i: number) => void }) {
   // Each dot is h-2 (8px) or h-6 (24px) for active, gap-3 (12px) between
@@ -277,18 +290,66 @@ function App() {
       <WelcomeAlert />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="appeals" element={<AppealsPage />} />
-          <Route path="blacklist" element={<BlacklistPage />} />
-          <Route path="admins" element={<AdminsPage />} />
-          <Route path="bots" element={<BotsPage />} />
-          <Route path="logs" element={<LogsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="backup" element={<BackupPage />} />
-          <Route path="level4-pending" element={<Level4PendingPage />} />
-          <Route path="images" element={<ImagesPage />} />
+        <Route path="/admin" element={
+          <Suspense fallback={<AdminPageFallback />}>
+            <AdminLogin />
+          </Suspense>
+        } />
+        <Route path="/admin/dashboard" element={
+          <Suspense fallback={<AdminPageFallback />}>
+            <AdminLayout />
+          </Suspense>
+        }>
+          <Route index element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <DashboardPage />
+            </Suspense>
+          } />
+          <Route path="appeals" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <AppealsPage />
+            </Suspense>
+          } />
+          <Route path="blacklist" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <BlacklistPage />
+            </Suspense>
+          } />
+          <Route path="admins" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <AdminsPage />
+            </Suspense>
+          } />
+          <Route path="bots" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <BotsPage />
+            </Suspense>
+          } />
+          <Route path="logs" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <LogsPage />
+            </Suspense>
+          } />
+          <Route path="settings" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <SettingsPage />
+            </Suspense>
+          } />
+          <Route path="backup" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <BackupPage />
+            </Suspense>
+          } />
+          <Route path="level4-pending" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <Level4PendingPage />
+            </Suspense>
+          } />
+          <Route path="images" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <ImagesPage />
+            </Suspense>
+          } />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
