@@ -64,6 +64,9 @@ export function BlacklistPage() {
   const [deleteReason, setDeleteReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
   
+  // Detail edit mode states
+  const [isEditingDetail, setIsEditingDetail] = useState(false);
+  
   // Use expandable detail hook
   const {
     isOpen: detailOpen,
@@ -187,6 +190,62 @@ export function BlacklistPage() {
     setEditDialogOpen(true);
   };
 
+  const openDetailEditMode = () => {
+    if (viewingItem) {
+      setEditingItem(viewingItem);
+      setEditReason(viewingItem.reason);
+      setEditUserId(viewingItem.user_id);
+      setEditUserType(viewingItem.user_type || 'user');
+      setEditLevel(viewingItem.level || 1);
+      setIsEditingDetail(true);
+    }
+  };
+
+  const closeDetailEditMode = () => {
+    setIsEditingDetail(false);
+    setEditingItem(null);
+  };
+
+  const saveDetailEdit = async () => {
+    if (!viewingItem || !token) return;
+    
+    setUpdatingLoading(true);
+    try {
+      const body: { reason?: string; user_type?: 'user' | 'group'; level?: number } = {};
+      if (editReason.trim() !== viewingItem.reason) body.reason = editReason.trim();
+      if (editUserType !== viewingItem.user_type) body.user_type = editUserType;
+      if (editLevel !== viewingItem.level) body.level = editLevel;
+      
+      if (Object.keys(body).length === 0) {
+        toast.info('没有需要更新的内容');
+        setIsEditingDetail(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/admin/blacklist/${viewingItem.user_id}?user_type=${viewingItem.user_type || 'user'}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('黑名单条目已更新');
+        setIsEditingDetail(false);
+        fetchBlacklist();
+      } else {
+        toast.error(data.message || '更新失败');
+      }
+    } catch (err) {
+      toast.error('更新失败');
+    } finally {
+      setUpdatingLoading(false);
+    }
+  };
+
   const deleteBlacklistItem = async () => {
     if (!deletingItem || !token) return;
     
@@ -294,7 +353,7 @@ export function BlacklistPage() {
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full" style={{ tableLayout: 'auto' }}>
               <thead className="bg-slate-800/50">
                 <tr>
                   <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">ID</th>
@@ -314,10 +373,10 @@ export function BlacklistPage() {
                     }}
                     className="hover:bg-slate-800/30"
                   >
-                    <td className="px-4 md:px-6 py-4">
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className="text-white font-mono">{item.user_id}</span>
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border shrink-0 ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
                           {getUserTypeLabel(item.user_type || 'user')}
                         </span>
                       </div>
@@ -331,19 +390,19 @@ export function BlacklistPage() {
                         等级 {item.level || 1}
                       </Badge>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate" title={item.reason}>{item.reason}</td>
-                    <td className="px-4 md:px-6 py-4">
+                    <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[300px] truncate" title={item.reason}>{item.reason}</td>
+                    <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <span className="text-slate-400">{item.added_by?.startsWith('admin:') ? item.added_by.slice(6) : item.added_by}</span>
                         <Badge 
                           variant="secondary" 
-                          className={`ml-1.5 text-[10px] px-1.5 py-0 ${item.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                          className={`ml-1.5 text-[10px] px-1.5 py-0 whitespace-nowrap shrink-0 ${item.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
                         >
                           {item.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
                         </Badge>
                       </div>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm">{new Date(item.added_at).toLocaleString()}</td>
+                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(item.added_at).toLocaleString()}</td>
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -602,40 +661,167 @@ export function BlacklistPage() {
       />
       
       {/* Detail View */}
-      <DetailView isOpen={detailOpen} title="黑名单详情" onClose={closeDetail}>
+      <DetailView isOpen={detailOpen} title={isEditingDetail ? '编辑黑名单' : '黑名单详情'} onClose={closeDetail}>
         {viewingItem && (
           <>
-            <DetailInfoGrid>
-              <DetailInfoItem label="类型">
-                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
-                  {getUserTypeLabel(viewingItem.user_type || 'user')}
-                </span>
-              </DetailInfoItem>
-              <DetailInfoItem label="ID">
-                <p className="text-white font-mono">{viewingItem.user_id}</p>
-              </DetailInfoItem>
-              <DetailInfoItem label="违规等级">
-                <Badge className={
-                  viewingItem.level === 4 ? 'bg-red-500' :
-                  viewingItem.level === 3 ? 'bg-orange-500' :
-                  viewingItem.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
-                }>
-                  等级 {viewingItem.level || 1}
-                </Badge>
-              </DetailInfoItem>
-              {viewingItem.added_by && (
-                <DetailInfoItem label="操作者">
-                  <p className="text-white">{viewingItem.added_by}</p>
-                </DetailInfoItem>
-              )}
-              <DetailInfoItem label="添加时间">
-                <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
-              </DetailInfoItem>
-            </DetailInfoGrid>
+            {isEditingDetail ? (
+              // Edit Mode
+              <div className="space-y-4">
+                <DetailInfoGrid>
+                  <DetailInfoItem label="类型">
+                    <Select value={editUserType} onValueChange={(value: 'user' | 'group') => setEditUserType(value)}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 h-9">
+                        <SelectValue placeholder="选择类型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">用户（QQ号）</SelectItem>
+                        <SelectItem value="group">群聊（群号）</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </DetailInfoItem>
+                  <DetailInfoItem label="ID">
+                    <Input
+                      value={editUserId}
+                      onChange={(e) => setEditUserId(e.target.value)}
+                      className="bg-slate-800 border-slate-700 h-9"
+                      placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`}
+                    />
+                  </DetailInfoItem>
+                  <DetailInfoItem label="违规等级">
+                    <Select value={String(editLevel)} onValueChange={(value) => setEditLevel(parseInt(value))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-700 h-9">
+                        <SelectValue placeholder="选择等级" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">等级 1 - 轻微违规</SelectItem>
+                        <SelectItem value="2">等级 2 - 一般违规</SelectItem>
+                        <SelectItem value="3">等级 3 - 严重违规</SelectItem>
+                        <SelectItem value="4">等级 4 - 极其严重</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </DetailInfoItem>
+                  {viewingItem.added_by && (
+                    <DetailInfoItem label="操作者">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                        >
+                          {viewingItem.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
+                        </Badge>
+                      </div>
+                    </DetailInfoItem>
+                  )}
+                  <DetailInfoItem label="添加时间">
+                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+                  </DetailInfoItem>
+                </DetailInfoGrid>
 
-            <DetailContentBlock label="封禁原因">
-              <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
-            </DetailContentBlock>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">封禁原因</label>
+                  <textarea
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 min-h-[100px] resize-none"
+                    placeholder="请输入封禁原因..."
+                  />
+                </div>
+
+                {editLevel === 4 && viewingItem.level !== 4 && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+                    <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-400">
+                      升级到等级4需要双管理员确认机制。保存后需要另一名管理员确认才能正式生效。
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-slate-700/50">
+                  <Button variant="outline" size="sm" onClick={closeDetailEditMode}>取消</Button>
+                  <LoadingButton
+                    onClick={saveDetailEdit}
+                    loading={updatingLoading}
+                    icon={Edit3}
+                    size="sm"
+                    className="bg-brand hover:bg-brand-dark"
+                  >
+                    保存修改
+                  </LoadingButton>
+                </div>
+              </div>
+            ) : (
+              // View Mode
+              <>
+                <DetailInfoGrid>
+                  <DetailInfoItem label="类型">
+                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getUserTypeBadgeClass(viewingItem.user_type || 'user')}`}>
+                      {getUserTypeLabel(viewingItem.user_type || 'user')}
+                    </span>
+                  </DetailInfoItem>
+                  <DetailInfoItem label="ID">
+                    <p className="text-white font-mono">{viewingItem.user_id}</p>
+                  </DetailInfoItem>
+                  <DetailInfoItem label="违规等级">
+                    <Badge className={
+                      viewingItem.level === 4 ? 'bg-red-500' :
+                      viewingItem.level === 3 ? 'bg-orange-500' :
+                      viewingItem.level === 2 ? 'bg-yellow-500' : 'bg-blue-500'
+                    }>
+                      等级 {viewingItem.level || 1}
+                    </Badge>
+                  </DetailInfoItem>
+                  {viewingItem.added_by && (
+                    <DetailInfoItem label="操作者">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                        >
+                          {viewingItem.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
+                        </Badge>
+                      </div>
+                    </DetailInfoItem>
+                  )}
+                  <DetailInfoItem label="添加时间">
+                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+                  </DetailInfoItem>
+                </DetailInfoGrid>
+
+                {canManageBlacklist && (
+                  <div className="mt-4 pt-4 border-t border-slate-700/50">
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-400 w-16">操作</span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={openDetailEditMode}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                        >
+                          <Edit3 className="w-4 h-4 mr-1.5" />
+                          编辑
+                        </Button>
+                        <Button
+                          onClick={() => { setDeletingItem(viewingItem); setDeleteReason(''); setDeleteDialogOpen(true); }}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1.5" />
+                          删除
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <DetailContentBlock label="封禁原因">
+                  <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
+                </DetailContentBlock>
+              </>
+            )}
           </>
         )}
       </DetailView>
