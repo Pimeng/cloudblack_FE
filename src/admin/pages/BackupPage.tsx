@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Database, RefreshCw, Plus, Trash2, Edit3, Download, Clock } from 'lucide-react';
+import { Database, RefreshCw, Plus, Trash2, Edit3, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
@@ -199,11 +199,6 @@ export function BackupPage() {
     setRemarkDialogOpen(true);
   };
 
-  const downloadBackup = (backup: BackupItem) => {
-    const url = `${API_BASE}/api/admin/backup/${encodeURIComponent(backup.filename)}/download`;
-    window.open(url, '_blank');
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader title="数据库备份" description="管理数据库自动备份和手动备份">
@@ -296,14 +291,6 @@ export function BackupPage() {
                   <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[200px] truncate">{backup.remark || '-'}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        onClick={() => downloadBackup(backup)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
                       {canUpdateBackupRemark && (
                         <Button
                           onClick={() => openRemarkDialog(backup)}
