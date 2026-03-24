@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { useUrlState, useUrlStateNumber } from '../hooks';
+import { cn } from '@/lib/utils';
 import {
   Image,
   RefreshCw,
@@ -82,7 +83,9 @@ export function ImagesPage() {
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -174,23 +177,65 @@ export function ImagesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // 验证文件
+  const validateFile = (file: File): boolean => {
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('不支持的文件类型，请上传 png, jpg, jpeg, gif 或 webp 格式的图片');
+      return false;
+    }
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('文件大小超过 5MB 限制');
+      return false;
+    }
+    return true;
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('不支持的文件类型，请上传 png, jpg, jpeg, gif 或 webp 格式的图片');
-        return;
-      }
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('文件大小超过 5MB 限制');
-        return;
-      }
+    if (file && validateFile(file)) {
       setUploadFile(file);
     }
   };
+
+  // 拖放事件处理
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 确保是真正离开 drop zone，而不是进入子元素
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 设置 dropEffect 以指示这是复制操作
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (validateFile(file)) {
+        setUploadFile(file);
+      }
+    }
+  }, []);
 
   const uploadImage = async () => {
     if (!uploadFile) return;
@@ -410,7 +455,19 @@ export function ImagesPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm text-slate-300">选择文件</label>
-              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-slate-600 transition-colors">
+              <div
+                ref={dropZoneRef}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={cn(
+                  "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200",
+                  isDragOver
+                    ? "border-brand bg-brand/10 scale-[1.02]"
+                    : "border-slate-700 hover:border-slate-600 hover:bg-slate-800/50"
+                )}
+              >
                 <input
                   ref={fileInputRef}
                   type="file"
