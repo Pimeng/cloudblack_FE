@@ -16,7 +16,7 @@ export function DashboardPage() {
     <div className="space-y-6 md:space-y-8">
       <PageHeader title="仪表盘" description="系统概览与统计数据" />
 
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
