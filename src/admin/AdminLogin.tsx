@@ -302,6 +302,15 @@ export function AdminLogin() {
               {error && (
                 <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
                   {error}
+                  {error.includes('SSO') && showLogto && (
+                    <button
+                      type="button"
+                      onClick={handleLogtoLogin}
+                      className="block mt-2 text-brand hover:underline font-medium"
+                    >
+                      点击使用 SSO 登录 →
+                    </button>
+                  )}
                 </div>
               )}
 

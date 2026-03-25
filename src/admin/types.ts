@@ -65,6 +65,7 @@ export interface Admin {
   level: number;
   created_at: string;
   avatar?: string;
+  force_sso?: boolean;
 }
 
 export interface BotToken {

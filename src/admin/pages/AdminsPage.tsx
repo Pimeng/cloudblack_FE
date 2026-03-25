@@ -43,6 +43,7 @@ export function AdminsPage() {
   const [editName, setEditName] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editLevel, setEditLevel] = useState(3);
+  const [editForceSso, setEditForceSso] = useState(false);
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAdmin, setDeletingAdmin] = useState<Admin | null>(null);
@@ -108,6 +109,9 @@ export function AdminsPage() {
     if (editLevel !== editingAdmin.level && adminLevel >= 4) {
       body.level = editLevel;
     }
+    if (editForceSso !== (editingAdmin.force_sso ?? false) && adminLevel >= 4) {
+      body.force_sso = editForceSso;
+    }
     
     if (Object.keys(body).length === 0) {
       toast.info('没有修改内容');
@@ -145,6 +149,7 @@ export function AdminsPage() {
     setEditName(admin.name);
     setEditPassword('');
     setEditLevel(admin.level);
+    setEditForceSso(admin.force_sso ?? false);
     setEditDialogOpen(true);
   };
 
@@ -172,6 +177,7 @@ export function AdminsPage() {
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">管理员ID</th>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">名称</th>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">等级</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">SSO</th>
                 <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">创建时间</th>
                 <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
               </tr>
@@ -191,6 +197,15 @@ export function AdminsPage() {
                   <td className="px-4 md:px-6 py-4 text-white font-mono">{admin.admin_id}</td>
                   <td className="px-4 md:px-6 py-4 text-slate-300">{admin.name}</td>
                   <td className="px-4 md:px-6 py-4"><AdminLevelBadge level={admin.level} /></td>
+                  <td className="px-4 md:px-6 py-4">
+                    {admin.force_sso ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                        强制SSO
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 text-sm">-</span>
+                    )}
+                  </td>
                   <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(admin.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -316,6 +331,20 @@ export function AdminsPage() {
                   { value: '1', label: 'Bot持有者 (等级1)' },
                 ]}
               />
+            )}
+            {adminLevel >= 4 && (
+              <div className="flex items-center gap-3 py-2">
+                <input
+                  type="checkbox"
+                  id="force_sso"
+                  checked={editForceSso}
+                  onChange={(e) => setEditForceSso(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                />
+                <label htmlFor="force_sso" className="text-sm text-slate-300 cursor-pointer">
+                  强制使用 SSO 登录
+                </label>
+              </div>
             )}
           </div>
 
