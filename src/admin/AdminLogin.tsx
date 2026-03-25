@@ -236,34 +236,14 @@ export function AdminLogin() {
 
         {/* Login Form */}
         <div className="glass-strong rounded-2xl p-8">
-          {/* Logto SSO Login */}
-          {showLogto && (
-            <>
-              <Button
-                type="button"
-                onClick={handleLogtoLogin}
-                disabled={loadingMethods}
-                className="w-full py-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl"
-              >
-                <span className="flex items-center gap-2">
-                  <ExternalLink className="w-5 h-5" />
-                  {loadingMethods ? '加载中...' : 'SSO 登录'}
-                </span>
-              </Button>
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                使用 QQ / 微信 等社交账号登录
-              </p>
-            </>
-          )}
-
           {/* Divider */}
           {showDivider && (
-            <div className="relative my-6">
+            <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border/50"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-slate-900/50 text-muted-foreground">或使用密码登录</span>
+                <span className="px-2 bg-slate-900/50 text-muted-foreground">使用密码登录</span>
               </div>
             </div>
           )}
@@ -342,6 +322,32 @@ export function AdminLogin() {
                   </span>
                 )}
               </Button>
+
+              {/* Logto SSO Login */}
+              {showLogto && (
+                <>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border/50"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-2 bg-slate-900/50 text-muted-foreground">或</span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLogtoLogin}
+                    disabled={loadingMethods}
+                    className="w-full py-6 text-lg font-medium border-2 border-brand text-brand bg-transparent hover:bg-transparent rounded-xl"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ExternalLink className="w-5 h-5" />
+                      {loadingMethods ? '加载中...' : '使用 纯月网络 账号登录'}
+                    </span>
+                  </Button>
+                </>
+              )}
             </form>
           )}
         </div>
