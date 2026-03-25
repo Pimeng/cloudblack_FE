@@ -16,6 +16,9 @@ import {
   RefreshCw,
   ShieldAlert,
   Image,
+  ExternalLink,
+  Link2,
+  Link2Off,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -51,6 +54,14 @@ export function AdminLayout() {
   const [profileAvatar, setProfileAvatar] = useState('');
   const [updatingProfile, setUpdatingProfile] = useState(false);
   
+  // Logto binding state
+  const [logtoStatus, setLogtoStatus] = useState<{ enabled: boolean; bound: boolean; logto_id?: string; logto_email?: string } | null>(null);
+  const [loadingLogtoStatus, setLoadingLogtoStatus] = useState(false);
+  const [bindingLogto, setBindingLogto] = useState(false);
+  const [unbindingLogto, setUnbindingLogto] = useState(false);
+  const [unbindPassword, setUnbindPassword] = useState('');
+  const [showUnbindDialog, setShowUnbindDialog] = useState(false);
+  
   const data = useAdminData();
   const { token, adminLevel, adminInfo, setAdminInfo, stats, isInitialized } = data;
 
@@ -79,8 +90,88 @@ export function AdminLayout() {
       setProfileName(adminInfo.name || '');
       setProfileAvatar(adminInfo.avatar || '');
       setProfilePassword('');
+      fetchLogtoStatus();
     }
   }, [profileDialogOpen, adminInfo]);
+
+  // Fetch Logto binding status
+  const fetchLogtoStatus = async () => {
+    if (!token) return;
+    setLoadingLogtoStatus(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/logto/status`, {
+        headers: { 'Authorization': token },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setLogtoStatus(data.data);
+      }
+    } catch (err) {
+      console.error('获取Logto绑定状态失败:', err);
+    } finally {
+      setLoadingLogtoStatus(false);
+    }
+  };
+
+  // Bind Logto account
+  const bindLogto = async () => {
+    if (!token) {
+      toast.error('未登录，请先登录');
+      return;
+    }
+    setBindingLogto(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/logto/bind/url`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      
+      if (data.success && data.data?.url) {
+        // Redirect to Logto authorization page
+        window.location.href = data.data.url;
+      } else {
+        toast.error(data.message || '获取绑定链接失败');
+      }
+    } catch (err) {
+      console.error('绑定请求失败:', err);
+      toast.error('绑定请求失败');
+    } finally {
+      setBindingLogto(false);
+    }
+  };
+
+  // Unbind Logto account
+  const unbindLogto = async () => {
+    if (!token || !unbindPassword) return;
+    setUnbindingLogto(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/logto/unbind`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: unbindPassword }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Logto 账户解绑成功');
+        setLogtoStatus(prev => prev ? { ...prev, bound: false, logto_id: undefined, logto_email: undefined } : null);
+        setShowUnbindDialog(false);
+        setUnbindPassword('');
+      } else {
+        toast.error(data.message || '解绑失败');
+      }
+    } catch (err) {
+      toast.error('解绑请求失败');
+    } finally {
+      setUnbindingLogto(false);
+    }
+  };
 
   const handleLogout = async () => {
     if (token) {
@@ -319,6 +410,66 @@ export function AdminLayout() {
               </div>
               <p className="text-xs text-muted-foreground">权限等级只能由超级管理员修改</p>
             </div>
+
+            {/* Logto SSO Binding */}
+            {logtoStatus?.enabled && (
+              <div className="space-y-2 pt-4 border-t border-slate-800">
+                <Label className="flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  Logto SSO 绑定
+                </Label>
+                
+                {loadingLogtoStatus ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin" />
+                    加载中...
+                  </div>
+                ) : logtoStatus?.bound ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 text-green-500 text-sm">
+                        <Link2 className="w-4 h-4" />
+                        <span>已绑定 Logto 账户</span>
+                      </div>
+                      {logtoStatus.logto_email && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          邮箱: {logtoStatus.logto_email}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowUnbindDialog(true)}
+                      className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                    >
+                      <Link2Off className="w-4 h-4 mr-2" />
+                      解绑 Logto 账户
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-muted-foreground">
+                      未绑定 Logto 账户，绑定后可使用 SSO 登录
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={bindLogto}
+                      disabled={bindingLogto}
+                      className="w-full"
+                    >
+                      {bindingLogto ? (
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                      ) : (
+                        <Link2 className="w-4 h-4 mr-2" />
+                      )}
+                      绑定 Logto 账户
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -326,6 +477,48 @@ export function AdminLayout() {
             <Button onClick={updateProfile} disabled={updatingProfile} className="bg-brand hover:bg-brand-dark">
               {updatingProfile ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <Edit3 className="w-4 h-4 mr-2" />}
               保存修改
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unbind Logto Dialog */}
+      <Dialog open={showUnbindDialog} onOpenChange={setShowUnbindDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-md w-[calc(100%-2rem)] mx-4">
+          <DialogHeader>
+            <DialogTitle>解绑 Logto 账户</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              解绑后您将无法使用 SSO 登录，请确保您记得当前账户的密码。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>当前密码</Label>
+              <Input
+                type="password"
+                value={unbindPassword}
+                onChange={(e) => setUnbindPassword(e.target.value)}
+                placeholder="请输入当前密码以确认解绑"
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-muted-foreground">需要验证密码以确保账户安全</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnbindDialog(false)}>取消</Button>
+            <Button
+              variant="destructive"
+              onClick={unbindLogto}
+              disabled={unbindingLogto || !unbindPassword}
+            >
+              {unbindingLogto ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <Link2Off className="w-4 h-4 mr-2" />
+              )}
+              确认解绑
             </Button>
           </DialogFooter>
         </DialogContent>

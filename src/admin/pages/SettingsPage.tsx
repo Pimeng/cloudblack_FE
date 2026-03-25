@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
-import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff } from 'lucide-react';
+import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,25 @@ export function SettingsPage() {
   
   // 从 URL 获取 tab 状态
   const [activeTab, setActiveTab] = useUrlState<'basic' | 'smtp' | 'ai' | 'security' | 'upload' | 'backup' | 'server'>('tab', 'basic');
+  
+  // 处理 Logto 绑定结果
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const bindResult = searchParams.get('bind');
+    const bindMessage = searchParams.get('message');
+    
+    if (bindResult) {
+      if (bindResult === 'success') {
+        toast.success('Logto 账户绑定成功！');
+      } else if (bindResult === 'error') {
+        toast.error(bindMessage || 'Logto 账户绑定失败');
+      }
+      // 清除 URL 参数
+      searchParams.delete('bind');
+      searchParams.delete('message');
+      setSearchParams(searchParams);
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (token) {
@@ -315,6 +334,37 @@ export function SettingsPage() {
                     className="bg-slate-800 border-slate-700"
                   />
                 </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Public URL (后端 API 地址)</Label>
+                  <Input
+                    value={editConfig.public_url || ''}
+                    onChange={(e) => updateEditConfig('public_url', e.target.value)}
+                    className="bg-slate-800 border-slate-700"
+                    placeholder="https://api.example.com"
+                  />
+                  <p className="text-xs text-muted-foreground">用于生成回调地址和 CORS 配置</p>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Frontend URL (前端地址)</Label>
+                  <Input
+                    value={editConfig.frontend_url || ''}
+                    onChange={(e) => updateEditConfig('frontend_url', e.target.value)}
+                    className="bg-slate-800 border-slate-700"
+                    placeholder="https://example.com"
+                  />
+                  <p className="text-xs text-muted-foreground">用于 CORS 和登出跳转</p>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Secret Key (Session 密钥)</Label>
+                  <Input
+                    type={showSensitiveInfo ? 'text' : 'password'}
+                    value={editConfig.secret_key || ''}
+                    onChange={(e) => updateEditConfig('secret_key', e.target.value)}
+                    className="bg-slate-800 border-slate-700"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                  {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
+                </div>
               </div>
             </div>
           ) : (
@@ -568,6 +618,65 @@ export function SettingsPage() {
                       disabled={!canEditSensitiveConfig}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Logto SSO Config */}
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5 text-indigo-500" />
+                  Logto SSO 配置
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>启用 Logto SSO</Label>
+                    <select
+                      value={editConfig.logto?.enabled ? 'true' : 'false'}
+                      onChange={(e) => updateEditConfig('logto.enabled', e.target.value === 'true')}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                      disabled={!canEditSensitiveConfig}
+                    >
+                      <option value="true">启用</option>
+                      <option value="false">禁用</option>
+                    </select>
+                    {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Logto Endpoint</Label>
+                    <Input
+                      value={editConfig.logto?.endpoint || ''}
+                      onChange={(e) => updateEditConfig('logto.endpoint', e.target.value)}
+                      className="bg-slate-800 border-slate-700"
+                      disabled={!canEditSensitiveConfig}
+                      placeholder="https://login.example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>App ID</Label>
+                    <Input
+                      value={editConfig.logto?.app_id || ''}
+                      onChange={(e) => updateEditConfig('logto.app_id', e.target.value)}
+                      className="bg-slate-800 border-slate-700"
+                      disabled={!canEditSensitiveConfig}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>App Secret</Label>
+                    <Input
+                      type={showSensitiveInfo ? 'text' : 'password'}
+                      value={editConfig.logto?.app_secret || ''}
+                      onChange={(e) => updateEditConfig('logto.app_secret', e.target.value)}
+                      className="bg-slate-800 border-slate-700"
+                      disabled={!canEditSensitiveConfig}
+                    />
+                  </div>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-3 text-xs text-muted-foreground">
+                  <p>Logto 控制台配置:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Redirect URI: <code className="bg-slate-700 px-1 rounded">{'{public_url}'}/api/auth/logto/callback</code></li>
+                    <li>Post Sign-out Redirect URI: <code className="bg-slate-700 px-1 rounded">{'{frontend_url}'}/login</code></li>
+                  </ul>
                 </div>
               </div>
 

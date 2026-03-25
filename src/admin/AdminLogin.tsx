@@ -1,12 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock, User, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
-
-const API_BASE = 'https://cloudblack-api.07210700.xyz';
+import { API_BASE, type AuthMethods } from './types';
 
 export function AdminLogin() {
   const [adminId, setAdminId] = useState('');
@@ -16,9 +15,58 @@ export function AdminLogin() {
   const [error, setError] = useState('');
   const [geetestResult, setGeetestResult] = useState<GeetestResult | null>(null);
   
+  // Logto auth methods
+  const [authMethods, setAuthMethods] = useState<AuthMethods | null>(null);
+  const [loadingMethods, setLoadingMethods] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const gotoPath = searchParams.get('goto') || '/admin/dashboard';
+
+  // 检查是否已登录，如果已登录则自动跳转
+  useEffect(() => {
+    const storedToken = localStorage.getItem('admin_token');
+    if (storedToken) {
+      // 已登录，直接跳转
+      navigate(gotoPath);
+      return;
+    }
+    setCheckingAuth(false);
+  }, [navigate, gotoPath]);
+
+  // 处理后端返回的错误参数（如 SSO 登录未绑定）
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const errorMessage = searchParams.get('message');
+    
+    if (error) {
+      setError(errorMessage || `登录失败: ${error}`);
+      // 清除 URL 参数
+      searchParams.delete('error');
+      searchParams.delete('message');
+      setSearchParams(searchParams);
+    }
+  }, [searchParams, setSearchParams]);
+
+  // 获取支持的认证方式
+  useEffect(() => {
+    if (checkingAuth) return; // 等待认证检查完成
+    const fetchAuthMethods = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/methods`);
+        const data = await response.json();
+        if (data.success) {
+          setAuthMethods(data.data);
+        }
+      } catch (e) {
+        // 忽略错误，使用默认密码登录
+      } finally {
+        setLoadingMethods(false);
+      }
+    };
+    fetchAuthMethods();
+  }, [checkingAuth]);
 
   // 使用 bind 模式的极验验证
   const { 
@@ -68,7 +116,12 @@ export function AdminLogin() {
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.message || '登录失败，请检查账号密码');
+        // 检查是否是强制SSO登录
+        if (data.sso_required && data.sso_login_url) {
+          setError(data.message || '该账户已强制使用 SSO 登录');
+        } else {
+          setError(data.message || '登录失败，请检查账号密码');
+        }
         setLoading(false);
         // 登录失败，重置极验
         resetGeetest();
@@ -152,6 +205,16 @@ export function AdminLogin() {
     }
   };
 
+  // Logto SSO 登录
+  const handleLogtoLogin = () => {
+    const loginUrl = authMethods?.logto?.login_url || '/api/auth/logto/login';
+    const nextParam = encodeURIComponent(gotoPath);
+    window.location.href = `${API_BASE}${loginUrl}?next=${nextParam}`;
+  };
+
+  const showLogto = authMethods?.methods?.includes('logto') && authMethods?.logto?.enabled;
+  const showDivider = showLogto && authMethods?.methods?.includes('password');
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative">
       {/* Background */}
@@ -173,79 +236,114 @@ export function AdminLogin() {
 
         {/* Login Form */}
         <div className="glass-strong rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="admin_id">管理员 ID</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="admin_id"
-                  type="text"
-                  placeholder="请输入管理员ID"
-                  value={adminId}
-                  onChange={(e) => setAdminId(e.target.value)}
-                  className="pl-10 py-6 bg-background/50 border-border/50 focus:border-brand"
-                />
+          {/* Logto SSO Login */}
+          {showLogto && (
+            <>
+              <Button
+                type="button"
+                onClick={handleLogtoLogin}
+                disabled={loadingMethods}
+                className="w-full py-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl"
+              >
+                <span className="flex items-center gap-2">
+                  <ExternalLink className="w-5 h-5" />
+                  {loadingMethods ? '加载中...' : 'SSO 登录'}
+                </span>
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                使用 QQ / 微信 等社交账号登录
+              </p>
+            </>
+          )}
+
+          {/* Divider */}
+          {showDivider && (
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/50"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-2 bg-slate-900/50 text-muted-foreground">或使用密码登录</span>
               </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="请输入密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 py-6 bg-background/50 border-border/50 focus:border-brand"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Geetest Verification Status */}
-            {isEnabled && geetestResult && (
+          {/* Password Login Form */}
+          {(!showLogto || authMethods?.methods?.includes('password')) && (
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4" />
-                  <span>人机验证</span>
-                  <span className="text-green-500 text-xs">(已完成)</span>
+                <Label htmlFor="admin_id">管理员 ID</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="admin_id"
+                    type="text"
+                    placeholder="请输入管理员ID"
+                    value={adminId}
+                    onChange={(e) => setAdminId(e.target.value)}
+                    className="pl-10 py-6 bg-background/50 border-border/50 focus:border-brand"
+                  />
                 </div>
               </div>
-            )}
 
-            {error && (
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
-                {error}
+              <div className="space-y-2">
+                <Label htmlFor="password">密码</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="请输入密码"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 py-6 bg-background/50 border-border/50 focus:border-brand"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              disabled={loading || geetestLoading || (isEnabled && !isReady)}
-              className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  登录中...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  登录
-                </span>
+              {/* Geetest Verification Status */}
+              {isEnabled && geetestResult && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Shield className="w-4 h-4" />
+                    <span>人机验证</span>
+                    <span className="text-green-500 text-xs">(已完成)</span>
+                  </div>
+                </div>
               )}
-            </Button>
-          </form>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+                  {error}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading || geetestLoading || (isEnabled && !isReady)}
+                className="w-full py-6 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    登录中...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    登录
+                  </span>
+                )}
+              </Button>
+            </form>
+          )}
         </div>
 
         {/* Back link */}

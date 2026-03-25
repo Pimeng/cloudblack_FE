@@ -30,6 +30,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 // 懒加载 Admin 模块
 const AdminLogin = lazy(() => import('./admin/AdminLogin').then(m => ({ default: m.AdminLogin })));
 const AdminLayout = lazy(() => import('./admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const LogtoCallback = lazy(() => import('./admin/LogtoCallback').then(m => ({ default: m.LogtoCallback })));
+const LogtoBindCallback = lazy(() => import('./admin/LogtoBindCallback').then(m => ({ default: m.LogtoBindCallback })));
 const DashboardPage = lazy(() => import('./admin/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const AppealsPage = lazy(() => import('./admin/pages/AppealsPage').then(m => ({ default: m.AppealsPage })));
 const BlacklistPage = lazy(() => import('./admin/pages/BlacklistPage').then(m => ({ default: m.BlacklistPage })));
@@ -245,6 +247,16 @@ function App() {
         <Route path="/admin" element={
           <Suspense fallback={<AdminPageFallback />}>
             <AdminLogin />
+          </Suspense>
+        } />
+        <Route path="/admin/callback" element={
+          <Suspense fallback={<AdminPageFallback />}>
+            <LogtoCallback />
+          </Suspense>
+        } />
+        <Route path="/admin/bind-callback" element={
+          <Suspense fallback={<AdminPageFallback />}>
+            <LogtoBindCallback />
           </Suspense>
         } />
         <Route path="/admin/dashboard" element={

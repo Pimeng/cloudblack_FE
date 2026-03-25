@@ -200,6 +200,9 @@ export interface SystemConfig {
   log_level: string;
   ip_header: string;
   root_redirect_url: string;
+  public_url?: string;
+  frontend_url?: string;
+  secret_key?: string;
   smtp?: SMTPConfig;
   geetest?: GeetestConfig;
   ai_analysis?: AIAnalysisConfig;
@@ -209,6 +212,7 @@ export interface SystemConfig {
   upload?: UploadConfig;
   hotlink_protection?: HotlinkProtectionConfig;
   audit_log?: AuditLogConfig;
+  logto?: LogtoConfig;
   [key: string]: any;
 }
 
@@ -228,4 +232,45 @@ export interface SystemInfo {
     percent: number;
   };
   uptime: number;
+}
+
+// Logto SSO Types
+export interface AuthMethods {
+  methods: string[];
+  logto?: {
+    enabled: boolean;
+    login_url: string;
+  };
+}
+
+export interface LogtoStatus {
+  enabled: boolean;
+  bound: boolean;
+  logto_id?: string;
+  logto_email?: string;
+}
+
+export interface LogtoBindUrl {
+  url: string;
+  expires_in: number;
+}
+
+export interface LogtoBindResult {
+  logto_id: string;
+  logto_email?: string;
+}
+
+export interface LogtoLoginResult {
+  admin_id: string;
+  name: string;
+  level: number;
+  temp_token: string;
+  expires_in: number;
+}
+
+export interface LogtoConfig {
+  enabled?: boolean;
+  endpoint?: string;
+  app_id?: string;
+  app_secret?: string;
 }
