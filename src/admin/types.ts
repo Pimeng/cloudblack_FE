@@ -8,9 +8,6 @@ export interface Stats {
   pending_appeals: number;
   total_appeals: number;
   blacklist_count: number;
-  total_approved: number;
-  success_rate: number;
-  avg_processing_hours: number;
 }
 
 export interface Appeal {
@@ -158,6 +155,7 @@ export interface AIAnalysisResult {
     suggestions: string;
     risk_factors: string[];
   };
+  error?: string;
   updated_at?: string;
 }
 

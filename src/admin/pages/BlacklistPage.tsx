@@ -155,12 +155,15 @@ export function BlacklistPage() {
     if (!editingItem) return;
     
     const body: Record<string, unknown> = {};
+    // user_type 是原类型，用于定位记录
+    body.user_type = editingItem.user_type || 'user';
     if (editReason !== editingItem.reason) body.reason = editReason;
     if (editUserId !== editingItem.user_id) body.new_user_id = editUserId;
-    if (editUserType !== editingItem.user_type) body.user_type = editUserType;
+    // 如果要修改类型，使用 new_user_type
+    if (editUserType !== editingItem.user_type) body.new_user_type = editUserType;
     if (editLevel !== (editingItem.level || 1)) body.level = editLevel;
     
-    if (Object.keys(body).length === 0) {
+    if (Object.keys(body).length <= 1) { // 只有 user_type 时没有实质修改
       toast.info('没有修改内容');
       return;
     }
@@ -205,19 +208,22 @@ export function BlacklistPage() {
   const saveDetailEdit = async () => {
     if (!viewingItem) return;
     
-    const body: { reason?: string; user_type?: 'user' | 'group'; level?: number } = {};
+    const body: { reason?: string; user_type?: 'user' | 'group'; new_user_type?: 'user' | 'group'; level?: number } = {};
+    // user_type 是原类型，用于定位记录
+    body.user_type = viewingItem.user_type || 'user';
     if (editReason.trim() !== viewingItem.reason) body.reason = editReason.trim();
-    if (editUserType !== viewingItem.user_type) body.user_type = editUserType;
+    // 如果要修改类型，使用 new_user_type
+    if (editUserType !== viewingItem.user_type) body.new_user_type = editUserType;
     if (editLevel !== viewingItem.level) body.level = editLevel;
     
-    if (Object.keys(body).length === 0) {
+    if (Object.keys(body).length <= 1) { // 只有 user_type 时没有实质修改
       toast.info('没有需要更新的内容');
       setIsEditingDetail(false);
       return;
     }
 
     const result = await updateBlacklistMutate(
-      `/api/admin/blacklist/${viewingItem.user_id}?user_type=${viewingItem.user_type || 'user'}`,
+      `/api/admin/blacklist/${viewingItem.user_id}`,
       { method: 'PUT' },
       body
     );

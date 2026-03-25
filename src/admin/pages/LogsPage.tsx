@@ -134,8 +134,8 @@ export function LogsPage() {
       const params = new URLSearchParams({ page: logsPage.toString(), per_page: logsPerPage.toString() });
       if (logFilterAction) params.append('action_type', logFilterAction);
       if (logFilterStatus !== 'all') params.append('status', logFilterStatus);
-      if (logStartDate) params.append('start_date', logStartDate);
-      if (logEndDate) params.append('end_date', logEndDate);
+      if (logStartDate) params.append('start_time', logStartDate);
+      if (logEndDate) params.append('end_time', logEndDate);
       const res = await fetch(`${API_BASE}/api/admin/logs?${params}`, { headers: { Authorization: token } });
       const data = await res.json();
       if (data.success) { setLogs(data.data.items); setLogsTotal(data.data.total); }

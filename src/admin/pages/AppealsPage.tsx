@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
-import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn } from 'lucide-react';
+import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useImageViewer } from '@/hooks/useImageViewer';
 import type { AdminDataContext } from '../hooks/useAdminData';
-import type { Appeal } from '../types';
+import type { Appeal, AIAnalysisResult } from '../types';
 import { API_BASE } from '../types';
 import { toast } from 'sonner';
 import {
@@ -59,6 +59,10 @@ export function AppealsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAppeal, setDeletingAppeal] = useState<Appeal | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  
+  // AI Analysis state
+  const [aiAnalysisDetail, setAiAnalysisDetail] = useState<AIAnalysisResult | null>(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   
   // viewingItem is now from useExpandableDetail hook
   
@@ -201,8 +205,45 @@ export function AppealsPage() {
     const result = await deleteAIMutate(`/api/admin/appeals/${appealId}/ai-analysis`, {
       method: 'DELETE',
     });
-    if (result) fetchAppeals();
+    if (result) {
+      setAiAnalysisDetail(null);
+      fetchAppeals();
+    }
   };
+  
+  // 获取AI分析详情
+  const fetchAIAnalysisDetail = useCallback(async (appealId: string) => {
+    if (!token) return;
+    setAiAnalysisLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/appeals/${appealId}/ai-analysis`, {
+        headers: { 'Authorization': token },
+      });
+      const data = await response.json();
+      if (data.success && data.data) {
+        setAiAnalysisDetail(data.data);
+      }
+    } catch (err) {
+      console.error('获取AI分析详情失败:', err);
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  }, [token]);
+  
+  // 当打开详情时，如果AI分析已完成但没有详情，则获取
+  useEffect(() => {
+    if (detailOpen && viewingItem) {
+      if (viewingItem.ai_analysis?.status === 'completed' && !viewingItem.ai_analysis?.result) {
+        fetchAIAnalysisDetail(viewingItem.appeal_id);
+      } else if (viewingItem.ai_analysis) {
+        setAiAnalysisDetail(viewingItem.ai_analysis);
+      } else {
+        setAiAnalysisDetail(null);
+      }
+    } else {
+      setAiAnalysisDetail(null);
+    }
+  }, [detailOpen, viewingItem, fetchAIAnalysisDetail]);
   
   const clearProcessedAppeals = async () => {
     const body: { days?: number } = {};
@@ -327,27 +368,40 @@ export function AppealsPage() {
                 )}
                 
                 {/* AI Analysis Summary */}
-                {appeal.ai_analysis && appeal.ai_analysis.status === 'completed' && (
+                {appeal.ai_analysis && (
                   <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="w-4 h-4 text-purple-500" />
                       <span className="text-sm text-purple-400">AI 建议</span>
-                      {(appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) ? (
-                        <AIRecommendationBadge 
-                          recommendation={appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || ''} 
-                        />
-                      ) : (
-                        <span className="text-xs text-slate-500">分析完成</span>
+                      {appeal.ai_analysis.status === 'pending' && (
+                        <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          分析中
+                        </Badge>
+                      )}
+                      {appeal.ai_analysis.status === 'failed' && (
+                        <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
+                          分析失败
+                        </Badge>
+                      )}
+                      {appeal.ai_analysis.status === 'completed' && (
+                        (appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation) ? (
+                          <AIRecommendationBadge 
+                            recommendation={appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || ''} 
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-500">分析完成</span>
+                        )
                       )}
                     </div>
-                    {/* AI Analysis Summary Content */}
-                    {appeal.ai_analysis.result?.summary && (
+                    {/* AI Analysis Summary Content - 仅completed状态展示 */}
+                    {appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.result?.summary && (
                       <p className="text-xs text-slate-300 line-clamp-2 mb-1">
                         <span className="text-purple-400">申诉要点：</span>
                         {appeal.ai_analysis.result.summary}
                       </p>
                     )}
-                    {appeal.ai_analysis.result?.confidence && (
+                    {appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.result?.confidence && (
                       <p className="text-xs text-slate-400">
                         置信度：{appeal.ai_analysis.result.confidence}%
                       </p>
@@ -587,15 +641,21 @@ export function AppealsPage() {
               )}
               
               {/* AI Analysis */}
-              {viewingItem.ai_analysis && viewingItem.ai_analysis.status === 'completed' && viewingItem.ai_analysis.result && (
+              {viewingItem.ai_analysis && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-purple-500" />
                       <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
+                      {viewingItem.ai_analysis.status === 'pending' && (
+                        <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          分析中
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex gap-2">
-                      {canRefreshAI && (
+                      {canRefreshAI && viewingItem.ai_analysis.status === 'completed' && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -618,53 +678,96 @@ export function AppealsPage() {
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400">AI 建议:</span>
-                      <Badge className={
-                        viewingItem.ai_analysis.result!.recommendation.includes('通过') 
-                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                          : viewingItem.ai_analysis.result!.recommendation.includes('拒绝')
-                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                          : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                      }>
-                        {viewingItem.ai_analysis.result!.recommendation}
-                      </Badge>
-                      <span className="text-xs text-slate-500">置信度: {viewingItem.ai_analysis.result!.confidence}%</span>
+                  {/* AI分析中 */}
+                  {viewingItem.ai_analysis.status === 'pending' && (
+                    <div className="flex items-center gap-3 text-slate-400 py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                      <span>AI正在分析中，请稍后再查看...</span>
                     </div>
-                    
-                    {viewingItem.ai_analysis.result!.summary && (
-                      <div>
-                        <p className="text-sm text-purple-400 font-medium">申诉要点</p>
-                        <p className="text-sm text-slate-300">{viewingItem.ai_analysis.result!.summary}</p>
-                      </div>
-                    )}
-                    
-                    {viewingItem.ai_analysis.result!.reason_analysis && (
-                      <div>
-                        <p className="text-sm text-purple-400 font-medium">理由分析</p>
-                        <p className="text-sm text-slate-300">{viewingItem.ai_analysis.result!.reason_analysis}</p>
-                      </div>
-                    )}
-                    
-                    {viewingItem.ai_analysis.result!.suggestions && (
-                      <div>
-                        <p className="text-sm text-purple-400 font-medium">处理建议</p>
-                        <p className="text-sm text-slate-300">{viewingItem.ai_analysis.result!.suggestions}</p>
-                      </div>
-                    )}
-                    
-                    {viewingItem.ai_analysis.result!.risk_factors && viewingItem.ai_analysis.result!.risk_factors.length > 0 && (
-                      <div>
-                        <p className="text-sm text-purple-400 font-medium">风险提示</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {viewingItem.ai_analysis.result!.risk_factors.map((risk, idx) => (
-                            <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
-                          ))}
+                  )}
+                  
+                  {/* AI分析失败 */}
+                  {viewingItem.ai_analysis.status === 'failed' && (
+                    <div className="text-slate-400 py-2">
+                      <span className="text-red-400">分析失败</span>
+                      {viewingItem.ai_analysis.error && (
+                        <p className="text-sm mt-1">{viewingItem.ai_analysis.error}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* AI分析完成 - 获取详情中 */}
+                  {viewingItem.ai_analysis.status === 'completed' && aiAnalysisLoading && (
+                    <div className="flex items-center gap-3 text-slate-400 py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                      <span>正在获取AI分析详情...</span>
+                    </div>
+                  )}
+                  
+                  {/* AI分析完成 - 展示详情 */}
+                  {viewingItem.ai_analysis.status === 'completed' && !aiAnalysisLoading && (
+                    <div className="space-y-3">
+                      {/* 使用获取到的详情或列表中的简要信息 */}
+                      {(aiAnalysisDetail?.result || viewingItem.ai_analysis.recommendation) && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400">AI 建议:</span>
+                          <Badge className={
+                            (aiAnalysisDetail?.result?.recommendation || viewingItem.ai_analysis.recommendation || '').includes('通过') 
+                              ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                              : (aiAnalysisDetail?.result?.recommendation || viewingItem.ai_analysis.recommendation || '').includes('拒绝')
+                              ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                              : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                          }>
+                            {aiAnalysisDetail?.result?.recommendation || viewingItem.ai_analysis.recommendation}
+                          </Badge>
+                          {(aiAnalysisDetail?.result?.confidence || viewingItem.ai_analysis.result?.confidence) && (
+                            <span className="text-xs text-slate-500">
+                              置信度: {aiAnalysisDetail?.result?.confidence || viewingItem.ai_analysis.result?.confidence}%
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      
+                      {aiAnalysisDetail?.result?.summary && (
+                        <div>
+                          <p className="text-sm text-purple-400 font-medium">申诉要点</p>
+                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.summary}</p>
+                        </div>
+                      )}
+                      
+                      {aiAnalysisDetail?.result?.reason_analysis && (
+                        <div>
+                          <p className="text-sm text-purple-400 font-medium">理由分析</p>
+                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.reason_analysis}</p>
+                        </div>
+                      )}
+                      
+                      {aiAnalysisDetail?.result?.suggestions && (
+                        <div>
+                          <p className="text-sm text-purple-400 font-medium">处理建议</p>
+                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.suggestions}</p>
+                        </div>
+                      )}
+                      
+                      {aiAnalysisDetail?.result?.risk_factors && aiAnalysisDetail.result.risk_factors.length > 0 && (
+                        <div>
+                          <p className="text-sm text-purple-400 font-medium">风险提示</p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {aiAnalysisDetail.result.risk_factors.map((risk, idx) => (
+                              <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* 如果没有获取到详细结果，显示提示 */}
+                      {!aiAnalysisDetail?.result && !viewingItem.ai_analysis.recommendation && (
+                        <div className="text-slate-400 py-2">
+                          <span>暂无详细分析结果</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -692,6 +795,47 @@ export function AppealsPage() {
                   </div>
                 </div>
               )}
+              
+              {/* 操作按钮区域 */}
+              <div className="pt-6 border-t border-slate-700/50">
+                <span className="text-muted-foreground text-sm mb-3 block">操作:</span>
+                <div className="flex flex-wrap gap-3">
+                  {/* 待审核状态显示通过/拒绝按钮 */}
+                  {viewingItem.status === 'pending' && canReviewAppeals && (
+                    <>
+                      <Button 
+                        onClick={() => openReviewDialog(viewingItem, 'approve')} 
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        通过申诉
+                      </Button>
+                      <Button 
+                        onClick={() => openReviewDialog(viewingItem, 'reject')} 
+                        variant="destructive"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        拒绝申诉
+                      </Button>
+                    </>
+                  )}
+                  {/* 删除按钮 - 待审核显示在通过拒绝后面，已处理状态单独显示 */}
+                  {canManageBlacklist && (
+                    <Button 
+                      onClick={() => { 
+                        setDeletingAppeal(viewingItem); 
+                        setDeleteReason(''); 
+                        setDeleteDialogOpen(true); 
+                      }}
+                      variant="outline"
+                      className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      删除申诉
+                    </Button>
+                  )}
+                </div>
+              </div>
               </div>
             )}
       </DetailView>

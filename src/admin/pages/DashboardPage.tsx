@@ -1,5 +1,5 @@
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Clock, FileText, CheckCircle, TrendingUp, UserX, AlertCircle, Users } from 'lucide-react';
+import { Clock, FileText, CheckCircle, UserX, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AdminDataContext } from '../hooks/useAdminData';
 import { LoadingSpinner, PageHeader } from '../components';
@@ -48,31 +48,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">已处理申诉</p>
-              <p className="text-3xl font-bold text-white">{stats.total_approved ?? 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6 text-green-500" />
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">申诉成功率</p>
-              <p className="text-3xl font-bold text-white">{stats.success_rate ?? 0}%</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-              <Clock className="w-6 h-6 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">平均处理时间</p>
-              <p className="text-3xl font-bold text-white">{stats.avg_processing_hours ?? 0}h</p>
+              <p className="text-3xl font-bold text-white">{stats.total_appeals - stats.pending_appeals}</p>
             </div>
           </div>
         </div>

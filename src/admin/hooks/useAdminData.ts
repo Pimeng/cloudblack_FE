@@ -227,27 +227,7 @@ export function useAdminData() {
       
       const data = await response.json();
       if (data.success) {
-        const appealsWithAI = await Promise.all(
-          data.data.items.map(async (appeal: Appeal) => {
-            if (appeal.ai_analysis?.status === 'completed' && !appeal.ai_analysis?.result) {
-              try {
-                const detailRes = await fetch(`${API_BASE}/api/admin/appeals/${appeal.appeal_id}/ai-analysis`, {
-                  headers: { 'Authorization': authToken },
-                });
-                if (detailRes.ok) {
-                  const detailData = await detailRes.json();
-                  if (detailData.success && detailData.data) {
-                    return { ...appeal, ai_analysis: detailData.data };
-                  }
-                }
-              } catch {
-                // 忽略单个请求失败
-              }
-            }
-            return appeal;
-          })
-        );
-        setAppeals(appealsWithAI);
+        setAppeals(data.data.items);
         setAppealTotal(data.data.total);
       }
     } catch (err) {
@@ -384,8 +364,8 @@ export function useAdminData() {
       });
       if (action) params.append('action_type', action);
       if (status !== 'all') params.append('status', status);
-      if (startDate) params.append('start_date', startDate);
-      if (endDate) params.append('end_date', endDate);
+      if (startDate) params.append('start_time', startDate);
+      if (endDate) params.append('end_time', endDate);
 
       const response = await fetch(`${API_BASE}/api/admin/logs?${params}`, {
         headers: { 'Authorization': authToken },
