@@ -249,20 +249,20 @@ export function AppealSection({ active }: { active?: boolean }) {
   }
 
   return (
-    <section ref={sectionRef} className="relative py-10 px-8 min-h-screen md:h-screen flex flex-col justify-center items-stretch">
-      <div className="text-center mb-6">
+    <section ref={sectionRef} className="relative py-4 md:py-10 px-8 min-h-screen md:h-screen flex flex-col justify-center items-stretch">
+      <div className="text-center mb-3 md:mb-6">
         <h2 className="text-3xl md:text-4xl font-bold text-gradient mb-2">申诉中心</h2>
         <p className="text-muted-foreground">提交申诉或查询您的申诉记录</p>
       </div>
 
-      <div className="w-full max-w-md mx-auto mb-4">
+      <div className="w-full max-w-md mx-auto mb-3">
         <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl">
           <button type="button" onClick={() => { setActiveTab('submit'); setError(''); setQueryResult(null); }}
-            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'submit' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
+            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'submit' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
             <FileText className="w-4 h-4" />提交申诉
           </button>
           <button type="button" onClick={() => { setActiveTab('query'); setError(''); setSubmitted(false); }}
-            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'query' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
+            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'query' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
             <Search className="w-4 h-4" />查询申诉
           </button>
         </div>
@@ -270,26 +270,26 @@ export function AppealSection({ active }: { active?: boolean }) {
 
       <div ref={formRef} className="w-full max-w-md mx-auto" style={{ opacity: 0 }}>
         {activeTab === 'submit' ? (
-          <div className="glass-strong rounded-3xl p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="glass-strong rounded-3xl p-4 md:p-6">
+            <form onSubmit={handleSubmit} className="space-y-3">
 
               {/* 申诉类型 */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>申诉类型</Label>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setFormData({ ...formData, user_type: 'user' })}
-                    className={`flex-1 py-2.5 px-4 rounded-xl border transition-all ${formData.user_type === 'user' ? 'border-brand bg-brand/10 text-brand' : 'border-border/50 text-muted-foreground hover:border-brand/50'}`}>
+                    className={`flex-1 py-2 px-4 rounded-xl border transition-all ${formData.user_type === 'user' ? 'border-brand bg-brand/10 text-brand' : 'border-border/50 text-muted-foreground hover:border-brand/50'}`}>
                     个人QQ
                   </button>
                   <button type="button" onClick={() => setFormData({ ...formData, user_type: 'group' })}
-                    className={`flex-1 py-2.5 px-4 rounded-xl border transition-all ${formData.user_type === 'group' ? 'border-brand bg-brand/10 text-brand' : 'border-border/50 text-muted-foreground hover:border-brand/50'}`}>
+                    className={`flex-1 py-2 px-4 rounded-xl border transition-all ${formData.user_type === 'group' ? 'border-brand bg-brand/10 text-brand' : 'border-border/50 text-muted-foreground hover:border-brand/50'}`}>
                     群号
                   </button>
                 </div>
               </div>
 
               {/* QQ号 / 群号 */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="user_id">{formData.user_type === 'user' ? 'QQ号' : '群号'}</Label>
                 <Input id="user_id" type="text" inputMode="numeric" pattern="[0-9]*"
                   placeholder={`请输入您的${formData.user_type === 'user' ? 'QQ号' : '群号'}`}
@@ -299,7 +299,7 @@ export function AppealSection({ active }: { active?: boolean }) {
               </div>
 
               {/* 联系邮箱 */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="email">联系邮箱</Label>
                 <Input id="email" type="email" placeholder="请输入您的邮箱地址"
                   value={formData.contact_email}
@@ -308,22 +308,22 @@ export function AppealSection({ active }: { active?: boolean }) {
               </div>
 
               {/* 申诉内容 */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="content">申诉内容</Label>
                 <Textarea id="content" placeholder="请详细说明您的情况..."
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="bg-background/50 border-border/50 focus:border-brand min-h-[100px] resize-none"
+                  className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-none"
                   maxLength={2000} />
                 <p className="text-xs text-muted-foreground text-right">{formData.content.length}/2000</p>
               </div>
 
               {/* 截图上传 */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label>相关截图（可选，最多3张）</Label>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {images.map((img, index) => (
-                    <div key={index} className="relative w-16 h-16 rounded-lg overflow-hidden group cursor-pointer"
+                    <div key={index} className="relative w-14 h-14 rounded-lg overflow-hidden group cursor-pointer"
                       onClick={() => openImage(img.preview)}>
                       <img src={img.preview} alt={`待上传图片 ${index + 1}`} className="w-full h-full object-cover" />
                       <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(index); }}
@@ -333,7 +333,7 @@ export function AppealSection({ active }: { active?: boolean }) {
                     </div>
                   ))}
                   {images.length < 3 && (
-                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 hover:bg-brand/5 transition-colors">
+                    <label className="w-14 h-14 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 hover:bg-brand/5 transition-colors">
                       <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" multiple className="hidden" onChange={handleImageUpload} />
                       <ImageIcon className="w-4 h-4 text-muted-foreground mb-1" />
                       <span className="text-xs text-muted-foreground">选择</span>
@@ -346,7 +346,7 @@ export function AppealSection({ active }: { active?: boolean }) {
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
 
               <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
-                className="w-full py-5 text-lg font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
+                className="w-full py-3 text-base font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
                 {submitting
                   ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>
                   : <span className="flex items-center gap-2"><Send className="w-5 h-5" />提交申诉</span>}

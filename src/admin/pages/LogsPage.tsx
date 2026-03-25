@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useUrlState, useUrlStateNumber } from '../hooks';
 import { ScrollText, RefreshCw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import type { AdminDataContext } from '../hooks/useAdminData';
+import { API_BASE } from '../types';
+import { toast } from 'sonner';
 import {
   LoadingSpinner,
   EmptyState,
@@ -99,38 +99,61 @@ interface LogItem {
 }
 
 export function LogsPage() {
-  const { token, logs, logsLoading, logsTotal, actionTypes, logStats, fetchLogs, fetchActionTypes, fetchLogStats } = useOutletContext<AdminDataContext>();
-  
-  // 从 URL 获取状态
-  const [logsPage, setLogsPage] = useUrlStateNumber('page', 1);
-  const [logsPerPage, setLogsPerPage] = useUrlStateNumber('per_page', 50);
-  const [logFilterAction, setLogFilterAction] = useUrlState<string>('action', '');
-  const [logFilterStatus, setLogFilterStatus] = useUrlState<'all' | 'success' | 'failure'>('status', 'all');
-  const [logStartDate, setLogStartDate] = useUrlState<string>('start_date', '');
-  const [logEndDate, setLogEndDate] = useUrlState<string>('end_date', '');
-  
-  // 本地 action_type 映射补充
-  const localActionTypeMap: Record<string, string> = {
-    'file_delete': '删除图片',
-  };
-  
-  // 获取 action_type 的中文名称（优先使用本地映射，其次使用后端返回的）
-  const getActionTypeLabel = (actionType: string) => {
-    return localActionTypeMap[actionType] || actionTypes[actionType] || actionType;
-  };
-  
-  // Detail dialog state
+  const { token } = useOutletContext<AdminDataContext>();
+
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPerPage, setLogsPerPage] = useState(50);
+  const [logFilterAction, setLogFilterAction] = useState('');
+  const [logFilterStatus, setLogFilterStatus] = useState<'all' | 'success' | 'failure'>('all');
+  const [logStartDate, setLogStartDate] = useState('');
+  const [logEndDate, setLogEndDate] = useState('');
+
+  const [logs, setLogs] = useState<LogItem[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [actionTypes, setActionTypes] = useState<Record<string, string>>({});
+  const [logStats, setLogStats] = useState<any>(null);
+
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
+  const localActionTypeMap: Record<string, string> = { 'file_delete': '删除图片' };
+  const getActionTypeLabel = (t: string) => localActionTypeMap[t] || actionTypes[t] || t;
+
+  // 用 ref 持有最新过滤值，避免闭包问题
+  const filterRef = useRef({ logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate });
   useEffect(() => {
-    if (token) {
-      fetchLogs();
-      fetchActionTypes();
-      fetchLogStats();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate]);
+    filterRef.current = { logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate };
+  });
+
+  const fetchLogs = useCallback(async () => {
+    if (!token) return;
+    const { logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate } = filterRef.current;
+    setLogsLoading(true);
+    try {
+      const params = new URLSearchParams({ page: logsPage.toString(), per_page: logsPerPage.toString() });
+      if (logFilterAction) params.append('action_type', logFilterAction);
+      if (logFilterStatus !== 'all') params.append('status', logFilterStatus);
+      if (logStartDate) params.append('start_date', logStartDate);
+      if (logEndDate) params.append('end_date', logEndDate);
+      const res = await fetch(`${API_BASE}/api/admin/logs?${params}`, { headers: { Authorization: token } });
+      const data = await res.json();
+      if (data.success) { setLogs(data.data.items); setLogsTotal(data.data.total); }
+    } catch { toast.error('获取审计日志失败'); }
+    finally { setLogsLoading(false); }
+  }, [token]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [token, logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_BASE}/api/admin/logs/action-types`, { headers: { Authorization: token } })
+      .then(r => r.json()).then(d => { if (d.success) setActionTypes(d.data); }).catch(() => {});
+    fetch(`${API_BASE}/api/admin/logs/statistics?days=7`, { headers: { Authorization: token } })
+      .then(r => r.json()).then(d => { if (d.success) setLogStats(d.data); }).catch(() => {});
+  }, [token]);
 
   const totalPages = Math.ceil(logsTotal / logsPerPage);
 
@@ -328,34 +351,32 @@ export function LogsPage() {
             <option value="success">成功</option>
             <option value="failure">失败</option>
           </select>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               type="datetime-local"
               value={logStartDate}
               onChange={(e) => { setLogStartDate(e.target.value); setLogsPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-              placeholder="开始时间"
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white w-44 [color-scheme:dark]"
             />
             <span className="text-slate-400">-</span>
             <input
               type="datetime-local"
               value={logEndDate}
               onChange={(e) => { setLogEndDate(e.target.value); setLogsPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
-              placeholder="结束时间"
+              className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white w-44 [color-scheme:dark]"
             />
             {(logStartDate || logEndDate) && (
               <Button 
                 onClick={() => { setLogStartDate(''); setLogEndDate(''); setLogsPage(1); }}
                 variant="ghost" 
                 size="sm"
-                className="text-slate-400 hover:text-white"
+                className="text-white hover:text-white hover:bg-slate-700"
               >
                 清除
               </Button>
             )}
           </div>
-          <Button onClick={() => fetchLogs()} variant="outline" size="icon">
+          <Button onClick={fetchLogs} variant="outline" size="icon">
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -366,18 +387,22 @@ export function LogsPage() {
           <h3 className="text-sm font-medium text-muted-foreground mb-4">最近7天操作统计</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(logStats.action_counts || {}).map(([action, count]) => (
-              <Badge 
-                key={action} 
-                variant="secondary" 
-                className={`cursor-pointer transition-colors ${logFilterAction === action ? 'bg-brand/30 text-brand border-brand/50' : 'bg-slate-800 hover:bg-slate-700'}`}
-                onClick={() => { 
-                  setLogFilterAction(logFilterAction === action ? '' : action); 
-                  setLogsPage(1); 
+              <button
+                key={action}
+                type="button"
+                onClick={() => {
+                  setLogFilterAction(logFilterAction === action ? '' : action);
+                  setLogsPage(1);
                 }}
                 title={logFilterAction === action ? '点击取消筛选' : '点击筛选此操作'}
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer
+                  ${logFilterAction === action
+                    ? 'bg-brand/30 text-brand border-brand/50'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
+                  }`}
               >
                 {getActionTypeLabel(action)}: {count as number}
-              </Badge>
+              </button>
             ))}
           </div>
         </div>

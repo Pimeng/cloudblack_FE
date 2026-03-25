@@ -2,7 +2,9 @@ import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
 import { FileText, ArrowUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { Navbar } from './components/Navbar';
+import { ScrollIndicator } from './components/ScrollIndicator';
 import { HeroSection } from './sections/HeroSection';
 import { FeaturesSection } from './sections/FeaturesSection';
 import { ProcessSection } from './sections/ProcessSection';
@@ -43,13 +45,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal';
 const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal'];
-const PAGE_LABELS: Record<PageKey, string> = {
-  hero: '云黑查询',
-  features: '了解云黑',
-  process: '申诉流程',
-  stats: '数据统计',
-  appeal: '申诉中心',
-};
 
 // Admin 页面加载中的占位组件
 function AdminPageFallback() {
@@ -63,68 +58,18 @@ function AdminPageFallback() {
   );
 }
 
-function PageDots({ currentIndex, onGoTo }: { currentIndex: number; onGoTo: (i: number) => void }) {
-  // Each dot is h-2 (8px) or h-6 (24px) for active, gap-3 (12px) between
-  // We calculate the center Y of each dot relative to the container
-  const DOT_H_INACTIVE = 8;
-  const DOT_H_ACTIVE = 24;
-  const GAP = 12;
-
-  // Compute cumulative center positions
-  const centers = PAGES.map((_, i) => {
-    let y = 0;
-    for (let j = 0; j < i; j++) {
-      y += (j === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) + GAP;
-    }
-    y += (i === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) / 2;
-    return y;
-  });
-
-  const totalHeight = PAGES.reduce((acc, _, i) => {
-    return acc + (i === currentIndex ? DOT_H_ACTIVE : DOT_H_INACTIVE) + (i < PAGES.length - 1 ? GAP : 0);
-  }, 0);
-
-  const activeCenterY = centers[currentIndex];
-  // tooltip top relative to container top = activeCenterY - totalHeight/2
-  const tooltipOffset = activeCenterY - totalHeight / 2;
-
-  return (
-    <div className="fixed left-4 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-3">
-      {/* Tooltip — positioned relative to the dots container center */}
-      <div
-        className="absolute left-5 z-50 pointer-events-none"
-        style={{
-          top: '50%',
-          transform: `translateY(calc(-50% + ${tooltipOffset}px))`,
-          transition: 'transform 0.4s cubic-bezier(0.4,0,0.2,1)',
-        }}
-      >
-        <div className="glass rounded-lg px-3 py-1.5 text-sm text-white whitespace-nowrap flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
-          {PAGE_LABELS[PAGES[currentIndex]]}
-        </div>
-      </div>
-
-      {PAGES.map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onGoTo(i)}
-          className={`w-2 rounded-full transition-all duration-300 ${
-            i === currentIndex
-              ? 'h-6 bg-brand shadow-glow'
-              : 'h-2 bg-white/30 hover:bg-white/60'
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
 
 function HomePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const isAnimating = useRef(false);
   const touchStartY = useRef(0);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const goTo = useCallback((index: number) => {
     if (index < 0 || index >= PAGES.length || isAnimating.current) return;
@@ -183,46 +128,53 @@ function HomePage() {
   return (
     <div className="relative h-screen overflow-hidden">
       <FluidBackground />
-      <PageDots currentIndex={currentIndex} onGoTo={goTo} />
+      <Navbar currentPage={PAGES[currentIndex]} onNavigate={(page) => goTo(PAGES.indexOf(page))} visible={currentIndex > 0} />
+      <ScrollIndicator visible={currentIndex === 0} />
 
-      {/* Quick Access Button - 快速前往申诉中心 / 回到顶部 */}
-      <AnimatePresence mode="wait">
-        {currentIndex !== 4 ? (
-          <motion.button
-            key="appeal-btn"
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            onClick={() => goTo(4)}
-            className="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-5 py-3 
-                       bg-brand/90 hover:bg-brand text-white rounded-full 
-                       shadow-lg shadow-brand/30 backdrop-blur-md
-                       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-brand/40
-                       border border-white/10"
+      {/* Quick Access Button — morphs between appeal and back-to-top */}
+      <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
+        <motion.button
+          onClick={() => goTo(currentIndex === 0 ? 4 : 0)}
+          animate={{ width: currentIndex === 0 ? (isMobile ? 40 : 140) : 40 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="relative flex items-center justify-center
+                     bg-brand/90 hover:bg-brand text-white rounded-full overflow-hidden
+                     shadow-lg shadow-brand/30 backdrop-blur-md
+                     hover:scale-105 hover:shadow-xl hover:shadow-brand/40
+                     border border-white/10"
+          style={{
+            height: isMobile ? 40 : 44,
+            minWidth: isMobile ? 40 : 44,
+            transition: 'background-color 0.3s, box-shadow 0.3s, transform 0.3s',
+          }}
+        >
+          {/* Appeal label — desktop only */}
+          <motion.span
+            animate={{ opacity: currentIndex === 0 ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 hidden md:flex items-center justify-center gap-2 px-4 whitespace-nowrap text-sm font-medium pointer-events-none"
           >
-            <FileText className="w-5 h-5" />
-            <span className="font-medium text-sm">申诉中心</span>
-          </motion.button>
-        ) : (
-          <motion.button
-            key="top-btn"
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            onClick={() => goTo(0)}
-            className="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-5 py-3 
-                       bg-slate-700/90 hover:bg-slate-600 text-white rounded-full 
-                       shadow-lg shadow-slate-900/30 backdrop-blur-md
-                       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-slate-900/40
-                       border border-white/10"
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            申诉中心
+          </motion.span>
+          {/* Mobile: always show icon, fade between FileText and ArrowUp */}
+          <motion.span
+            animate={{ opacity: currentIndex === 0 ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 flex md:hidden items-center justify-center pointer-events-none"
           >
-            <ArrowUp className="w-5 h-5" />
-            <span className="font-medium text-sm">回到顶部</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
+            <FileText className="w-4 h-4" />
+          </motion.span>
+          {/* Back to top icon */}
+          <motion.span
+            animate={{ opacity: currentIndex === 0 ? 0 : 1 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <ArrowUp className="w-4 h-4 md:w-5 md:h-5" />
+          </motion.span>
+        </motion.button>
+      </div>
 
       {/* Fullpage slider */}
       <div

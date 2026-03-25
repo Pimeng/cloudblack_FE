@@ -375,7 +375,7 @@ export function useAdminData() {
     }
   }, []);
 
-  const fetchLogs = useCallback(async (authToken: string, page = logsPage, perPage = logsPerPage, action = logFilterAction, status = logFilterStatus, startDate = logStartDate, endDate = logEndDate) => {
+  const fetchLogs = useCallback(async (authToken: string, page = 1, perPage = 50, action = '', status: 'all' | 'success' | 'failure' = 'all', startDate = '', endDate = '') => {
     setLogsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -406,7 +406,7 @@ export function useAdminData() {
     } finally {
       setLogsLoading(false);
     }
-  }, [logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate, handleAuthError]);
+  }, [handleAuthError]);
 
   const fetchActionTypes = useCallback(async (authToken: string) => {
     try {
@@ -616,7 +616,17 @@ export function useAdminData() {
     setLogEndDate,
     actionTypes,
     logStats,
-    fetchLogs: () => fetchLogs(token),
+    fetchLogs: useCallback((params?: { page?: number; perPage?: number; action?: string; status?: 'all' | 'success' | 'failure'; startDate?: string; endDate?: string }) => {
+      if (token) fetchLogs(
+        token,
+        params?.page ?? 1,
+        params?.perPage ?? 50,
+        params?.action ?? '',
+        params?.status ?? 'all',
+        params?.startDate ?? '',
+        params?.endDate ?? '',
+      );
+    }, [token, fetchLogs]),
     fetchActionTypes: () => fetchActionTypes(token),
     fetchLogStats: () => fetchLogStats(token),
     

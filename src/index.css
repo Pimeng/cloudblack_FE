@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -116,7 +114,7 @@
   input,
   select,
   textarea {
-    min-height: 44px;
+    min-height: unset;
   }
   
   /* Responsive tables */
@@ -191,4 +189,14 @@
 
 .animate-bounce-soft {
   animation: bounce-soft 2s ease-in-out infinite;
+}
+
+/* Scroll indicator animations */
+@keyframes scroll-arrow {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%       { opacity: 0.8; transform: translateY(7px); }
+}
+
+.animate-scroll-arrow {
+  animation: scroll-arrow 1.8s ease-in-out infinite;
 }
