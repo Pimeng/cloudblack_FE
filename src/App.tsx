@@ -254,6 +254,11 @@ function App() {
             <LogtoCallback />
           </Suspense>
         } />
+        <Route path="/auth/callback" element={
+          <Suspense fallback={<AdminPageFallback />}>
+            <LogtoCallback />
+          </Suspense>
+        } />
         <Route path="/admin/bind-callback" element={
           <Suspense fallback={<AdminPageFallback />}>
             <LogtoBindCallback />
