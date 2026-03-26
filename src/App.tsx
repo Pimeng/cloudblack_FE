@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
-import { FileText, ArrowUp } from 'lucide-react';
+import { FileText, ArrowUp, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { ScrollIndicator } from './components/ScrollIndicator';
@@ -13,6 +13,7 @@ import { AppealSection } from './sections/AppealSection';
 import { Footer } from './sections/Footer';
 import { Toaster } from '@/components/ui/sonner';
 import { ImageViewerProvider } from '@/hooks/useImageViewer';
+import { useTheme } from '@/hooks/useTheme';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,10 +52,10 @@ const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal'];
 // Admin 页面加载中的占位组件
 function AdminPageFallback() {
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-950">
+    <div className="flex items-center justify-center h-screen bg-background">
       <div className="flex flex-col items-center gap-4">
         <Spinner className="w-10 h-10 text-brand" />
-        <p className="text-slate-400">加载中...</p>
+        <p className="text-muted-foreground">加载中...</p>
       </div>
     </div>
   );
@@ -66,6 +67,7 @@ function HomePage() {
   const isAnimating = useRef(false);
   const touchStartY = useRef(0);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -130,7 +132,26 @@ function HomePage() {
   return (
     <div className="relative h-screen overflow-hidden">
       <FluidBackground />
-      <Navbar currentPage={PAGES[currentIndex]} onNavigate={(page) => goTo(PAGES.indexOf(page))} visible={currentIndex > 0} />
+      <Navbar currentPage={PAGES[currentIndex]} onNavigate={(page) => goTo(PAGES.indexOf(page))} visible={currentIndex > 0} theme={theme} onToggleTheme={toggleTheme} />
+
+      {/* Theme toggle — fixed top-right on home page, same position as Navbar button.
+          Navbar slides down and covers this when navigating away from hero. */}
+      <div
+        className="fixed top-0 right-0 z-40 h-16 flex items-center pr-6 transition-all duration-500 ease-in-out"
+        style={{
+          opacity: currentIndex === 0 ? 1 : 0,
+          pointerEvents: currentIndex === 0 ? 'auto' : 'none',
+        }}
+      >
+        <button
+          onClick={toggleTheme}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-foreground/60 hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
+          aria-label="切换主题"
+        >
+          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        </button>
+      </div>
+
       <ScrollIndicator visible={currentIndex === 0} />
 
       {/* Quick Access Button — morphs between appeal and back-to-top */}
@@ -216,10 +237,10 @@ function WelcomeAlert() {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+      <AlertDialogContent className="bg-card border-border text-foreground max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-xl font-bold text-white">重要提示</AlertDialogTitle>
-          <AlertDialogDescription className="text-slate-300 text-base leading-relaxed">
+          <AlertDialogTitle className="text-xl font-bold">重要提示</AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground text-base leading-relaxed">
             云黑正在开发，如遇Token/API不可用属正常现象，有问题请联系QQ：1470458485（注明：云黑API）
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -237,6 +258,9 @@ function WelcomeAlert() {
 }
 
 function App() {
+  // 在根组件初始化主题，确保所有路由（包括 admin）都能正确应用
+  useTheme();
+
   return (
     <BrowserRouter>
       <ImageViewerProvider>
@@ -327,10 +351,10 @@ function App() {
         position="top-center"
         toastOptions={{
           style: {
-            background: 'rgba(30, 41, 59, 0.9)',
+            background: 'hsl(var(--card))',
             backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#fff',
+            border: '1px solid hsl(var(--border))',
+            color: 'hsl(var(--foreground))',
           },
         }}
       />

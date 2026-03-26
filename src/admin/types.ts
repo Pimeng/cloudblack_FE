@@ -1,6 +1,6 @@
 // Admin Dashboard Types
 
-export const API_BASE = 'https://cloudblack-api.07210700.xyz';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz';
 
 export type Tab = 'dashboard' | 'appeals' | 'blacklist' | 'admins' | 'bots' | 'logs' | 'settings' | 'backup' | 'images';
 

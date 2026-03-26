@@ -238,8 +238,8 @@ export function OperatorTypeBadge({ type, level, className }: OperatorTypeBadgeP
       <Badge 
         variant="secondary" 
         className={cn(
-          'bg-slate-800 text-slate-400 border-slate-700 text-xs',
-          level !== undefined && 'bg-slate-800 text-slate-400 border-slate-700'
+          'bg-muted text-muted-foreground border-border text-xs',
+          level !== undefined && 'bg-muted text-muted-foreground border-border'
         )}
       >
         {level !== undefined ? `L${level}` : '管理员'}

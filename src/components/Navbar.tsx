@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X, Shield, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal';
@@ -16,9 +16,11 @@ interface NavbarProps {
   currentPage: PageKey;
   onNavigate: (page: PageKey) => void;
   visible: boolean;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
-export function Navbar({ currentPage, onNavigate, visible }: NavbarProps) {
+export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleNav = (key: PageKey) => {
@@ -35,12 +37,12 @@ export function Navbar({ currentPage, onNavigate, visible }: NavbarProps) {
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
-      <div className="w-full border-b border-white/8 bg-white/5 backdrop-blur-2xl" style={{ WebkitBackdropFilter: 'blur(24px)' }}>
+      <div className="w-full border-b border-foreground/8 bg-background/30 backdrop-blur-2xl" style={{ WebkitBackdropFilter: 'blur(24px)' }}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo / Brand */}
           <button
             onClick={() => handleNav('hero')}
-            className="flex items-center gap-2.5 text-white hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 rounded-lg bg-brand/20 border border-brand/40 flex items-center justify-center">
               <Shield className="w-4 h-4 text-brand" />
@@ -56,8 +58,8 @@ export function Navbar({ currentPage, onNavigate, visible }: NavbarProps) {
                 onClick={() => handleNav(item.key)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   currentPage === item.key
-                    ? 'text-white bg-white/10'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'text-foreground bg-foreground/10'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
                 }`}
               >
                 {item.label}
@@ -66,58 +68,78 @@ export function Navbar({ currentPage, onNavigate, visible }: NavbarProps) {
                 )}
               </button>
             ))}
+            {onToggleTheme && (
+              <button
+                onClick={onToggleTheme}
+                className="ml-2 w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
+                aria-label="切换主题"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            )}
           </div>
 
           {/* Mobile hamburger */}
-          <div className="md:hidden relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="relative w-9 h-9 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-            >
-              {/* Menu / X icon crossfade */}
-              <motion.span
-                animate={{ opacity: menuOpen ? 0 : 1, rotate: menuOpen ? 90 : 0, scale: menuOpen ? 0.5 : 1 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 flex items-center justify-center"
+          <div className="md:hidden flex items-center gap-1">
+            {onToggleTheme && (
+              <button
+                onClick={onToggleTheme}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all duration-200"
+                aria-label="切换主题"
               >
-                <Menu className="w-5 h-5" />
-              </motion.span>
-              <motion.span
-                animate={{ opacity: menuOpen ? 1 : 0, rotate: menuOpen ? 0 : -90, scale: menuOpen ? 1 : 0.5 }}
-                transition={{ duration: 0.2 }}
-                className="absolute inset-0 flex items-center justify-center"
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            )}
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="relative w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
-                <X className="w-5 h-5" />
-              </motion.span>
-            </button>
-
-            {/* Dropdown menu */}
-            <AnimatePresence>
-              {menuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: -8, transformOrigin: 'top right' }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -8 }}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                  className="absolute top-12 right-0 w-36 bg-slate-900/70 backdrop-blur-2xl border border-white/10 rounded-xl p-1.5 flex flex-col gap-0.5 shadow-xl"
-                  style={{ transformOrigin: 'top right', WebkitBackdropFilter: 'blur(24px)' }}
+                {/* Menu / X icon crossfade */}
+                <motion.span
+                  animate={{ opacity: menuOpen ? 0 : 1, rotate: menuOpen ? 90 : 0, scale: menuOpen ? 0.5 : 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute inset-0 flex items-center justify-center"
                 >
-                  {navItems.map((item) => (
-                    <button
-                      key={item.key}
-                      onClick={() => handleNav(item.key)}
-                      className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
-                        currentPage === item.key
-                          ? 'bg-white/15 text-white'
-                          : 'text-slate-300 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <Menu className="w-5 h-5" />
+                </motion.span>
+                <motion.span
+                  animate={{ opacity: menuOpen ? 1 : 0, rotate: menuOpen ? 0 : -90, scale: menuOpen ? 1 : 0.5 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </motion.span>
+              </button>
+
+              {/* Dropdown menu */}
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -8, transformOrigin: 'top right' }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -8 }}
+                    transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                    className="absolute top-12 right-0 w-36 bg-popover/90 backdrop-blur-2xl border border-border rounded-xl p-1.5 flex flex-col gap-0.5 shadow-xl"
+                    style={{ transformOrigin: 'top right', WebkitBackdropFilter: 'blur(24px)' }}
+                  >
+                    {navItems.map((item) => (
+                      <button
+                        key={item.key}
+                        onClick={() => handleNav(item.key)}
+                        className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
+                          currentPage === item.key
+                            ? 'bg-foreground/15 text-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-foreground/10'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

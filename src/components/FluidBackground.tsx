@@ -10,6 +10,21 @@ export function FluidBackground() {
   const rafRef = useRef<number>(0);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const [webglSupported, setWebglSupported] = useState(true);
+  const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains('light'));
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsLight(document.documentElement.classList.contains('light'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.uIsLight.value = isLight ? 1.0 : 0.0;
+    }
+  }, [isLight]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -69,6 +84,7 @@ export function FluidBackground() {
       uniform float uTime;
       uniform vec2 uResolution;
       uniform vec2 uMouse;
+      uniform float uIsLight;
       varying vec2 vUv;
 
       // Simplex noise function
@@ -124,11 +140,22 @@ export function FluidBackground() {
         
         combinedNoise += mouseEffect;
         
-        // Color palette - blue theme matching oklch(0.75 0.14 250)
-        vec3 color1 = vec3(0.06, 0.09, 0.16); // Dark background
-        vec3 color2 = vec3(0.1, 0.15, 0.25);  // Slightly lighter
-        vec3 color3 = vec3(0.15, 0.25, 0.45); // Blue tint
-        vec3 color4 = vec3(0.2, 0.35, 0.6);   // Brighter blue
+        // Dark mode colors
+        vec3 dark1 = vec3(0.06, 0.09, 0.16);
+        vec3 dark2 = vec3(0.1, 0.15, 0.25);
+        vec3 dark3 = vec3(0.15, 0.25, 0.45);
+        vec3 dark4 = vec3(0.2, 0.35, 0.6);
+
+        // Light mode colors
+        vec3 light1 = vec3(0.94, 0.96, 1.0);
+        vec3 light2 = vec3(0.88, 0.92, 0.98);
+        vec3 light3 = vec3(0.80, 0.87, 0.97);
+        vec3 light4 = vec3(0.70, 0.80, 0.95);
+
+        vec3 color1 = mix(dark1, light1, uIsLight);
+        vec3 color2 = mix(dark2, light2, uIsLight);
+        vec3 color3 = mix(dark3, light3, uIsLight);
+        vec3 color4 = mix(dark4, light4, uIsLight);
         
         // Mix colors based on noise
         vec3 finalColor = mix(color1, color2, smoothstep(-0.5, 0.5, combinedNoise));
@@ -149,7 +176,8 @@ export function FluidBackground() {
       uniforms: {
         uTime: { value: 0 },
         uResolution: { value: new THREE.Vector2(width, height) },
-        uMouse: { value: new THREE.Vector2(0.5, 0.5) }
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+        uIsLight: { value: isLight ? 1.0 : 0.0 },
       }
     });
     materialRef.current = material;
@@ -219,7 +247,13 @@ export function FluidBackground() {
   }, []);
 
   // Fallback gradient when WebGL is not supported
-  const fallbackGradient = {
+  const fallbackGradient = isLight ? {
+    background: `
+      radial-gradient(ellipse at 30% 20%, rgba(100, 150, 246, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(80, 120, 235, 0.1) 0%, transparent 50%),
+      linear-gradient(135deg, #e8f0fe 0%, #dbeafe 50%, #e8f0fe 100%)
+    `,
+  } : {
     background: `
       radial-gradient(ellipse at 30% 20%, rgba(56, 130, 246, 0.15) 0%, transparent 50%),
       radial-gradient(ellipse at 70% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
@@ -231,7 +265,7 @@ export function FluidBackground() {
     <div 
       ref={containerRef} 
       className="fixed inset-0 -z-10"
-      style={webglSupported ? { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' } : fallbackGradient}
+      style={webglSupported ? { background: isLight ? 'linear-gradient(135deg, #e8f0fe 0%, #dbeafe 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' } : fallbackGradient}
     />
   );
 }

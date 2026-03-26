@@ -256,12 +256,12 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 z-50 flex items-center px-4 gap-3">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center px-4 gap-3">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+          className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -269,7 +269,7 @@ export function AdminLayout() {
           <div className="w-8 h-8 rounded-xl bg-brand/20 flex items-center justify-center">
             <LayoutDashboard className="w-4 h-4 text-brand" />
           </div>
-          <h1 className="font-bold text-white">管理后台</h1>
+          <h1 className="font-bold text-foreground">管理后台</h1>
         </div>
       </header>
 
@@ -282,7 +282,7 @@ export function AdminLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50 transition-transform duration-300 md:translate-x-0 flex flex-col ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50 transition-transform duration-300 md:translate-x-0 flex flex-col ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Header Logo */}
         <div className="p-6 pb-4 shrink-0">
           <div className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export function AdminLayout() {
               <LayoutDashboard className="w-5 h-5 text-brand" />
             </div>
             <div>
-              <h1 className="font-bold text-white">管理后台</h1>
+              <h1 className="font-bold text-foreground">管理后台</h1>
               <p className="text-xs text-muted-foreground">云黑库系统</p>
             </div>
           </div>
@@ -305,7 +305,7 @@ export function AdminLayout() {
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                 activeTab === item.id 
                   ? 'bg-brand/20 text-brand' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <item.icon className="w-5 h-5" />
@@ -320,10 +320,10 @@ export function AdminLayout() {
         </nav>
 
         {/* Footer - Fixed at bottom */}
-        <div className="shrink-0 p-6 border-t border-slate-800 space-y-2">
+        <div className="shrink-0 p-6 border-t border-border space-y-2">
           <button
             onClick={() => { data.refreshAll(); setMobileMenuOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="清除缓存并刷新数据"
           >
             <RefreshCw className="w-5 h-5" />
@@ -331,7 +331,7 @@ export function AdminLayout() {
           </button>
           <button
             onClick={() => { setProfileDialogOpen(true); setMobileMenuOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             {adminInfo?.avatar ? (
               <img 
@@ -345,15 +345,15 @@ export function AdminLayout() {
               </div>
             )}
             <div className="flex flex-col items-start">
-              <span className="text-white text-sm font-medium">
+              <span className="text-foreground text-sm font-medium">
                 {adminInfo?.name || adminInfo?.admin_id || '管理员'}
               </span>
-              <span className="text-xs text-slate-500">个人设置</span>
+              <span className="text-xs text-muted-foreground">个人设置</span>
             </div>
           </button>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <LogOut className="w-5 h-5" />
             退出登录
@@ -368,10 +368,10 @@ export function AdminLayout() {
 
       {/* Profile Dialog */}
       <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg w-[calc(100%-2rem)] mx-4">
+        <DialogContent className="bg-card border-border text-foreground max-w-lg w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>个人设置</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {adminInfo && `修改 ${adminInfo.admin_id} 的个人信息`}
             </DialogDescription>
           </DialogHeader>
@@ -379,33 +379,33 @@ export function AdminLayout() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>管理员ID</Label>
-              <Input value={adminInfo?.admin_id || ''} disabled className="bg-slate-800/50 border-slate-700 text-muted-foreground" />
+              <Input value={adminInfo?.admin_id || ''} disabled className="bg-muted/50 border-border text-muted-foreground" />
               <p className="text-xs text-muted-foreground">管理员ID不可修改</p>
             </div>
 
             <div className="space-y-2">
               <Label>显示名称</Label>
-              <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="请输入显示名称" className="bg-slate-800 border-slate-700" />
+              <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="请输入显示名称" className="bg-muted border-border" />
             </div>
 
             <div className="space-y-2">
               <Label>头像 URL</Label>
-              <Input value={profileAvatar} onChange={(e) => setProfileAvatar(e.target.value)} placeholder="请输入头像图片 URL" className="bg-slate-800 border-slate-700" />
+              <Input value={profileAvatar} onChange={(e) => setProfileAvatar(e.target.value)} placeholder="请输入头像图片 URL" className="bg-muted border-border" />
               {profileAvatar && (
                 <div className="mt-2">
-                  <img src={profileAvatar} alt="头像预览" className="w-16 h-16 rounded-full object-cover border border-slate-700" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img src={profileAvatar} alt="头像预览" className="w-16 h-16 rounded-full object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>新密码（留空则不修改）</Label>
-              <Input type="password" value={profilePassword} onChange={(e) => setProfilePassword(e.target.value)} placeholder="请输入新密码（至少6位）" className="bg-slate-800 border-slate-700" />
+              <Input type="password" value={profilePassword} onChange={(e) => setProfilePassword(e.target.value)} placeholder="请输入新密码（至少6位）" className="bg-muted border-border" />
             </div>
 
             <div className="space-y-2">
               <Label>权限等级</Label>
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-muted-foreground">
+              <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 text-muted-foreground">
                 {getLevelText(adminInfo?.level)}
               </div>
               <p className="text-xs text-muted-foreground">权限等级只能由超级管理员修改</p>
@@ -413,7 +413,7 @@ export function AdminLayout() {
 
             {/* Logto SSO Binding */}
             {logtoStatus?.enabled && (
-              <div className="space-y-2 pt-4 border-t border-slate-800">
+              <div className="space-y-2 pt-4 border-t border-border">
                 <Label className="flex items-center gap-2">
                   <ExternalLink className="w-4 h-4" />
                   Logto SSO 绑定
@@ -449,7 +449,7 @@ export function AdminLayout() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-muted-foreground">
+                    <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-muted-foreground">
                       未绑定 Logto 账户，绑定后可使用 SSO 登录
                     </div>
                     <Button
@@ -460,7 +460,7 @@ export function AdminLayout() {
                       className="w-full"
                     >
                       {bindingLogto ? (
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin mr-2" />
                       ) : (
                         <Link2 className="w-4 h-4 mr-2" />
                       )}
@@ -484,10 +484,10 @@ export function AdminLayout() {
 
       {/* Unbind Logto Dialog */}
       <Dialog open={showUnbindDialog} onOpenChange={setShowUnbindDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-md w-[calc(100%-2rem)] mx-4">
+        <DialogContent className="bg-card border-border text-foreground max-w-md w-[calc(100%-2rem)] mx-4">
           <DialogHeader>
             <DialogTitle>解绑 Logto 账户</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               解绑后您将无法使用 SSO 登录，请确保您记得当前账户的密码。
             </DialogDescription>
           </DialogHeader>
@@ -500,7 +500,7 @@ export function AdminLayout() {
                 value={unbindPassword}
                 onChange={(e) => setUnbindPassword(e.target.value)}
                 placeholder="请输入当前密码以确认解绑"
-                className="bg-slate-800 border-slate-700"
+                className="bg-muted border-border"
               />
               <p className="text-xs text-muted-foreground">需要验证密码以确保账户安全</p>
             </div>

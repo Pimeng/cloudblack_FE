@@ -13,9 +13,9 @@ export function ScrollIndicator({ visible }: ScrollIndicatorProps) {
       }}
     >
       {/* Mouse shell */}
-      <div className="relative w-5 h-8 rounded-full border-2 border-white/50">
+      <div className="relative w-5 h-8 rounded-full border-2 border-foreground/40">
         {/* Static dot, positioned in upper third */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-[6px] w-[3px] h-[8px] rounded-full bg-white/80" />
+        <div className="absolute left-1/2 -translate-x-1/2 top-[6px] w-[3px] h-[8px] rounded-full bg-foreground/70" />
       </div>
 
       {/* Arrow */}
@@ -24,7 +24,7 @@ export function ScrollIndicator({ visible }: ScrollIndicatorProps) {
         height="14"
         viewBox="0 0 10 14"
         fill="none"
-        className="text-white/50 animate-scroll-arrow"
+        className="text-foreground/40 animate-scroll-arrow"
       >
         <path
           d="M5 0v11M1 8l4 4 4-4"

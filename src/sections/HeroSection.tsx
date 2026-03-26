@@ -96,7 +96,7 @@ export function HeroSection() {
     const currentQueryId = ++queryIdRef.current;
     
     try {
-      const response = await fetch('https://cloudblack-api.07210700.xyz/api/check', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz'}/api/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -207,14 +207,14 @@ export function HeroSection() {
           {/* Search input */}
           <div ref={inputRef} className="space-y-4 overflow-hidden">
             {/* User Type Selector */}
-            <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl">
+            <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
               <button
                 type="button"
                 onClick={() => setUserType('user')}
                 className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   userType === 'user'
                     ? 'bg-brand text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <User className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function HeroSection() {
                 className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   userType === 'group'
                     ? 'bg-brand text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -242,10 +242,10 @@ export function HeroSection() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="pl-12 pr-4 py-6 text-lg bg-slate-800/80 border-slate-700/50 rounded-xl
+                className="pl-12 pr-4 py-6 text-lg bg-muted/80 border-border/50 rounded-xl
                   focus:border-brand/60 focus:ring-2 focus:ring-brand/20 
                   transition-all duration-200 ease-out
-                  placeholder:text-slate-500"
+                  placeholder:text-muted-foreground"
               />
             </div>
             

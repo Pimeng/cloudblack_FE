@@ -19,7 +19,7 @@ export function PageHeader({
       className
     )}>
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">{title}</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 md:mb-2">{title}</h2>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {children}

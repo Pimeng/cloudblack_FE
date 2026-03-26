@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const API_BASE = 'https://cloudblack-api.07210700.xyz';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz';
 
 export interface GeetestConfig {
   enabled: boolean;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Bot, Plus, Edit3, Trash2, Eye, EyeOff, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -181,22 +181,22 @@ export function BotsPage() {
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full" style={{ tableLayout: 'auto' }}>
-            <thead className="bg-slate-800/50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">Bot 名称</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">所有者</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">描述</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">创建时间</th>
-                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">Bot 名称</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">所有者</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">描述</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">创建时间</th>
+                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {bots.map((bot) => (
-                <tr key={bot.bot_name} className="hover:bg-slate-800/30">
-                  <td className="px-4 md:px-6 py-4 text-white font-mono">{bot.bot_name}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-300">{bot.owner}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400">{bot.description || '-'}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(bot.created_at).toLocaleString()}</td>
+                <tr key={bot.bot_name} className="hover:bg-muted/30">
+                  <td className="px-4 md:px-6 py-4 text-foreground font-mono">{bot.bot_name}</td>
+                  <td className="px-4 md:px-6 py-4 text-foreground/80">{bot.owner}</td>
+                  <td className="px-4 md:px-6 py-4 text-muted-foreground">{bot.description || '-'}</td>
+                  <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm whitespace-nowrap">{new Date(bot.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canViewToken && (
@@ -247,7 +247,7 @@ export function BotsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>创建 Bot Token</DialogTitle>
-            <DialogDescription className="text-slate-400">创建新的 Bot Token 用于自动化操作</DialogDescription>
+            <DialogDescription className="text-muted-foreground">创建新的 Bot Token 用于自动化操作</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -277,7 +277,7 @@ export function BotsPage() {
                   id="useCustomToken"
                   checked={useCustomToken}
                   onChange={(e) => setUseCustomToken(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                  className="w-4 h-4 rounded border-border bg-muted text-brand focus:ring-brand"
                 />
                 <label htmlFor="useCustomToken" className="text-sm cursor-pointer">自定义 Token（可选）</label>
               </div>
@@ -313,7 +313,7 @@ export function BotsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>编辑 Bot Token</DialogTitle>
-            <DialogDescription className="text-slate-400">{editingBot && `编辑 ${editingBot.bot_name} 的信息`}</DialogDescription>
+            <DialogDescription className="text-muted-foreground">{editingBot && `编辑 ${editingBot.bot_name} 的信息`}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -342,7 +342,7 @@ export function BotsPage() {
                   id="editChangeToken"
                   checked={editChangeToken}
                   onChange={(e) => setEditChangeToken(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                  className="w-4 h-4 rounded border-border bg-muted text-brand focus:ring-brand"
                 />
                 <label htmlFor="editChangeToken" className="cursor-pointer text-sm text-yellow-500">修改 Token</label>
               </div>
@@ -389,7 +389,7 @@ export function BotsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>查看 Bot Token</DialogTitle>
-            <DialogDescription className="text-slate-400">{viewingBot && `${viewingBot.bot_name} 的 Token`}</DialogDescription>
+            <DialogDescription className="text-muted-foreground">{viewingBot && `${viewingBot.bot_name} 的 Token`}</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
@@ -401,14 +401,14 @@ export function BotsPage() {
                   <Input 
                     value={showToken ? viewingToken : '•'.repeat(viewingToken.length || 32)} 
                     readOnly 
-                    className="bg-slate-800 border-slate-700 pr-24 font-mono text-sm" 
+                    className="bg-muted border-border pr-24 font-mono text-sm" 
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowToken(!showToken)}
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     >
                       {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -416,7 +416,7 @@ export function BotsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={copyToken}
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     >
                       <Copy className="w-4 h-4" />
                     </Button>

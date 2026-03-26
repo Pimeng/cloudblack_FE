@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+﻿import { useEffect, useState, useRef, useCallback } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { useUrlState, useUrlStateNumber } from '../hooks';
 import { cn } from '@/lib/utils';
@@ -328,12 +328,12 @@ export function ImagesPage() {
       <div className="glass rounded-2xl p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-slate-400" />
+            <FolderOpen className="w-4 h-4 text-muted-foreground" />
             <Select value={subfolder} onValueChange={handleSubfolderChange}>
-              <SelectTrigger className="w-[180px] bg-slate-800 border-slate-700">
+              <SelectTrigger className="w-[180px] bg-muted border-border">
                 <SelectValue placeholder="选择目录" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-muted border-border">
                 {subfolders.map((sf) => (
                   <SelectItem key={sf.name} value={sf.name}>
                     <div className="flex items-center gap-2">
@@ -349,23 +349,23 @@ export function ImagesPage() {
             </Select>
           </div>
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索文件名..."
-              className="pl-10 bg-slate-800 border-slate-700"
+              className="pl-10 bg-muted border-border"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
-          <div className="text-sm text-slate-400">
+          <div className="text-sm text-muted-foreground">
             共 {total} 个文件
           </div>
         </div>
@@ -385,7 +385,7 @@ export function ImagesPage() {
                 className="group glass rounded-xl overflow-hidden hover:border-brand/50 transition-colors"
               >
                 <div
-                  className="aspect-square bg-slate-800/50 cursor-pointer relative overflow-hidden"
+                  className="aspect-square bg-muted/50 cursor-pointer relative overflow-hidden"
                   onClick={() => setPreviewImage(image)}
                 >
                   <img
@@ -398,20 +398,20 @@ export function ImagesPage() {
                       (e.target as HTMLImageElement).style.display = 'none';
                       (e.target as HTMLImageElement).parentElement?.classList.add('flex', 'items-center', 'justify-center');
                       const icon = document.createElement('div');
-                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                       (e.target as HTMLImageElement).parentElement?.appendChild(icon.firstChild!);
                     }}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Eye className="w-8 h-8 text-white" />
+                    <Eye className="w-8 h-8 text-foreground" />
                   </div>
                 </div>
                 <div className="p-3 space-y-2">
-                  <p className="text-xs text-slate-300 truncate" title={image.filename}>
+                  <p className="text-xs text-foreground/80 truncate" title={image.filename}>
                     {image.filename}
                   </p>
                   <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs bg-slate-800">
+                    <Badge variant="secondary" className="text-xs bg-muted">
                       {formatFileSize(image.size)}
                     </Badge>
                     {canDeleteImage && (
@@ -447,14 +447,14 @@ export function ImagesPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>上传图片</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               上传图片到 {subfolder} 目录
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm text-slate-300">选择文件</label>
+              <label className="text-sm text-foreground/80">选择文件</label>
               <div
                 ref={dropZoneRef}
                 onDragEnter={handleDragEnter}
@@ -465,7 +465,7 @@ export function ImagesPage() {
                   "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200",
                   isDragOver
                     ? "border-brand bg-brand/10 scale-[1.02]"
-                    : "border-slate-700 hover:border-slate-600 hover:bg-slate-800/50"
+                    : "border-border hover:border-border hover:bg-muted/50"
                 )}
               >
                 <input
@@ -483,8 +483,8 @@ export function ImagesPage() {
                   {uploadFile ? (
                     <>
                       <FileImage className="w-12 h-12 text-brand" />
-                      <p className="text-white font-medium">{uploadFile.name}</p>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-foreground font-medium">{uploadFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
                         {formatFileSize(uploadFile.size)}
                       </p>
                       <Button
@@ -504,9 +504,9 @@ export function ImagesPage() {
                     </>
                   ) : (
                     <>
-                      <Upload className="w-12 h-12 text-slate-500" />
-                      <p className="text-slate-300">点击选择图片或拖拽到此处</p>
-                      <p className="text-xs text-slate-500">
+                      <Upload className="w-12 h-12 text-muted-foreground" />
+                      <p className="text-foreground/80">点击选择图片或拖拽到此处</p>
+                      <p className="text-xs text-muted-foreground">
                         支持 png, jpg, jpeg, gif, webp，最大 5MB
                       </p>
                     </>
@@ -516,12 +516,12 @@ export function ImagesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm text-slate-300">目标目录</label>
+              <label className="text-sm text-foreground/80">目标目录</label>
               <Select value={subfolder} onValueChange={setSubfolder}>
-                <SelectTrigger className="bg-slate-800 border-slate-700">
+                <SelectTrigger className="bg-muted border-border">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-muted border-border">
                   {subfolders.map((sf) => (
                     <SelectItem key={sf.name} value={sf.name}>
                       {sf.name}
@@ -561,7 +561,7 @@ export function ImagesPage() {
           deletingImage && (
             <div className="space-y-2">
               <p>确定要删除以下图片吗？此操作不可恢复。</p>
-              <p className="font-mono text-sm bg-slate-800 p-2 rounded">
+              <p className="font-mono text-sm bg-muted p-2 rounded">
                 {deletingImage.filename}
               </p>
             </div>
@@ -575,7 +575,7 @@ export function ImagesPage() {
 
       {/* Preview Dialog */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-4xl w-[calc(100%-2rem)] bg-slate-900 border-slate-800 p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl w-[calc(100%-2rem)] bg-card border-border p-0 overflow-hidden">
           <div className="relative">
             {previewImage && (
               <img
@@ -588,8 +588,8 @@ export function ImagesPage() {
           </div>
           {previewImage && (
             <div className="p-4 space-y-2">
-              <p className="text-white font-medium truncate">{previewImage.filename}</p>
-              <div className="flex items-center gap-4 text-sm text-slate-400">
+              <p className="text-foreground font-medium truncate">{previewImage.filename}</p>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>大小: {formatFileSize(previewImage.size)}</span>
                 <span>创建于: {previewImage.created_at}</span>
               </div>

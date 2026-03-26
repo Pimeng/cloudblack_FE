@@ -156,7 +156,7 @@ export function ExternalLinkProvider() {
         
         {/* 对话框 */}
         <div 
-          className={`relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden ${
+          className={`relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden ${
             isClosing ? 'animate-swal-hide' : 'animate-swal-show'
           }`}
           style={{
@@ -170,7 +170,7 @@ export function ExternalLinkProvider() {
           {/* 关闭按钮 */}
           <button
             onClick={handleCancel}
-            className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -183,28 +183,28 @@ export function ExternalLinkProvider() {
             </div>
 
             {/* 标题 */}
-            <h3 className="text-xl font-semibold text-white text-center mb-3">
+            <h3 className="text-xl font-semibold text-foreground text-center mb-3">
               即将离开本站
             </h3>
 
             {/* 提示信息 */}
-            <p className="text-slate-400 text-center text-sm mb-5 leading-relaxed">
+            <p className="text-muted-foreground text-center text-sm mb-5 leading-relaxed">
               您正准备离开本站前往以下地址，请确认目标链接是否安全。
             </p>
 
             {/* 链接显示区域 */}
-            <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 mb-6">
+            <div className="bg-muted/80 border border-border rounded-xl p-4 mb-6">
               <div className="flex items-start gap-3">
-                <ExternalLink className="w-5 h-5 text-slate-500 mt-0.5 shrink-0" />
+                <ExternalLink className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-500 mb-1">目标地址</p>
-                  <p className="text-sm text-white font-mono break-all leading-relaxed">
+                  <p className="text-xs text-muted-foreground mb-1">目标地址</p>
+                  <p className="text-sm text-foreground font-mono break-all leading-relaxed">
                     {pendingUrl}
                   </p>
                 </div>
                 <button
                   onClick={handleCopyUrl}
-                  className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors shrink-0"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
                   title="复制链接"
                 >
                   <Copy className="w-4 h-4" />
@@ -216,7 +216,7 @@ export function ExternalLinkProvider() {
             <div className="flex gap-3">
               <button
                 onClick={handleCancel}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-muted hover:bg-muted text-foreground/80 font-medium transition-colors"
               >
                 取消
               </button>
@@ -231,8 +231,8 @@ export function ExternalLinkProvider() {
           </div>
 
           {/* 底部安全提示 */}
-          <div className="px-6 py-3 bg-slate-800/50 border-t border-slate-800">
-            <p className="text-xs text-slate-500 text-center">
+          <div className="px-6 py-3 bg-muted/50 border-t border-border">
+            <p className="text-xs text-muted-foreground text-center">
               请勿在不明网站输入您的账号密码
             </p>
           </div>

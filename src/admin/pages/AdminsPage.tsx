@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { UserCog, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -171,31 +171,31 @@ export function AdminsPage() {
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full" style={{ tableLayout: 'auto' }}>
-            <thead className="bg-slate-800/50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">头像</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">管理员ID</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">名称</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">等级</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">SSO</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">创建时间</th>
-                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">头像</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">管理员ID</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">名称</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">等级</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">SSO</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">创建时间</th>
+                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {admins.map((admin) => (
-                <tr key={admin.admin_id} className="hover:bg-slate-800/30">
+                <tr key={admin.admin_id} className="hover:bg-muted/30">
                   <td className="px-4 md:px-6 py-4">
                     {admin.avatar ? (
-                      <img src={admin.avatar} alt={admin.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                      <img src={admin.avatar} alt={admin.name} className="w-10 h-10 rounded-full object-cover border border-border" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 font-medium">
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium">
                         {admin.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 md:px-6 py-4 text-white font-mono">{admin.admin_id}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-300">{admin.name}</td>
+                  <td className="px-4 md:px-6 py-4 text-foreground font-mono">{admin.admin_id}</td>
+                  <td className="px-4 md:px-6 py-4 text-foreground/80">{admin.name}</td>
                   <td className="px-4 md:px-6 py-4"><AdminLevelBadge level={admin.level} /></td>
                   <td className="px-4 md:px-6 py-4">
                     {admin.force_sso ? (
@@ -203,10 +203,10 @@ export function AdminsPage() {
                         强制SSO
                       </span>
                     ) : (
-                      <span className="text-slate-500 text-sm">-</span>
+                      <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(admin.created_at).toLocaleString()}</td>
+                  <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm whitespace-nowrap">{new Date(admin.created_at).toLocaleString()}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {/* 等级4可以编辑任何管理员，等级3只能编辑自己 */}
@@ -247,7 +247,7 @@ export function AdminsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>添加管理员</DialogTitle>
-            <DialogDescription className="text-slate-400">创建新的管理员账号</DialogDescription>
+            <DialogDescription className="text-muted-foreground">创建新的管理员账号</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -302,7 +302,7 @@ export function AdminsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>修改管理员</DialogTitle>
-            <DialogDescription className="text-slate-400">{editingAdmin && `修改管理员 ${editingAdmin.admin_id} 的信息`}</DialogDescription>
+            <DialogDescription className="text-muted-foreground">{editingAdmin && `修改管理员 ${editingAdmin.admin_id} 的信息`}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -339,9 +339,9 @@ export function AdminsPage() {
                   id="force_sso"
                   checked={editForceSso}
                   onChange={(e) => setEditForceSso(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-brand focus:ring-brand"
+                  className="w-4 h-4 rounded border-border bg-muted text-brand focus:ring-brand"
                 />
-                <label htmlFor="force_sso" className="text-sm text-slate-300 cursor-pointer">
+                <label htmlFor="force_sso" className="text-sm text-foreground/80 cursor-pointer">
                   强制使用 SSO 登录
                 </label>
               </div>

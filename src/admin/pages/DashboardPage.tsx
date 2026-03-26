@@ -1,4 +1,4 @@
-import { useNavigate, useOutletContext } from 'react-router-dom';
+﻿import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Clock, FileText, CheckCircle, UserX, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AdminDataContext } from '../hooks/useAdminData';
@@ -24,7 +24,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">待处理申诉</p>
-              <p className="text-3xl font-bold text-white">{stats.pending_appeals}</p>
+              <p className="text-3xl font-bold text-foreground">{stats.pending_appeals}</p>
             </div>
           </div>
         </div>
@@ -36,7 +36,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">总申诉数</p>
-              <p className="text-3xl font-bold text-white">{stats.total_appeals}</p>
+              <p className="text-3xl font-bold text-foreground">{stats.total_appeals}</p>
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">已处理申诉</p>
-              <p className="text-3xl font-bold text-white">{stats.total_appeals - stats.pending_appeals}</p>
+              <p className="text-3xl font-bold text-foreground">{stats.total_appeals - stats.pending_appeals}</p>
             </div>
           </div>
         </div>
@@ -60,7 +60,7 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-sm">黑名单用户</p>
-              <p className="text-3xl font-bold text-white">{stats.blacklist_count}</p>
+              <p className="text-3xl font-bold text-foreground">{stats.blacklist_count}</p>
             </div>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function DashboardPage() {
 
       <div className="glass rounded-2xl p-8 text-center">
         <AlertCircle className="w-12 h-12 text-brand mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-white mb-2">快速操作</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">快速操作</h3>
         <p className="text-muted-foreground mb-6">选择左侧菜单开始管理</p>
         <div className="flex justify-center gap-4">
           <Button onClick={() => navigate('/admin/dashboard/appeals')} className="bg-brand hover:bg-brand-dark">

@@ -58,20 +58,20 @@ export function DocReminder() {
     >
       {/* 展开的提示内容 */}
       {isExpanded && (
-        <div className="mb-2 w-80 glass rounded-2xl p-4 border border-slate-700/50 shadow-xl animate-in slide-in-from-bottom-2 fade-in duration-200">
+        <div className="mb-2 w-80 glass rounded-2xl p-4 border border-border/50 shadow-xl animate-in slide-in-from-bottom-2 fade-in duration-200">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center">
                 <BookOpen className="w-4 h-4 text-brand" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white">Bot 对接文档</h4>
-                <p className="text-xs text-slate-400">开发 Bot 时需要参考</p>
+                <h4 className="text-sm font-medium text-foreground">Bot 对接文档</h4>
+                <p className="text-xs text-muted-foreground">开发 Bot 时需要参考</p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="不再显示"
             >
               <X className="w-4 h-4" />
@@ -79,8 +79,8 @@ export function DocReminder() {
           </div>
 
           <div className="space-y-3">
-            <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <p className="text-xs text-slate-400 mb-1.5">文档地址</p>
+            <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
+              <p className="text-xs text-muted-foreground mb-1.5">文档地址</p>
               <button
                 onClick={handleOpenDoc}
                 className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-light transition-colors group"
@@ -90,13 +90,13 @@ export function DocReminder() {
               </button>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <p className="text-xs text-slate-400 mb-1.5">查看密码</p>
+            <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
+              <p className="text-xs text-muted-foreground mb-1.5">查看密码</p>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-mono text-white">{DOC_PASSWORD}</span>
+                <span className="text-sm font-mono text-foreground">{DOC_PASSWORD}</span>
                 <button
                   onClick={handleCopyPassword}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   title="复制密码"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export function DocReminder() {
           transition-all duration-300 shadow-lg
           ${isExpanded || isHovered
             ? 'bg-brand hover:bg-brand-dark text-white shadow-brand/30'
-            : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/50'
+            : 'bg-muted/90 hover:bg-muted text-foreground/80 border border-border/50'
           }
         `}
       >

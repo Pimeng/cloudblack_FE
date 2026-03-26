@@ -18,7 +18,7 @@ export function AnimationLayer({ animating, cardRect, animationPhase }: Animatio
 
   return (
     <div
-      className="fixed z-40 bg-slate-900/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50"
+      className="fixed z-40 bg-card/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-border/50"
       style={{
         left: isAtCardPosition ? cardRect.left : fullLeft,
         top: isAtCardPosition ? cardRect.top : 0,
@@ -41,15 +41,15 @@ export function DetailView({ isOpen, title, onClose, children }: DetailViewProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 left-0 md:left-64 bg-slate-950 z-50 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 left-0 md:left-64 bg-background z-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-8 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="px-8 py-4 border-b border-border flex items-center justify-between shrink-0">
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={onClose} 
-          className="text-slate-400 hover:text-white hover:bg-slate-800"
+          className="text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <X className="w-5 h-5" />
         </Button>
@@ -100,7 +100,7 @@ export function DetailContentBlock({ label, children }: DetailContentBlockProps)
   return (
     <div>
       <span className="text-muted-foreground text-sm">{label}:</span>
-      <div className="mt-2 bg-slate-800 rounded-lg p-4">
+      <div className="mt-2 bg-muted rounded-lg p-4">
         {children}
       </div>
     </div>

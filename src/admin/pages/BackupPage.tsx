@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Database, RefreshCw, Plus, Trash2, Edit3, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -193,21 +193,21 @@ export function BackupPage() {
           <div className="glass rounded-2xl p-6">
             <div>
               <p className="text-muted-foreground text-sm">备份频率</p>
-              <p className="text-white font-medium">{backupStatus.cron}</p>
+              <p className="text-foreground font-medium">{backupStatus.cron}</p>
             </div>
           </div>
 
           <div className="glass rounded-2xl p-6">
             <div>
               <p className="text-muted-foreground text-sm">备份数量</p>
-              <p className="text-white font-medium">{backupStatus.backup_count} / {backupStatus.max_backups}</p>
+              <p className="text-foreground font-medium">{backupStatus.backup_count} / {backupStatus.max_backups}</p>
             </div>
           </div>
 
           <div className="glass rounded-2xl p-6">
             <div>
               <p className="text-muted-foreground text-sm">下次备份</p>
-              <p className="text-white font-medium">{backupStatus.next_backup || '未安排'}</p>
+              <p className="text-foreground font-medium">{backupStatus.next_backup || '未安排'}</p>
             </div>
           </div>
         </div>
@@ -220,26 +220,26 @@ export function BackupPage() {
       ) : (
         <div className="glass rounded-2xl overflow-x-auto">
           <table className="w-full" style={{ tableLayout: 'auto' }}>
-            <thead className="bg-slate-800/50">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">文件名</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">类型</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">大小</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">创建时间</th>
-                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">备注</th>
-                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">文件名</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">类型</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">大小</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">创建时间</th>
+                <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">备注</th>
+                <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-muted-foreground">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {backups.map((backup) => (
-                <tr key={backup.filename} className="hover:bg-slate-800/30">
-                  <td className="px-4 md:px-6 py-4 text-white font-mono text-sm">{backup.filename}</td>
+                <tr key={backup.filename} className="hover:bg-muted/30">
+                  <td className="px-4 md:px-6 py-4 text-foreground font-mono text-sm">{backup.filename}</td>
                   <td className="px-4 md:px-6 py-4">
                     <BackupTypeBadge isAuto={backup.is_auto} />
                   </td>
-                  <td className="px-4 md:px-6 py-4 text-slate-300">{backup.size_human}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{backup.created_at_str}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-300">{backup.remark || '-'}</td>
+                  <td className="px-4 md:px-6 py-4 text-foreground/80">{backup.size_human}</td>
+                  <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm whitespace-nowrap">{backup.created_at_str}</td>
+                  <td className="px-4 md:px-6 py-4 text-foreground/80">{backup.remark || '-'}</td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       {canUpdateBackupRemark && (
@@ -276,7 +276,7 @@ export function BackupPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>创建备份</DialogTitle>
-            <DialogDescription className="text-slate-400">手动创建数据库备份</DialogDescription>
+            <DialogDescription className="text-muted-foreground">手动创建数据库备份</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -320,7 +320,7 @@ export function BackupPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>更新备注</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {editingRemarkBackup && `更新 ${editingRemarkBackup.filename} 的备注`}
             </DialogDescription>
           </DialogHeader>
@@ -354,7 +354,7 @@ export function BackupPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>备份设置</DialogTitle>
-            <DialogDescription className="text-slate-400">配置自动备份参数</DialogDescription>
+            <DialogDescription className="text-muted-foreground">配置自动备份参数</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">

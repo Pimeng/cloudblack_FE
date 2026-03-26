@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { Server, TrendingUp, Shield, RotateCcw, Power, Mail, Bot, Database, FileUp, Activity, Eye, EyeOff, ExternalLink } from 'lucide-react';
@@ -214,7 +214,7 @@ export function SettingsPage() {
         <select
           value={value ? 'true' : 'false'}
           onChange={(e) => onChange(e.target.value === 'true')}
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
         >
           <option value="true">启用</option>
           <option value="false">禁用</option>
@@ -227,7 +227,7 @@ export function SettingsPage() {
           type="number"
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-          className="bg-slate-800 border-slate-700"
+          className="bg-muted border-border"
         />
       );
     }
@@ -236,7 +236,7 @@ export function SettingsPage() {
         type={type}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-slate-800 border-slate-700"
+        className="bg-muted border-border"
       />
     );
   };
@@ -249,7 +249,7 @@ export function SettingsPage() {
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
             showSensitiveInfo
               ? 'bg-brand hover:bg-brand-dark text-white'
-              : 'bg-slate-700/50 hover:bg-slate-700 text-slate-300'
+              : 'bg-muted/60 hover:bg-muted text-muted-foreground'
           }`}
         >
           {showSensitiveInfo ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -258,7 +258,7 @@ export function SettingsPage() {
       </PageHeader>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-        <TabsList className="bg-slate-800 flex-wrap h-auto">
+        <TabsList className="bg-muted flex-wrap h-auto">
           <TabsTrigger value="basic">基础配置</TabsTrigger>
           <TabsTrigger value="smtp">邮件服务</TabsTrigger>
           <TabsTrigger value="ai">AI分析</TabsTrigger>
@@ -276,7 +276,7 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Server className="w-5 h-5 text-brand" />
                 基础配置
               </h3>
@@ -302,7 +302,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.timezone || ''}
                     onChange={(e) => updateEditConfig('timezone', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                   />
                 </div>
                 <div className="space-y-2">
@@ -310,7 +310,7 @@ export function SettingsPage() {
                   <select
                     value={editConfig.log_level || 'INFO'}
                     onChange={(e) => updateEditConfig('log_level', e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                   >
                     <option value="DEBUG">DEBUG</option>
                     <option value="INFO">INFO</option>
@@ -323,7 +323,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.root_redirect_url || ''}
                     onChange={(e) => updateEditConfig('root_redirect_url', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -331,7 +331,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.ip_header || ''}
                     onChange={(e) => updateEditConfig('ip_header', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -339,7 +339,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.public_url || ''}
                     onChange={(e) => updateEditConfig('public_url', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     placeholder="https://api.example.com"
                   />
                   <p className="text-xs text-muted-foreground">用于生成回调地址和 CORS 配置</p>
@@ -349,7 +349,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.frontend_url || ''}
                     onChange={(e) => updateEditConfig('frontend_url', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     placeholder="https://example.com"
                   />
                   <p className="text-xs text-muted-foreground">用于 CORS 和登出跳转</p>
@@ -360,7 +360,7 @@ export function SettingsPage() {
                     type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.secret_key || ''}
                     onChange={(e) => updateEditConfig('secret_key', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                   {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
@@ -382,7 +382,7 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Mail className="w-5 h-5 text-blue-500" />
                 SMTP 邮件服务配置
               </h3>
@@ -392,7 +392,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.smtp?.host || ''}
                     onChange={(e) => updateEditConfig('smtp.host', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                   {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
@@ -403,7 +403,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.smtp?.port || ''}
                     onChange={(e) => updateEditConfig('smtp.port', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -412,7 +412,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.smtp?.username || ''}
                     onChange={(e) => updateEditConfig('smtp.username', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -422,7 +422,7 @@ export function SettingsPage() {
                     type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.smtp?.password || ''}
                     onChange={(e) => updateEditConfig('smtp.password', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -431,7 +431,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.smtp?.from || ''}
                     onChange={(e) => updateEditConfig('smtp.from', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -440,7 +440,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.smtp?.from_name || ''}
                     onChange={(e) => updateEditConfig('smtp.from_name', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -449,7 +449,7 @@ export function SettingsPage() {
                   <select
                     value={editConfig.smtp?.security || 'tls'}
                     onChange={(e) => updateEditConfig('smtp.security', e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                     disabled={!canEditSensitiveConfig}
                   >
                     <option value="tls">TLS</option>
@@ -471,7 +471,7 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Bot className="w-5 h-5 text-purple-500" />
                 AI 分析配置
               </h3>
@@ -481,7 +481,7 @@ export function SettingsPage() {
                   <select
                     value={editConfig.ai_analysis?.enabled ? 'true' : 'false'}
                     onChange={(e) => updateEditConfig('ai_analysis.enabled', e.target.value === 'true')}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                     disabled={!canEditSensitiveConfig}
                   >
                     <option value="true">启用</option>
@@ -494,7 +494,7 @@ export function SettingsPage() {
                     type={showSensitiveInfo ? 'text' : 'password'}
                     value={editConfig.ai_analysis?.api_key || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.api_key', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -503,7 +503,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.ai_analysis?.base_url || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.base_url', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -512,7 +512,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.ai_analysis?.model || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.model', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -522,7 +522,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.ai_analysis?.max_tokens || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.max_tokens', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -535,7 +535,7 @@ export function SettingsPage() {
                     max="2"
                     value={editConfig.ai_analysis?.temperature || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.temperature', parseFloat(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -545,7 +545,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.ai_analysis?.timeout || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.timeout', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -554,7 +554,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.ai_analysis?.cache_file || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.cache_file', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -563,7 +563,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.ai_analysis?.public_url || ''}
                     onChange={(e) => updateEditConfig('ai_analysis.public_url', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -582,7 +582,7 @@ export function SettingsPage() {
             <>
               {/* Geetest */}
               <div className="glass rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Shield className="w-5 h-5 text-green-500" />
                   极验验证配置
                 </h3>
@@ -592,7 +592,7 @@ export function SettingsPage() {
                     <select
                       value={editConfig.geetest?.enabled ? 'true' : 'false'}
                       onChange={(e) => updateEditConfig('geetest.enabled', e.target.value === 'true')}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                       disabled={!canEditSensitiveConfig}
                     >
                       <option value="true">启用</option>
@@ -604,7 +604,7 @@ export function SettingsPage() {
                     <Input
                       value={editConfig.geetest?.captcha_id || ''}
                       onChange={(e) => updateEditConfig('geetest.captcha_id', e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                       disabled={!canEditSensitiveConfig}
                     />
                   </div>
@@ -614,7 +614,7 @@ export function SettingsPage() {
                       type={showSensitiveInfo ? 'text' : 'password'}
                       value={editConfig.geetest?.captcha_key || ''}
                       onChange={(e) => updateEditConfig('geetest.captcha_key', e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                       disabled={!canEditSensitiveConfig}
                     />
                   </div>
@@ -623,7 +623,7 @@ export function SettingsPage() {
 
               {/* Logto SSO Config */}
               <div className="glass rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <ExternalLink className="w-5 h-5 text-indigo-500" />
                   Logto SSO 配置
                 </h3>
@@ -633,7 +633,7 @@ export function SettingsPage() {
                     <select
                       value={editConfig.logto?.enabled ? 'true' : 'false'}
                       onChange={(e) => updateEditConfig('logto.enabled', e.target.value === 'true')}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                       disabled={!canEditSensitiveConfig}
                     >
                       <option value="true">启用</option>
@@ -646,7 +646,7 @@ export function SettingsPage() {
                     <Input
                       value={editConfig.logto?.endpoint || ''}
                       onChange={(e) => updateEditConfig('logto.endpoint', e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                       disabled={!canEditSensitiveConfig}
                       placeholder="https://login.example.com"
                     />
@@ -656,7 +656,7 @@ export function SettingsPage() {
                     <Input
                       value={editConfig.logto?.app_id || ''}
                       onChange={(e) => updateEditConfig('logto.app_id', e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                       disabled={!canEditSensitiveConfig}
                     />
                   </div>
@@ -666,23 +666,23 @@ export function SettingsPage() {
                       type={showSensitiveInfo ? 'text' : 'password'}
                       value={editConfig.logto?.app_secret || ''}
                       onChange={(e) => updateEditConfig('logto.app_secret', e.target.value)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                       disabled={!canEditSensitiveConfig}
                     />
                   </div>
                 </div>
-                <div className="bg-slate-800/50 rounded-lg p-3 text-xs text-muted-foreground">
+                <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
                   <p>Logto 控制台配置:</p>
                   <ul className="list-disc list-inside mt-1 space-y-1">
-                    <li>Redirect URI: <code className="bg-slate-700 px-1 rounded">{'{public_url}'}/api/auth/logto/callback</code></li>
-                    <li>Post Sign-out Redirect URI: <code className="bg-slate-700 px-1 rounded">{'{frontend_url}'}/login</code></li>
+                    <li>Redirect URI: <code className="bg-muted px-1 rounded">{'{public_url}'}/api/auth/logto/callback</code></li>
+                    <li>Post Sign-out Redirect URI: <code className="bg-muted px-1 rounded">{'{frontend_url}'}/login</code></li>
                   </ul>
                 </div>
               </div>
 
               {/* Rate Limit */}
               <div className="glass rounded-2xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Activity className="w-5 h-5 text-orange-500" />
                   速率限制
                 </h3>
@@ -693,7 +693,7 @@ export function SettingsPage() {
                       type="number"
                       value={editConfig.rate_limit_max_requests || ''}
                       onChange={(e) => updateEditConfig('rate_limit_max_requests', parseInt(e.target.value) || 0)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                     />
                   </div>
                   <div className="space-y-2">
@@ -702,7 +702,7 @@ export function SettingsPage() {
                       type="number"
                       value={editConfig.rate_limit_window || ''}
                       onChange={(e) => updateEditConfig('rate_limit_window', parseInt(e.target.value) || 0)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                     />
                   </div>
                   <div className="space-y-2">
@@ -711,7 +711,7 @@ export function SettingsPage() {
                       type="number"
                       value={editConfig.ip_limit_max_attempts || ''}
                       onChange={(e) => updateEditConfig('ip_limit_max_attempts', parseInt(e.target.value) || 0)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                     />
                   </div>
                   <div className="space-y-2">
@@ -720,7 +720,7 @@ export function SettingsPage() {
                       type="number"
                       value={editConfig.ip_limit_window || ''}
                       onChange={(e) => updateEditConfig('ip_limit_window', parseInt(e.target.value) || 0)}
-                      className="bg-slate-800 border-slate-700"
+                      className="bg-muted border-border"
                     />
                   </div>
                 </div>
@@ -737,7 +737,7 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <FileUp className="w-5 h-5 text-pink-500" />
                 文件上传配置
               </h3>
@@ -748,7 +748,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.max_upload_size || ''}
                     onChange={(e) => updateEditConfig('max_upload_size', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                   />
                   <p className="text-xs text-muted-foreground">{formatBytes(editConfig.max_upload_size || 0)}</p>
                 </div>
@@ -757,7 +757,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.upload_folder || ''}
                     onChange={(e) => updateEditConfig('upload_folder', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -765,7 +765,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.allowed_extensions?.join(', ') || ''}
                     onChange={(e) => updateEditConfig('allowed_extensions', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     placeholder="png, jpg, jpeg, gif, webp"
                   />
                   <p className="text-xs text-muted-foreground">用逗号分隔</p>
@@ -783,7 +783,7 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <div className="glass rounded-2xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Database className="w-5 h-5 text-cyan-500" />
                 数据库自动备份配置
               </h3>
@@ -793,7 +793,7 @@ export function SettingsPage() {
                   <select
                     value={editConfig.database_backup?.enabled ? 'true' : 'false'}
                     onChange={(e) => updateEditConfig('database_backup.enabled', e.target.value === 'true')}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground"
                     disabled={!canEditSensitiveConfig}
                   >
                     <option value="true">启用</option>
@@ -805,7 +805,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.database_backup?.cron || ''}
                     onChange={(e) => updateEditConfig('database_backup.cron', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                     placeholder="0 3 * * *"
                   />
@@ -815,7 +815,7 @@ export function SettingsPage() {
                   <Input
                     value={editConfig.database_backup?.backup_dir || ''}
                     onChange={(e) => updateEditConfig('database_backup.backup_dir', e.target.value)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -825,7 +825,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.database_backup?.max_backups || ''}
                     onChange={(e) => updateEditConfig('database_backup.max_backups', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -835,7 +835,7 @@ export function SettingsPage() {
                     type="number"
                     value={editConfig.database_backup?.retention_days || ''}
                     onChange={(e) => updateEditConfig('database_backup.retention_days', parseInt(e.target.value) || 0)}
-                    className="bg-slate-800 border-slate-700"
+                    className="bg-muted border-border"
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
@@ -851,20 +851,20 @@ export function SettingsPage() {
               <div className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Server className="w-5 h-5 text-brand" />
-                  <h3 className="font-semibold text-white">系统信息</h3>
+                  <h3 className="font-semibold text-foreground">系统信息</h3>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">平台</span>
-                    <span className="text-white">{systemInfo.platform}</span>
+                    <span className="text-foreground">{systemInfo.platform}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Python版本</span>
-                    <span className="text-white">{systemInfo.python_version}</span>
+                    <span className="text-foreground">{systemInfo.python_version}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">运行时间</span>
-                    <span className="text-white">{formatUptime(systemInfo.uptime)}</span>
+                    <span className="text-foreground">{formatUptime(systemInfo.uptime)}</span>
                   </div>
                 </div>
               </div>
@@ -872,14 +872,14 @@ export function SettingsPage() {
               <div className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <TrendingUp className="w-5 h-5 text-green-500" />
-                  <h3 className="font-semibold text-white">CPU使用率</h3>
+                  <h3 className="font-semibold text-foreground">CPU使用率</h3>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-white">{systemInfo.cpu_percent}%</span>
+                    <span className="text-foreground">{systemInfo.cpu_percent}%</span>
                   </div>
-                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-green-500 transition-all" style={{ width: `${systemInfo.cpu_percent}%` }} />
                   </div>
                 </div>
@@ -888,14 +888,14 @@ export function SettingsPage() {
               <div className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Shield className="w-5 h-5 text-blue-500" />
-                  <h3 className="font-semibold text-white">内存使用</h3>
+                  <h3 className="font-semibold text-foreground">内存使用</h3>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-white">{systemInfo.memory.percent}%</span>
+                    <span className="text-foreground">{systemInfo.memory.percent}%</span>
                   </div>
-                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-blue-500 transition-all" style={{ width: `${systemInfo.memory.percent}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -908,14 +908,14 @@ export function SettingsPage() {
               <div className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Database className="w-5 h-5 text-orange-500" />
-                  <h3 className="font-semibold text-white">磁盘使用</h3>
+                  <h3 className="font-semibold text-foreground">磁盘使用</h3>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-white">{systemInfo.disk.percent}%</span>
+                    <span className="text-foreground">{systemInfo.disk.percent}%</span>
                   </div>
-                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-orange-500 transition-all" style={{ width: `${systemInfo.disk.percent}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -940,7 +940,7 @@ export function SettingsPage() {
           value={updateReason}
           onChange={(e) => setUpdateReason(e.target.value)}
           placeholder="请输入配置更新原因，将记录到审计日志..."
-          className="bg-slate-800 border-slate-700"
+          className="bg-muted border-border"
         />
         <p className="text-xs text-muted-foreground">提供更新原因有助于后续审计追踪</p>
       </div>
@@ -962,7 +962,7 @@ export function SettingsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>重启服务器</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               确定要重启服务器吗？此操作会立即终止当前进程，Docker环境将自动重新启动容器。
             </DialogDescription>
           </DialogHeader>

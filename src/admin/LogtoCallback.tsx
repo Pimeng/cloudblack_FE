@@ -168,7 +168,7 @@ export function LogtoCallback() {
             {status === 'processing' && (
               <>
                 <Spinner className="w-12 h-12 text-brand" />
-                <p className="text-lg text-white">{message}</p>
+                <p className="text-lg text-foreground">{message}</p>
               </>
             )}
 
@@ -177,7 +177,7 @@ export function LogtoCallback() {
                 <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
                   <CheckCircle className="w-10 h-10 text-green-500" />
                 </div>
-                <p className="text-lg text-white">{message}</p>
+                <p className="text-lg text-foreground">{message}</p>
               </>
             )}
 
@@ -187,7 +187,7 @@ export function LogtoCallback() {
                   <AlertCircle className="w-10 h-10 text-destructive" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg text-white mb-2">登录失败</p>
+                  <p className="text-lg text-foreground mb-2">登录失败</p>
                   <p className="text-muted-foreground">{message}</p>
                   {errorCode === 'ACCOUNT_NOT_BOUND' && (
                     <p className="text-sm text-muted-foreground mt-2">

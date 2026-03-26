@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+﻿import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { ScrollText, RefreshCw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -319,8 +319,8 @@ export function LogsPage() {
       
       items.push(
         <div key={key} className="flex items-start gap-2 text-xs">
-          <span className="text-slate-500 shrink-0">{label}:</span>
-          <span className="text-slate-300 break-all">{displayValue}</span>
+          <span className="text-muted-foreground shrink-0">{label}:</span>
+          <span className="text-foreground/80 break-all">{displayValue}</span>
         </div>
       );
     });
@@ -335,7 +335,7 @@ export function LogsPage() {
           <select
             value={logFilterAction}
             onChange={(e) => { setLogFilterAction(e.target.value); setLogsPage(1); }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             <option value="">所有操作</option>
             {Object.entries({ ...localActionTypeMap, ...actionTypes }).map(([key, label]) => (
@@ -345,7 +345,7 @@ export function LogsPage() {
           <select
             value={logFilterStatus}
             onChange={(e) => { setLogFilterStatus(e.target.value as any); setLogsPage(1); }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             <option value="all">所有状态</option>
             <option value="success">成功</option>
@@ -356,21 +356,21 @@ export function LogsPage() {
               type="datetime-local"
               value={logStartDate}
               onChange={(e) => { setLogStartDate(e.target.value); setLogsPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white w-44 [color-scheme:dark]"
+              className="bg-muted border border-border rounded-lg px-2 py-2 text-sm text-foreground w-44 "
             />
-            <span className="text-slate-400">-</span>
+            <span className="text-muted-foreground">-</span>
             <input
               type="datetime-local"
               value={logEndDate}
               onChange={(e) => { setLogEndDate(e.target.value); setLogsPage(1); }}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white w-44 [color-scheme:dark]"
+              className="bg-muted border border-border rounded-lg px-2 py-2 text-sm text-foreground w-44 "
             />
             {(logStartDate || logEndDate) && (
               <Button 
                 onClick={() => { setLogStartDate(''); setLogEndDate(''); setLogsPage(1); }}
                 variant="ghost" 
                 size="sm"
-                className="text-white hover:text-white hover:bg-slate-700"
+                className="text-foreground hover:text-foreground hover:bg-muted"
               >
                 清除
               </Button>
@@ -398,7 +398,7 @@ export function LogsPage() {
                 className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer
                   ${logFilterAction === action
                     ? 'bg-brand/30 text-brand border-brand/50'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-muted border-border text-foreground/80 hover:bg-muted hover:text-foreground'
                   }`}
               >
                 {getActionTypeLabel(action)}: {count as number}
@@ -416,36 +416,36 @@ export function LogsPage() {
         <>
           <div className="glass rounded-2xl overflow-x-auto">
             <table className="w-full" style={{ tableLayout: 'auto' }}>
-              <thead className="bg-slate-800/50">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400 w-10"></th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">时间</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作类型</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">IP地址</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">状态</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground w-10"></th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">时间</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">操作类型</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">操作者</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">IP地址</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">状态</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {logs.map((log: LogItem, index: number) => (
                   <tr 
                     key={index} 
-                    className="hover:bg-slate-800/30"
+                    className="hover:bg-muted/30"
                   >
                     <td className="px-4 md:px-6 py-4">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6 text-slate-500 hover:text-slate-300"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground/80"
                         onClick={() => openDetailDialog(log)}
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{log.timestamp}</td>
-                    <td className="px-4 md:px-6 py-4 text-white">{getActionTypeLabel(log.action_type)}</td>
-                    <td className="px-4 md:px-6 py-4 text-slate-300 whitespace-nowrap">
+                    <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm whitespace-nowrap">{log.timestamp}</td>
+                    <td className="px-4 md:px-6 py-4 text-foreground">{getActionTypeLabel(log.action_type)}</td>
+                    <td className="px-4 md:px-6 py-4 text-foreground/80 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span>{log.operator_id}</span>
                         <OperatorTypeBadge 
@@ -454,7 +454,7 @@ export function LogsPage() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm font-mono whitespace-nowrap">{log.ip}</td>
+                    <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm font-mono whitespace-nowrap">{log.ip}</td>
                     <td className="px-4 md:px-6 py-4">
                       <OperationStatusBadge status={log.status === 'success'} />
                     </td>
@@ -485,14 +485,14 @@ export function LogsPage() {
           <>
             <DetailInfoGrid>
               <DetailInfoItem label="时间">
-                <p className="text-white">{selectedLog.timestamp}</p>
+                <p className="text-foreground">{selectedLog.timestamp}</p>
               </DetailInfoItem>
               <DetailInfoItem label="操作类型">
-                <p className="text-white">{getActionTypeLabel(selectedLog.action_type)}</p>
+                <p className="text-foreground">{getActionTypeLabel(selectedLog.action_type)}</p>
               </DetailInfoItem>
               <DetailInfoItem label="操作者">
                 <div className="flex items-center gap-2">
-                  <span className="text-white">{selectedLog.operator_id}</span>
+                  <span className="text-foreground">{selectedLog.operator_id}</span>
                   <OperatorTypeBadge 
                     type={selectedLog.operator_type} 
                     level={selectedLog.operator_level} 
@@ -500,7 +500,7 @@ export function LogsPage() {
                 </div>
               </DetailInfoItem>
               <DetailInfoItem label="IP地址">
-                <p className="text-white font-mono">{selectedLog.ip}</p>
+                <p className="text-foreground font-mono">{selectedLog.ip}</p>
               </DetailInfoItem>
               <DetailInfoItem label="状态">
                 <OperationStatusBadge status={selectedLog.status === 'success'} />
@@ -509,7 +509,7 @@ export function LogsPage() {
 
             {extractLogSummary(selectedLog) && (
               <DetailContentBlock label="摘要">
-                <p className="text-slate-300">{extractLogSummary(selectedLog)}</p>
+                <p className="text-foreground/80">{extractLogSummary(selectedLog)}</p>
               </DetailContentBlock>
             )}
 

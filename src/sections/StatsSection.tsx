@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { FileCheck, Users, TrendingUp, Clock } from 'lucide-react';
 import { gsap } from 'gsap';
 
-const API_BASE = 'https://cloudblack-api.07210700.xyz';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz';
 
 interface StatisticsData {
   processed_appeals: number;
@@ -89,17 +89,17 @@ export function StatsSection({ active }: StatsSectionProps) {
           {stats.map((stat) => (
             <div key={stat.label} className="group relative">
               <div className={`glass rounded-2xl p-6 h-full bg-gradient-to-br ${stat.color} hover:shadow-glow transition-all duration-500`}>
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center mb-4">
-                  <stat.icon className="w-5 h-5 text-white/80" />
+                <div className="w-10 h-10 rounded-lg bg-foreground/10 flex items-center justify-center mb-4">
+                  <stat.icon className="w-5 h-5 text-foreground/70" />
                 </div>
-                <div className="text-3xl md:text-4xl font-bold text-white mb-2">
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">
                   {loading ? (
-                    <span className="text-white/40">--</span>
+                    <span className="text-foreground/30">--</span>
                   ) : (
                     <AnimatedNumber value={stat.value} suffix={stat.suffix} decimals={(stat as any).decimals} play={!!active} />
                   )}
                 </div>
-                <p className="text-sm text-white/60">{stat.label}</p>
+                <p className="text-sm text-foreground/60">{stat.label}</p>
               </div>
               <div className={`absolute -inset-1 bg-gradient-to-br ${stat.color} rounded-2xl blur-xl -z-10 opacity-0 group-hover:opacity-50 transition-opacity duration-500`} />
             </div>

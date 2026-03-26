@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useUrlState, useUrlStateNumber } from '../hooks';
 import { ShieldAlert, CheckCircle, XCircle, UserCheck, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -155,7 +155,7 @@ export function Level4PendingPage() {
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value as any); setPage(1); }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             <option value="pending">待确认</option>
             <option value="confirmed">已确认</option>
@@ -175,8 +175,8 @@ export function Level4PendingPage() {
             <ShieldAlert className="w-6 h-6 text-red-500" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white mb-1">双管理员确认机制</h3>
-            <p className="text-slate-400 text-sm">
+            <h3 className="text-lg font-semibold text-foreground mb-1">双管理员确认机制</h3>
+            <p className="text-muted-foreground text-sm">
               等级4（严重违规）需要两名管理员共同确认才能生效。
               第一位管理员提交后，需要另一位管理员进行确认。
               您不能确认自己提交的记录。
@@ -200,7 +200,7 @@ export function Level4PendingPage() {
                 key={item.id}
                 className={`glass rounded-2xl p-6 ${
                   item.status === 'pending' ? 'border-yellow-500/20' : ''
-                } ${item.first_admin_id === adminInfo?.admin_id ? 'bg-slate-800/30' : ''}`}
+                } ${item.first_admin_id === adminInfo?.admin_id ? 'bg-muted/30' : ''}`}
               >
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="space-y-3">
@@ -216,28 +216,28 @@ export function Level4PendingPage() {
                     
                     <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
                       <div>
-                        <span className="text-slate-500">用户ID:</span>
-                        <span className="text-white font-mono ml-2">{item.user_id}</span>
+                        <span className="text-muted-foreground">用户ID:</span>
+                        <span className="text-foreground font-mono ml-2">{item.user_id}</span>
                       </div>
                       <div>
-                        <span className="text-slate-500">类型:</span>
-                        <span className="text-white ml-2">
+                        <span className="text-muted-foreground">类型:</span>
+                        <span className="text-foreground ml-2">
                           <UserTypeBadge type={item.user_type} className="ml-2" />
                         </span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-slate-500">封禁原因:</span>
-                        <span className="text-white ml-2">{item.reason}</span>
+                        <span className="text-muted-foreground">封禁原因:</span>
+                        <span className="text-foreground ml-2">{item.reason}</span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800">
+                    <div className="pt-2 border-t border-border">
                       <div className="flex items-center gap-2 text-sm">
-                        <UserCheck className="w-4 h-4 text-slate-500" />
-                        <span className="text-slate-500">提交者:</span>
-                        <span className="text-white">{item.first_admin_name}</span>
-                        <span className="text-slate-600">·</span>
-                        <span className="text-slate-500">
+                        <UserCheck className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">提交者:</span>
+                        <span className="text-foreground">{item.first_admin_name}</span>
+                        <span className="text-border">·</span>
+                        <span className="text-muted-foreground">
                           {new Date(item.first_confirmed_at).toLocaleString()}
                         </span>
                       </div>
@@ -245,10 +245,10 @@ export function Level4PendingPage() {
                       {item.second_admin_name && (
                         <div className="flex items-center gap-2 text-sm mt-1">
                           <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-slate-500">确认者:</span>
-                          <span className="text-white">{item.second_admin_name}</span>
-                          <span className="text-slate-600">·</span>
-                          <span className="text-slate-500">
+                          <span className="text-muted-foreground">确认者:</span>
+                          <span className="text-foreground">{item.second_admin_name}</span>
+                          <span className="text-border">·</span>
+                          <span className="text-muted-foreground">
                             {item.second_confirmed_at && new Date(item.second_confirmed_at).toLocaleString()}
                           </span>
                         </div>
@@ -257,10 +257,10 @@ export function Level4PendingPage() {
                       {item.cancelled_by && (
                         <div className="flex items-center gap-2 text-sm mt-1">
                           <XCircle className="w-4 h-4 text-red-500" />
-                          <span className="text-slate-500">取消者:</span>
-                          <span className="text-white">{item.cancelled_by}</span>
+                          <span className="text-muted-foreground">取消者:</span>
+                          <span className="text-foreground">{item.cancelled_by}</span>
                           {item.cancel_reason && (
-                            <span className="text-slate-500">({item.cancel_reason})</span>
+                            <span className="text-muted-foreground">({item.cancel_reason})</span>
                           )}
                         </div>
                       )}
@@ -313,10 +313,10 @@ export function Level4PendingPage() {
               <AlertTriangle className="w-5 h-5 text-yellow-500" />
               确认等级4黑名单
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {confirmingItem && (
                 <div className="space-y-2 mt-2">
-                  <p>您即将确认将 <span className="text-white font-mono">{confirmingItem.user_id}</span> 加入等级4黑名单。</p>
+                  <p>您即将确认将 <span className="text-foreground font-mono">{confirmingItem.user_id}</span> 加入等级4黑名单。</p>
                   <p className="text-sm">封禁原因: {confirmingItem.reason}</p>
                   <p className="text-yellow-500 text-sm">此操作不可撤销，确认后该用户将被正式封禁。</p>
                 </div>
@@ -345,7 +345,7 @@ export function Level4PendingPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>取消待确认记录</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {cancellingItem && `确定要取消 ${cancellingItem.user_id} 的等级4待确认记录吗？`}
             </DialogDescription>
           </DialogHeader>

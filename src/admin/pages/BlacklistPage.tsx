@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, ShieldAlert } from 'lucide-react';
@@ -310,10 +310,10 @@ export function BlacklistPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">黑名单管理</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 md:mb-2">黑名单管理</h2>
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-muted-foreground">查看和管理黑名单用户/群聊</p>
-            <div className="flex bg-slate-800/50 rounded-lg p-1 gap-1">
+            <div className="flex bg-muted/50 rounded-lg p-1 gap-1">
               {typeTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -326,8 +326,8 @@ export function BlacklistPage() {
                     type="button"
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all ${
                       blacklistTypeFilter === tab.key
-                        ? 'bg-slate-700 text-white'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                        ? 'bg-brand/20 text-brand'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -345,7 +345,7 @@ export function BlacklistPage() {
               placeholder="搜索用户ID、群号或原因..."
               value={blacklistSearch}
               onChange={(e) => { setBlacklistSearch(e.target.value); setBlacklistPage(1); }}
-              className="pl-10 w-full md:w-64 bg-slate-800 border-slate-700"
+              className="pl-10 w-full md:w-64 bg-muted border-border"
             />
           </div>
           {canManageBlacklist && (
@@ -368,28 +368,28 @@ export function BlacklistPage() {
         <>
           <div className="glass rounded-2xl overflow-x-auto">
             <table className="w-full" style={{ tableLayout: 'auto' }}>
-              <thead className="bg-slate-800/50">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">ID</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">等级</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">封禁原因</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">操作者</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-slate-400">添加时间</th>
-                  <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-slate-400">操作</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">ID</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">等级</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">封禁原因</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">操作者</th>
+                  <th className="px-4 md:px-6 py-4 text-left text-sm font-medium text-muted-foreground">添加时间</th>
+                  <th className="px-4 md:px-6 py-4 text-right text-sm font-medium text-muted-foreground">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {blacklist.map((item) => (
                   <tr 
                     key={`${item.user_id}-${item.user_type || 'user'}`} 
                     ref={(el) => {
                       if (el) rowRefs.current.set(`${item.user_id}-${item.user_type || 'user'}`, el);
                     }}
-                    className="hover:bg-slate-800/30"
+                    className="hover:bg-muted/30"
                   >
                     <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-mono">{item.user_id}</span>
+                        <span className="text-foreground font-mono">{item.user_id}</span>
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border shrink-0 ${getUserTypeBadgeClass(item.user_type || 'user')}`}>
                           {getUserTypeLabel(item.user_type || 'user')}
                         </span>
@@ -398,26 +398,26 @@ export function BlacklistPage() {
                     <td className="px-4 md:px-6 py-4">
                       <ViolationLevelBadge level={item.level || 1} />
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-300 max-w-[300px] truncate" title={item.reason}>{item.reason}</td>
+                    <td className="px-4 md:px-6 py-4 text-foreground/80 max-w-[300px] truncate" title={item.reason}>{item.reason}</td>
                     <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="text-slate-400">{item.added_by?.startsWith('admin:') ? item.added_by.slice(6) : item.added_by}</span>
+                        <span className="text-muted-foreground">{item.added_by?.startsWith('admin:') ? item.added_by.slice(6) : item.added_by}</span>
                         <Badge 
                           variant="secondary" 
-                          className={`ml-1.5 text-[10px] px-1.5 py-0 whitespace-nowrap shrink-0 ${item.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                          className={`ml-1.5 text-[10px] px-1.5 py-0 whitespace-nowrap shrink-0 ${item.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-muted text-muted-foreground border-border'}`}
                         >
                           {item.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
                         </Badge>
                       </div>
                     </td>
-                    <td className="px-4 md:px-6 py-4 text-slate-400 text-sm whitespace-nowrap">{new Date(item.added_at).toLocaleString()}</td>
+                    <td className="px-4 md:px-6 py-4 text-muted-foreground text-sm whitespace-nowrap">{new Date(item.added_at).toLocaleString()}</td>
                     <td className="px-4 md:px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           onClick={() => handleOpenDetail(item)}
                           variant="ghost"
                           size="sm"
-                          className="text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/60"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -463,14 +463,14 @@ export function BlacklistPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>添加黑名单</DialogTitle>
-            <DialogDescription className="text-slate-400">将用户或群聊添加到黑名单</DialogDescription>
+            <DialogDescription className="text-muted-foreground">将用户或群聊添加到黑名单</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">类型</label>
               <Select value={newUserType} onValueChange={(value: 'user' | 'group') => setNewUserType(value)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700">
+                <SelectTrigger className="bg-muted border-border">
                   <SelectValue placeholder="选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -518,10 +518,10 @@ export function BlacklistPage() {
                 <p className="text-sm text-yellow-400 mb-2">
                   <strong>待确认记录已创建</strong>
                 </p>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   记录ID: {pendingConfirmation.confirmation_id}
                 </p>
-                <p className="text-sm text-slate-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   需要另一名管理员在「严重违规审核」页面确认后才能生效。
                 </p>
               </div>
@@ -552,14 +552,14 @@ export function BlacklistPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>修改黑名单条目</DialogTitle>
-            <DialogDescription className="text-slate-400">修改黑名单中的用户/群聊信息</DialogDescription>
+            <DialogDescription className="text-muted-foreground">修改黑名单中的用户/群聊信息</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">类型</label>
               <Select value={editUserType} onValueChange={(value: 'user' | 'group') => setEditUserType(value)}>
-                <SelectTrigger className="bg-slate-800 border-slate-700">
+                <SelectTrigger className="bg-muted border-border">
                   <SelectValue placeholder="选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -623,10 +623,10 @@ export function BlacklistPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>移除黑名单</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {deletingItem && (
                 <>
-                  确定要将 <span className="text-white font-mono">{deletingItem.user_id}</span> ({getUserTypeLabel(deletingItem.user_type || 'user')}) 移出黑名单吗？
+                  确定要将 <span className="text-foreground font-mono">{deletingItem.user_id}</span> ({getUserTypeLabel(deletingItem.user_type || 'user')}) 移出黑名单吗？
                 </>
               )}
             </DialogDescription>
@@ -673,7 +673,7 @@ export function BlacklistPage() {
                 <DetailInfoGrid>
                   <DetailInfoItem label="类型">
                     <Select value={editUserType} onValueChange={(value: 'user' | 'group') => setEditUserType(value)}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 h-9">
+                      <SelectTrigger className="bg-muted border-border h-9">
                         <SelectValue placeholder="选择类型" />
                       </SelectTrigger>
                       <SelectContent>
@@ -686,13 +686,13 @@ export function BlacklistPage() {
                     <Input
                       value={editUserId}
                       onChange={(e) => setEditUserId(e.target.value)}
-                      className="bg-slate-800 border-slate-700 h-9"
+                      className="bg-muted border-border h-9"
                       placeholder={`请输入${editUserType === 'group' ? '群号' : 'QQ号'}`}
                     />
                   </DetailInfoItem>
                   <DetailInfoItem label="违规等级">
                     <Select value={String(editLevel)} onValueChange={(value) => setEditLevel(parseInt(value))}>
-                      <SelectTrigger className="bg-slate-800 border-slate-700 h-9">
+                      <SelectTrigger className="bg-muted border-border h-9">
                         <SelectValue placeholder="选择等级" />
                       </SelectTrigger>
                       <SelectContent>
@@ -706,10 +706,10 @@ export function BlacklistPage() {
                   {viewingItem.added_by && (
                     <DetailInfoItem label="操作者">
                       <div className="flex items-center gap-2">
-                        <span className="text-white">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
+                        <span className="text-foreground">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
                         <Badge 
                           variant="secondary" 
-                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-muted text-muted-foreground border-border'}`}
                         >
                           {viewingItem.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
                         </Badge>
@@ -717,16 +717,16 @@ export function BlacklistPage() {
                     </DetailInfoItem>
                   )}
                   <DetailInfoItem label="添加时间">
-                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+                    <p className="text-foreground">{new Date(viewingItem.added_at).toLocaleString()}</p>
                   </DetailInfoItem>
                 </DetailInfoGrid>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">封禁原因</label>
+                  <label className="text-sm font-medium text-foreground/80">封禁原因</label>
                   <textarea
                     value={editReason}
                     onChange={(e) => setEditReason(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand/50 min-h-[100px] resize-none"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/50 min-h-[100px] resize-none"
                     placeholder="请输入封禁原因..."
                   />
                 </div>
@@ -740,7 +740,7 @@ export function BlacklistPage() {
                   </div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-700/50">
+                <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
                   <Button variant="outline" size="sm" onClick={closeDetailEditMode}>取消</Button>
                   <LoadingButton
                     onClick={saveDetailEdit}
@@ -761,7 +761,7 @@ export function BlacklistPage() {
                     <UserTypeBadge type={viewingItem.user_type || 'user'} />
                   </DetailInfoItem>
                   <DetailInfoItem label="ID">
-                    <p className="text-white font-mono">{viewingItem.user_id}</p>
+                    <p className="text-foreground font-mono">{viewingItem.user_id}</p>
                   </DetailInfoItem>
                   <DetailInfoItem label="违规等级">
                     <ViolationLevelBadge level={viewingItem.level || 1} />
@@ -769,10 +769,10 @@ export function BlacklistPage() {
                   {viewingItem.added_by && (
                     <DetailInfoItem label="操作者">
                       <div className="flex items-center gap-2">
-                        <span className="text-white">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
+                        <span className="text-foreground">{viewingItem.added_by?.startsWith('admin:') ? viewingItem.added_by.slice(6) : viewingItem.added_by}</span>
                         <Badge 
                           variant="secondary" 
-                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}
+                          className={`text-[10px] px-1.5 py-0 ${viewingItem.added_by?.startsWith('admin:') ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-muted text-muted-foreground border-border'}`}
                         >
                           {viewingItem.added_by?.startsWith('admin:') ? '管理' : 'Bot'}
                         </Badge>
@@ -780,14 +780,14 @@ export function BlacklistPage() {
                     </DetailInfoItem>
                   )}
                   <DetailInfoItem label="添加时间">
-                    <p className="text-white">{new Date(viewingItem.added_at).toLocaleString()}</p>
+                    <p className="text-foreground">{new Date(viewingItem.added_at).toLocaleString()}</p>
                   </DetailInfoItem>
                 </DetailInfoGrid>
 
                 {canManageBlacklist && (
-                  <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <div className="mt-4 pt-4 border-t border-border/50">
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-slate-400 w-16">操作</span>
+                      <span className="text-sm text-muted-foreground w-16">操作</span>
                       <div className="flex items-center gap-2">
                         <Button
                           onClick={openDetailEditMode}
@@ -813,7 +813,7 @@ export function BlacklistPage() {
                 )}
 
                 <DetailContentBlock label="封禁原因">
-                  <p className="text-white whitespace-pre-wrap break-words">{viewingItem.reason}</p>
+                  <p className="text-foreground whitespace-pre-wrap break-words">{viewingItem.reason}</p>
                 </DetailContentBlock>
               </>
             )}

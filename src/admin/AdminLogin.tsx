@@ -219,7 +219,7 @@ export function AdminLogin() {
     <div className="min-h-screen flex items-center justify-center px-4 relative">
       {/* Background */}
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-muted to-background" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
@@ -243,7 +243,7 @@ export function AdminLogin() {
                 <div className="w-full border-t border-border/50"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-slate-900/50 text-muted-foreground">使用密码登录</span>
+                <span className="px-2 bg-card/80 text-muted-foreground">使用密码登录</span>
               </div>
             </div>
           )}
@@ -340,7 +340,7 @@ export function AdminLogin() {
                       <div className="w-full border-t border-border/50"></div>
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="px-2 bg-slate-900/50 text-muted-foreground">或</span>
+                      <span className="px-2 bg-card/80 text-muted-foreground">或</span>
                     </div>
                   </div>
                   <Button

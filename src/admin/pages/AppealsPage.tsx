@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn, Loader2 } from 'lucide-react';
@@ -280,7 +280,7 @@ export function AppealsPage() {
               setAppealFilter(e.target.value as any);
               setAppealPage(1);
             }}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             <option value="all">全部状态</option>
             <option value="pending">待审核</option>
@@ -316,13 +316,13 @@ export function AppealsPage() {
                 ref={(el) => {
                   if (el) cardRefs.current.set(appeal.appeal_id, el);
                 }}
-                className="glass rounded-2xl p-6 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                className="glass rounded-2xl p-6 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => handleOpenDetail(appeal, appeal.appeal_id)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="font-semibold text-white">
+                      <span className="font-semibold text-foreground">
                         {appeal.user_type === 'group' ? '群号' : 'QQ'}: {appeal.user_id}
                       </span>
                       <AppealStatusBadge status={appeal.status} />
@@ -331,14 +331,14 @@ export function AppealsPage() {
                       提交时间: {new Date(appeal.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 text-slate-400 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground text-sm">
                     <Eye className="w-4 h-4" />
                     查看详情
                   </div>
                 </div>
 
-                <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap break-words line-clamp-3">{appeal.content}</p>
+                <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words line-clamp-3">{appeal.content}</p>
                 </div>
                 
                 {/* Images */}
@@ -348,7 +348,7 @@ export function AppealsPage() {
                       <button
                         key={idx}
                         onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
-                        className="w-16 h-16 rounded-lg overflow-hidden bg-slate-800 relative group cursor-pointer"
+                        className="w-16 h-16 rounded-lg overflow-hidden bg-muted relative group cursor-pointer"
                       >
                         <img 
                           src={img.startsWith('http') ? img : `${API_BASE}${img}`}
@@ -357,19 +357,19 @@ export function AppealsPage() {
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-5 h-5 text-white" />
+                          <ZoomIn className="w-5 h-5 text-foreground" />
                         </div>
                       </button>
                     ))}
                     {appeal.images.length > 3 && (
-                      <span className="text-xs text-slate-500 self-center">+{appeal.images.length - 3}</span>
+                      <span className="text-xs text-muted-foreground self-center">+{appeal.images.length - 3}</span>
                     )}
                   </div>
                 )}
                 
                 {/* AI Analysis Summary */}
                 {appeal.ai_analysis && (
-                  <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
+                  <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
                     <div className="flex items-center gap-2 mb-2">
                       <Sparkles className="w-4 h-4 text-purple-500" />
                       <span className="text-sm text-purple-400">AI 建议</span>
@@ -390,19 +390,19 @@ export function AppealsPage() {
                             recommendation={appeal.ai_analysis.recommendation || appeal.ai_analysis.result?.recommendation || ''} 
                           />
                         ) : (
-                          <span className="text-xs text-slate-500">分析完成</span>
+                          <span className="text-xs text-muted-foreground">分析完成</span>
                         )
                       )}
                     </div>
                     {/* AI Analysis Summary Content - 仅completed状态展示 */}
                     {appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.result?.summary && (
-                      <p className="text-xs text-slate-300 line-clamp-2 mb-1">
+                      <p className="text-xs text-foreground/80 line-clamp-2 mb-1">
                         <span className="text-purple-400">申诉要点：</span>
                         {appeal.ai_analysis.result.summary}
                       </p>
                     )}
                     {appeal.ai_analysis.status === 'completed' && appeal.ai_analysis.result?.confidence && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-muted-foreground">
                         置信度：{appeal.ai_analysis.result.confidence}%
                       </p>
                     )}
@@ -453,7 +453,7 @@ export function AppealsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>{reviewAction === 'approve' ? '通过申诉' : '拒绝申诉'}</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {selectedAppeal && `处理用户 ${selectedAppeal.user_id} 的申诉`}
             </DialogDescription>
           </DialogHeader>
@@ -469,7 +469,7 @@ export function AppealsPage() {
 
             {reviewAction === 'approve' && (
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="removeFromBlacklist" checked={removeFromBlacklist} onChange={(e) => setRemoveFromBlacklist(e.target.checked)} className="rounded border-slate-700 bg-slate-800" />
+                <input type="checkbox" id="removeFromBlacklist" checked={removeFromBlacklist} onChange={(e) => setRemoveFromBlacklist(e.target.checked)} className="rounded border-border bg-muted" />
                 <label htmlFor="removeFromBlacklist" className="text-sm cursor-pointer">同时从黑名单中移除该用户</label>
               </div>
             )}
@@ -495,7 +495,7 @@ export function AppealsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>删除申诉</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {deletingAppeal && `确定要删除用户 ${deletingAppeal.user_id} 的申诉吗？此操作不可恢复。`}
             </DialogDescription>
           </DialogHeader>
@@ -529,7 +529,7 @@ export function AppealsPage() {
         <AdminDialogContent>
           <DialogHeader>
             <DialogTitle>清理已处理申诉</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               清理所有已批准和已拒绝的申诉记录。待审核的申诉不会被删除。
             </DialogDescription>
           </DialogHeader>
@@ -582,7 +582,7 @@ export function AppealsPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">申诉ID:</span>
-                  <p className="text-white font-mono">{viewingItem.appeal_id}</p>
+                  <p className="text-foreground font-mono">{viewingItem.appeal_id}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">状态:</span>
@@ -590,27 +590,27 @@ export function AppealsPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">用户类型:</span>
-                  <p className="text-white">{viewingItem.user_type === 'group' ? '群号' : '个人QQ'}</p>
+                  <p className="text-foreground">{viewingItem.user_type === 'group' ? '群号' : '个人QQ'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">用户ID:</span>
-                  <p className="text-white font-mono">{viewingItem.user_id}</p>
+                  <p className="text-foreground font-mono">{viewingItem.user_id}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">联系邮箱:</span>
-                  <p className="text-white">{viewingItem.contact_email || '-'}</p>
+                  <p className="text-foreground">{viewingItem.contact_email || '-'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">提交时间:</span>
-                  <p className="text-white">{new Date(viewingItem.created_at).toLocaleString()}</p>
+                  <p className="text-foreground">{new Date(viewingItem.created_at).toLocaleString()}</p>
                 </div>
               </div>
 
               {/* Content */}
               <div>
                 <span className="text-muted-foreground text-sm">申诉内容:</span>
-                <div className="mt-2 bg-slate-800 rounded-lg p-4">
-                  <p className="text-white whitespace-pre-wrap break-words">{viewingItem.content}</p>
+                <div className="mt-2 bg-muted rounded-lg p-4">
+                  <p className="text-foreground whitespace-pre-wrap break-words">{viewingItem.content}</p>
                 </div>
               </div>
 
@@ -623,7 +623,7 @@ export function AppealsPage() {
                       <button
                         key={idx}
                         onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
-                        className="w-24 h-24 rounded-lg overflow-hidden bg-slate-800 relative group cursor-pointer"
+                        className="w-24 h-24 rounded-lg overflow-hidden bg-muted relative group cursor-pointer"
                       >
                         <img 
                           src={img.startsWith('http') ? img : `${API_BASE}${img}`}
@@ -632,7 +632,7 @@ export function AppealsPage() {
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-6 h-6 text-white" />
+                          <ZoomIn className="w-6 h-6 text-foreground" />
                         </div>
                       </button>
                     ))}
@@ -642,7 +642,7 @@ export function AppealsPage() {
               
               {/* AI Analysis */}
               {viewingItem.ai_analysis && (
-                <div className="p-4 rounded-lg bg-gradient-to-br from-purple-900/30 to-slate-800 border border-purple-500/20">
+                <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-purple-500" />
@@ -680,7 +680,7 @@ export function AppealsPage() {
                   
                   {/* AI分析中 */}
                   {viewingItem.ai_analysis.status === 'pending' && (
-                    <div className="flex items-center gap-3 text-slate-400 py-4">
+                    <div className="flex items-center gap-3 text-muted-foreground py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
                       <span>AI正在分析中，请稍后再查看...</span>
                     </div>
@@ -688,7 +688,7 @@ export function AppealsPage() {
                   
                   {/* AI分析失败 */}
                   {viewingItem.ai_analysis.status === 'failed' && (
-                    <div className="text-slate-400 py-2">
+                    <div className="text-muted-foreground py-2">
                       <span className="text-red-400">分析失败</span>
                       {viewingItem.ai_analysis.error && (
                         <p className="text-sm mt-1">{viewingItem.ai_analysis.error}</p>
@@ -698,7 +698,7 @@ export function AppealsPage() {
                   
                   {/* AI分析完成 - 获取详情中 */}
                   {viewingItem.ai_analysis.status === 'completed' && aiAnalysisLoading && (
-                    <div className="flex items-center gap-3 text-slate-400 py-4">
+                    <div className="flex items-center gap-3 text-muted-foreground py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
                       <span>正在获取AI分析详情...</span>
                     </div>
@@ -710,7 +710,7 @@ export function AppealsPage() {
                       {/* 使用获取到的详情或列表中的简要信息 */}
                       {(aiAnalysisDetail?.result || viewingItem.ai_analysis.recommendation) && (
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400">AI 建议:</span>
+                          <span className="text-muted-foreground">AI 建议:</span>
                           <Badge className={
                             (aiAnalysisDetail?.result?.recommendation || viewingItem.ai_analysis.recommendation || '').includes('通过') 
                               ? 'bg-green-500/20 text-green-400 border-green-500/30'
@@ -721,7 +721,7 @@ export function AppealsPage() {
                             {aiAnalysisDetail?.result?.recommendation || viewingItem.ai_analysis.recommendation}
                           </Badge>
                           {(aiAnalysisDetail?.result?.confidence || viewingItem.ai_analysis.result?.confidence) && (
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-muted-foreground">
                               置信度: {aiAnalysisDetail?.result?.confidence || viewingItem.ai_analysis.result?.confidence}%
                             </span>
                           )}
@@ -731,21 +731,21 @@ export function AppealsPage() {
                       {aiAnalysisDetail?.result?.summary && (
                         <div>
                           <p className="text-sm text-purple-400 font-medium">申诉要点</p>
-                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.summary}</p>
+                          <p className="text-sm text-foreground/80">{aiAnalysisDetail.result.summary}</p>
                         </div>
                       )}
                       
                       {aiAnalysisDetail?.result?.reason_analysis && (
                         <div>
                           <p className="text-sm text-purple-400 font-medium">理由分析</p>
-                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.reason_analysis}</p>
+                          <p className="text-sm text-foreground/80">{aiAnalysisDetail.result.reason_analysis}</p>
                         </div>
                       )}
                       
                       {aiAnalysisDetail?.result?.suggestions && (
                         <div>
                           <p className="text-sm text-purple-400 font-medium">处理建议</p>
-                          <p className="text-sm text-slate-300">{aiAnalysisDetail.result.suggestions}</p>
+                          <p className="text-sm text-foreground/80">{aiAnalysisDetail.result.suggestions}</p>
                         </div>
                       )}
                       
@@ -762,7 +762,7 @@ export function AppealsPage() {
                       
                       {/* 如果没有获取到详细结果，显示提示 */}
                       {!aiAnalysisDetail?.result && !viewingItem.ai_analysis.recommendation && (
-                        <div className="text-slate-400 py-2">
+                        <div className="text-muted-foreground py-2">
                           <span>暂无详细分析结果</span>
                         </div>
                       )}
@@ -775,20 +775,20 @@ export function AppealsPage() {
               {viewingItem.review && (
                 <div>
                   <span className="text-muted-foreground text-sm">审核信息:</span>
-                  <div className="mt-2 bg-slate-800 rounded-lg p-4 space-y-2">
-                    <p className="text-white">
+                  <div className="mt-2 bg-muted rounded-lg p-4 space-y-2">
+                    <p className="text-foreground">
                       <span className="text-muted-foreground">审核结果:</span>{' '}
                       {viewingItem.review.action === 'approve' ? '通过' : '拒绝'}
                     </p>
-                    <p className="text-white">
+                    <p className="text-foreground">
                       <span className="text-muted-foreground">审核人:</span>{' '}
                       {viewingItem.review.admin_name} ({viewingItem.review.admin_id})
                     </p>
-                    <p className="text-white">
+                    <p className="text-foreground">
                       <span className="text-muted-foreground">审核时间:</span>{' '}
                       {new Date(viewingItem.review.reviewed_at).toLocaleString()}
                     </p>
-                    <p className="text-white">
+                    <p className="text-foreground">
                       <span className="text-muted-foreground">审核理由:</span>{' '}
                       {viewingItem.review.reason}
                     </p>
@@ -797,7 +797,7 @@ export function AppealsPage() {
               )}
               
               {/* 操作按钮区域 */}
-              <div className="pt-6 border-t border-slate-700/50">
+              <div className="pt-6 border-t border-border/50">
                 <span className="text-muted-foreground text-sm mb-3 block">操作:</span>
                 <div className="flex flex-wrap gap-3">
                   {/* 待审核状态显示通过/拒绝按钮 */}

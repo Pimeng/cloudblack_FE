@@ -41,7 +41,7 @@ export function Pagination({
           <select
             value={perPage}
             onChange={(e) => onPerPageChange(Number(e.target.value))}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             {perPageOptions.map((option) => (
               <option key={option} value={option}>
@@ -154,10 +154,10 @@ export function SelectPagination({
           value={perPage.toString()}
           onValueChange={(v) => onPerPageChange(Number(v))}
         >
-          <SelectTrigger className="w-[100px] bg-slate-800 border-slate-700">
+          <SelectTrigger className="w-[100px] bg-muted border-border">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
+          <SelectContent className="bg-muted border-border">
             {perPageOptions.map((option) => (
               <SelectItem key={option} value={option.toString()}>
                 {option}/页
@@ -176,7 +176,7 @@ export function SelectPagination({
         >
           <ChevronLeft className="w-4 h-4" />
         </Button>
-        <span className="text-sm text-slate-400">
+        <span className="text-sm text-muted-foreground">
           {page} / {totalPages}
         </span>
         <Button

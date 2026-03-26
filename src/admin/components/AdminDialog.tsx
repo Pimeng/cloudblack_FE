@@ -24,7 +24,7 @@ export function AdminDialogContent({
   return (
     <DialogContent 
       className={cn(
-        'bg-slate-900 border-slate-800 text-white',
+        'bg-card border-border text-foreground',
         fullWidth ? 'w-[calc(100%-2rem)] mx-4' : 'max-w-lg w-[calc(100%-2rem)] mx-4',
         className
       )} 

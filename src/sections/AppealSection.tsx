@@ -8,7 +8,7 @@ import { useImageViewer } from '@/hooks/useImageViewer';
 import { gsap } from 'gsap';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 
-const API_BASE = 'https://cloudblack-api.07210700.xyz';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz';
 
 interface AppealItem {
   appeal_id: string;
@@ -256,13 +256,13 @@ export function AppealSection({ active }: { active?: boolean }) {
       </div>
 
       <div className="w-full max-w-md mx-auto mb-3">
-        <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl">
+        <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
           <button type="button" onClick={() => { setActiveTab('submit'); setError(''); setQueryResult(null); }}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'submit' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
+            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'submit' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground'}`}>
             <FileText className="w-4 h-4" />提交申诉
           </button>
           <button type="button" onClick={() => { setActiveTab('query'); setError(''); setSubmitted(false); }}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'query' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-white'}`}>
+            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'query' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground'}`}>
             <Search className="w-4 h-4" />查询申诉
           </button>
         </div>
@@ -393,18 +393,18 @@ export function AppealSection({ active }: { active?: boolean }) {
                   {queryResult.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">未找到申诉记录</div>
                   ) : queryResult.map((appeal) => (
-                    <div key={appeal.appeal_id} className="bg-slate-800/50 rounded-xl p-4">
+                    <div key={appeal.appeal_id} className="bg-muted/50 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-mono text-sm text-muted-foreground">{appeal.appeal_id}</span>
                         {getStatusBadge(appeal.status)}
                       </div>
-                      <p className="text-sm text-slate-300 mb-2 line-clamp-2">{appeal.content}</p>
+                      <p className="text-sm text-foreground/80 mb-2 line-clamp-2">{appeal.content}</p>
                       <p className="text-xs text-muted-foreground">提交时间: {new Date(appeal.created_at).toLocaleString()}</p>
                       {appeal.review && (
-                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                        <div className="mt-3 pt-3 border-t border-border/50">
                           <p className="text-xs text-muted-foreground">审核人: {appeal.review.admin_name}</p>
                           <p className="text-xs text-muted-foreground">审核时间: {new Date(appeal.review.reviewed_at).toLocaleString()}</p>
-                          <p className="text-xs text-slate-300 mt-1">审核理由: {appeal.review.reason}</p>
+                          <p className="text-xs text-foreground/80 mt-1">审核理由: {appeal.review.reason}</p>
                         </div>
                       )}
                     </div>
