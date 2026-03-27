@@ -37,20 +37,20 @@ export function ClarityNotice() {
           className="fixed top-4 right-4 z-[100] max-w-sm"
         >
           <div
-            className="relative overflow-hidden rounded-xl border border-amber-400/50 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 p-4 backdrop-blur-xl"
+            className="relative overflow-hidden rounded-xl border border-amber-400/50 bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-50/95 p-4 backdrop-blur-xl dark:from-slate-900/95 dark:via-slate-800/95 dark:to-slate-900/95"
             style={{
               boxShadow: `
                 /* 内发光边框 */
                 inset 0 0 0 1px rgba(245, 158, 11, 0.3),
-                inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
                 /* 主光晕 - 琥珀色 */
-                0 0 20px rgba(245, 158, 11, 0.4),
-                0 0 40px rgba(245, 158, 11, 0.3),
-                0 0 80px rgba(245, 158, 11, 0.2),
+                0 0 20px rgba(245, 158, 11, 0.3),
+                0 0 40px rgba(245, 158, 11, 0.2),
+                0 0 80px rgba(245, 158, 11, 0.1),
                 /* 蓝色辅助光晕 */
-                0 0 30px rgba(59, 130, 246, 0.25),
+                0 0 30px rgba(59, 130, 246, 0.15),
                 /* 外阴影 */
-                0 10px 50px -10px rgba(0, 0, 0, 0.5)
+                0 10px 50px -10px rgba(0, 0, 0, 0.2)
               `,
             }}
           >
@@ -60,10 +60,10 @@ export function ClarityNotice() {
               style={{
                 background: `
                   radial-gradient(circle at center,
-                    rgba(251, 191, 36, 0.6) 0%,
-                    rgba(245, 158, 11, 0.4) 20%,
-                    rgba(245, 158, 11, 0.2) 40%,
-                    rgba(245, 158, 11, 0.05) 60%,
+                    rgba(251, 191, 36, 0.4) 0%,
+                    rgba(245, 158, 11, 0.25) 20%,
+                    rgba(245, 158, 11, 0.1) 40%,
+                    rgba(245, 158, 11, 0.03) 60%,
                     transparent 70%
                   )
                 `,
@@ -77,9 +77,9 @@ export function ClarityNotice() {
               style={{
                 background: `
                   radial-gradient(circle at center,
-                    rgba(96, 165, 250, 0.5) 0%,
-                    rgba(59, 130, 246, 0.3) 30%,
-                    rgba(59, 130, 246, 0.1) 50%,
+                    rgba(96, 165, 250, 0.35) 0%,
+                    rgba(59, 130, 246, 0.2) 30%,
+                    rgba(59, 130, 246, 0.05) 50%,
                     transparent 70%
                   )
                 `,
@@ -102,9 +102,9 @@ export function ClarityNotice() {
                   )
                 `,
                 boxShadow: `
-                  0 0 10px rgba(251, 191, 36, 0.8),
-                  0 0 20px rgba(245, 158, 11, 0.6),
-                  0 0 30px rgba(245, 158, 11, 0.4)
+                  0 0 10px rgba(251, 191, 36, 0.6),
+                  0 0 20px rgba(245, 158, 11, 0.4),
+                  0 0 30px rgba(245, 158, 11, 0.25)
                 `,
               }}
             />
@@ -116,26 +116,23 @@ export function ClarityNotice() {
                 background: `
                   linear-gradient(180deg,
                     transparent 0%,
-                    rgba(251, 191, 36, 0.8) 30%,
-                    rgba(245, 158, 11, 0.6) 50%,
-                    rgba(59, 130, 246, 0.4) 70%,
+                    rgba(251, 191, 36, 0.7) 30%,
+                    rgba(245, 158, 11, 0.5) 50%,
+                    rgba(59, 130, 246, 0.3) 70%,
                     transparent 100%
                   )
                 `,
-                boxShadow: '0 0 10px rgba(251, 191, 36, 0.5)',
+                boxShadow: '0 0 10px rgba(251, 191, 36, 0.4)',
               }}
             />
 
-            {/* 关闭按钮 - 增强发光 */}
+            {/* 关闭按钮 - 增大点击区域 */}
             <button
               onClick={handleDismiss}
-              className="absolute right-2 top-2 rounded-full p-1.5 text-slate-300 transition-all duration-200 hover:bg-white/15 hover:text-white"
-              style={{
-                textShadow: '0 0 8px rgba(255, 255, 255, 0.3)',
-              }}
+              className="absolute -right-1 -top-1 rounded-full p-2.5 text-amber-700 transition-all duration-200 hover:bg-amber-500/20 hover:text-amber-900 dark:text-slate-300 dark:hover:bg-white/15 dark:hover:text-white"
               aria-label="关闭通知"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
 
             {/* 内容区域 */}
@@ -146,29 +143,29 @@ export function ClarityNotice() {
                 style={{
                   background: `
                     linear-gradient(135deg,
-                      rgba(251, 191, 36, 0.35) 0%,
-                      rgba(245, 158, 11, 0.25) 50%,
-                      rgba(59, 130, 246, 0.2) 100%
+                      rgba(251, 191, 36, 0.45) 0%,
+                      rgba(245, 158, 11, 0.35) 50%,
+                      rgba(59, 130, 246, 0.25) 100%
                     )
                   `,
                   boxShadow: `
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
-                    inset 0 0 20px rgba(251, 191, 36, 0.2),
-                    0 0 15px rgba(245, 158, 11, 0.4),
-                    0 0 30px rgba(245, 158, 11, 0.3),
-                    0 0 45px rgba(245, 158, 11, 0.2)
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
+                    inset 0 0 20px rgba(251, 191, 36, 0.3),
+                    0 0 15px rgba(245, 158, 11, 0.3),
+                    0 0 30px rgba(245, 158, 11, 0.2),
+                    0 0 45px rgba(245, 158, 11, 0.1)
                   `,
-                  border: '1px solid rgba(251, 191, 36, 0.3)',
+                  border: '1px solid rgba(251, 191, 36, 0.4)',
                 }}
               >
                 <BarChart3
                   className="h-6 w-6"
                   style={{
-                    color: '#fbbf24',
+                    color: '#d97706',
                     filter: `
-                      drop-shadow(0 0 4px rgba(251, 191, 36, 0.8))
-                      drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))
-                      drop-shadow(0 0 12px rgba(245, 158, 11, 0.4))
+                      drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))
+                      drop-shadow(0 0 8px rgba(245, 158, 11, 0.4))
+                      drop-shadow(0 0 12px rgba(245, 158, 11, 0.25))
                     `,
                   }}
                 />
@@ -177,24 +174,18 @@ export function ClarityNotice() {
               {/* 文字内容 - 增强发光 */}
               <div className="flex-1">
                 <h4
-                  className="mb-1.5 text-sm font-bold tracking-wide"
+                  className="mb-1.5 text-sm font-bold tracking-wide text-amber-900 dark:text-white"
                   style={{
-                    color: '#fff',
                     textShadow: `
-                      0 0 10px rgba(255, 255, 255, 0.5),
-                      0 0 20px rgba(251, 191, 36, 0.3),
-                      0 0 30px rgba(245, 158, 11, 0.2)
+                      0 0 10px rgba(251, 191, 36, 0.3),
+                      0 0 20px rgba(245, 158, 11, 0.2)
                     `,
                   }}
                 >
                   数据分析声明
                 </h4>
                 <p 
-                  className="text-xs leading-relaxed"
-                  style={{
-                    color: 'rgba(226, 232, 240, 0.95)',
-                    textShadow: '0 0 10px rgba(255, 255, 255, 0.1)',
-                  }}
+                  className="text-xs leading-relaxed text-amber-800/90 dark:text-slate-200/95"
                 >
                   本站使用 Clarity 来分析用户行为，帮助我们更好地改进站点。如需禁用，请开启浏览器的跟踪防护。
                 </p>
@@ -208,15 +199,15 @@ export function ClarityNotice() {
                 background: `
                   linear-gradient(90deg,
                     transparent 0%,
-                    rgba(251, 191, 36, 0.6) 20%,
-                    rgba(96, 165, 250, 0.5) 50%,
-                    rgba(59, 130, 246, 0.4) 80%,
+                    rgba(251, 191, 36, 0.5) 20%,
+                    rgba(96, 165, 250, 0.4) 50%,
+                    rgba(59, 130, 246, 0.3) 80%,
                     transparent 100%
                   )
                 `,
                 boxShadow: `
-                  0 -1px 10px rgba(251, 191, 36, 0.3),
-                  0 -2px 20px rgba(59, 130, 246, 0.2)
+                  0 -1px 10px rgba(251, 191, 36, 0.2),
+                  0 -2px 20px rgba(59, 130, 246, 0.15)
                 `,
               }}
             />
