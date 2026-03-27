@@ -509,6 +509,90 @@ export function SettingsPage() {
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>最大 Token 数</Label>
+                  <Input
+                    type="number"
+                    value={editConfig.ai_analysis?.max_tokens || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.max_tokens', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>采样温度 (0-2)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="2"
+                    value={editConfig.ai_analysis?.temperature || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.temperature', parseFloat(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>API 超时时间（秒）</Label>
+                  <Input
+                    type="number"
+                    value={editConfig.ai_analysis?.timeout || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.timeout', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>最大工作线程数</Label>
+                  <Input
+                    type="number"
+                    value={editConfig.ai_analysis?.max_workers || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.max_workers', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>最大重试次数</Label>
+                  <Input
+                    type="number"
+                    value={editConfig.ai_analysis?.max_retries || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.max_retries', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>图片最大边长（像素）</Label>
+                  <Input
+                    type="number"
+                    value={editConfig.ai_analysis?.image_max_size || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.image_max_size', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>JPEG 压缩质量 (1-100)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editConfig.ai_analysis?.image_quality || ''}
+                    onChange={(e) => updateEditConfig('ai_analysis.image_quality', parseInt(e.target.value) || 0)}
+                    className="bg-muted border-border"
+                    disabled={!canEditSensitiveConfig}
+                  />
+                </div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground mt-4">
+                <p>配置说明:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>采样温度: 控制AI输出的随机性，0表示确定性输出，2表示最大随机性</li>
+                  <li>最大工作线程数: 批量分析时的并发数</li>
+                  <li>图片最大边长: 超过此尺寸的图片会被压缩</li>
+                  <li>JPEG压缩质量: 数值越高图片质量越好，但文件越大</li>
+                </ul>
               </div>
             </div>
           ) : null}

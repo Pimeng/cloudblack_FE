@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
-import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn, Loader2 } from 'lucide-react';
+import { FileText, RefreshCw, Trash2, CheckCircle, XCircle, Eye, Sparkles, ZoomIn, Loader2, Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useImageViewer } from '@/hooks/useImageViewer';
@@ -32,6 +32,18 @@ import { useExpandableDetail, useApiMutation } from '../hooks';
 
 interface ClearProcessedResponse {
   deleted_count?: number;
+}
+
+interface BatchAIResponse {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  results: Array<{
+    appeal_id: string;
+    status: string;
+    result?: AIAnalysisResult;
+  }>;
 }
 
 export function AppealsPage() {
@@ -88,6 +100,7 @@ export function AppealsPage() {
   const canClearProcessed = adminLevel >= 4;  // 仅超级管理员可操作
   const canRefreshAI = adminLevel >= 2;
   const canDeleteAI = adminLevel >= 3;
+  const canBatchAI = adminLevel >= 2;  // 批量分析需要等级2+
   const appealTotalPages = appealsPerPage > 0 ? Math.ceil(appealTotal / appealsPerPage) : 0;
   
   // Clear processed dialog state
@@ -111,6 +124,10 @@ export function AppealsPage() {
   });
   const { mutate: deleteAIMutate } = useApiMutation(token, {
     successMessage: 'AI 分析已删除',
+  });
+  const { mutate: batchAIMutate, loading: batchAILoading } = useApiMutation<BatchAIResponse>(token, {
+    successMessage: '',
+    showSuccessToast: false,
   });
 
   const openReviewDialog = (appeal: Appeal, action: 'approve' | 'reject') => {
@@ -290,6 +307,51 @@ export function AppealsPage() {
           <Button onClick={() => fetchAppeals()} variant="outline" size="icon">
             <RefreshCw className="w-4 h-4" />
           </Button>
+          {canBatchAI && (
+            <Button 
+              onClick={async () => {
+                // 筛选出待审核且没有AI分析或AI分析失败的申诉
+                const pendingAppeals = appeals.filter(
+                  a => a.status === 'pending' && (!a.ai_analysis || a.ai_analysis.status === 'failed')
+                );
+                if (pendingAppeals.length === 0) {
+                  toast.info('没有需要批量分析的待审核申诉');
+                  return;
+                }
+                
+                const result = await batchAIMutate(
+                  '/api/admin/ai-analysis/batch',
+                  { method: 'POST' },
+                  {
+                    appeals: pendingAppeals.map(a => ({
+                      appeal_id: a.appeal_id,
+                      user_id: a.user_id,
+                      user_type: a.user_type,
+                      content: a.content,
+                      images: a.images,
+                      created_at: a.created_at,
+                    })),
+                  }
+                );
+                
+                if (result) {
+                  const { total, completed, failed, pending } = result;
+                  toast.success(`批量分析完成: 总计${total}条, 成功${completed}条, 失败${failed}条, 进行中${pending}条`);
+                  fetchAppeals();
+                }
+              }}
+              variant="outline" 
+              disabled={batchAILoading}
+              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+            >
+              {batchAILoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Bot className="w-4 h-4 mr-2" />
+              )}
+              批量AI分析
+            </Button>
+          )}
           {canClearProcessed && (
             <Button 
               onClick={() => setClearDialogOpen(true)}
@@ -377,6 +439,12 @@ export function AppealsPage() {
                         <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
                           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                           分析中
+                        </Badge>
+                      )}
+                      {appeal.ai_analysis.status === 'retrying' && (
+                        <Badge variant="outline" className="border-orange-500/30 text-orange-400 text-xs">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          重试中
                         </Badge>
                       )}
                       {appeal.ai_analysis.status === 'failed' && (
@@ -653,6 +721,15 @@ export function AppealsPage() {
                           分析中
                         </Badge>
                       )}
+                      {viewingItem.ai_analysis.status === 'retrying' && (
+                        <Badge variant="outline" className="border-orange-500/30 text-orange-400 text-xs">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          重试中
+                          {viewingItem.ai_analysis.retry_count !== undefined && (
+                            <span className="ml-1">({viewingItem.ai_analysis.retry_count})</span>
+                          )}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       {canRefreshAI && viewingItem.ai_analysis.status === 'completed' && (
@@ -683,6 +760,21 @@ export function AppealsPage() {
                     <div className="flex items-center gap-3 text-muted-foreground py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
                       <span>AI正在分析中，请稍后再查看...</span>
+                    </div>
+                  )}
+                  
+                  {/* AI重试中 */}
+                  {viewingItem.ai_analysis.status === 'retrying' && (
+                    <div className="flex items-center gap-3 text-orange-400 py-4">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <div>
+                        <span>API调用失败，正在自动重试...</span>
+                        {viewingItem.ai_analysis.retry_count !== undefined && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            第 {viewingItem.ai_analysis.retry_count} 次尝试
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                   
@@ -757,6 +849,57 @@ export function AppealsPage() {
                               <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
                             ))}
                           </div>
+                        </div>
+                      )}
+                      
+                      {/* 新增字段展示 */}
+                      {(aiAnalysisDetail?.result?.category || aiAnalysisDetail?.result?.sentiment_score !== undefined || aiAnalysisDetail?.result?.evidence_strength !== undefined) && (
+                        <div className="border-t border-border/50 pt-3 mt-3 space-y-2">
+                          <p className="text-sm text-purple-400 font-medium">详细评估</p>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            {aiAnalysisDetail?.result?.category && (
+                              <div>
+                                <span className="text-muted-foreground">申诉分类:</span>
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {aiAnalysisDetail.result.category}
+                                </Badge>
+                              </div>
+                            )}
+                            {aiAnalysisDetail?.result?.sentiment_score !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">情感评分:</span>
+                                <span className="ml-2 text-foreground">
+                                  {(aiAnalysisDetail.result.sentiment_score * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            )}
+                            {aiAnalysisDetail?.result?.evidence_strength !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">证据强度:</span>
+                                <span className="ml-2 text-foreground">
+                                  {aiAnalysisDetail.result.evidence_strength}%
+                                </span>
+                              </div>
+                            )}
+                            {aiAnalysisDetail?.result?.processing_time_ms !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">处理耗时:</span>
+                                <span className="ml-2 text-foreground">
+                                  {aiAnalysisDetail.result.processing_time_ms}ms
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {aiAnalysisDetail?.result?.parse_error && (
+                        <div className="flex items-center gap-2 text-xs text-yellow-400 mt-2">
+                          <span className="text-muted-foreground">解析状态:</span>
+                          <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
+                            解析异常
+                          </Badge>
+                          <span className="text-muted-foreground">(已自动修正)</span>
                         </div>
                       )}
                       

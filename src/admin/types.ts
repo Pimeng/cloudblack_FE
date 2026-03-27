@@ -97,6 +97,13 @@ export interface AIAnalysisConfig {
   api_key?: string;
   base_url?: string;
   model?: string;
+  max_tokens?: number;
+  temperature?: number;
+  timeout?: number;
+  max_workers?: number;
+  max_retries?: number;
+  image_max_size?: number;
+  image_quality?: number;
 }
 
 export interface DatabaseBackupConfig {
@@ -148,9 +155,15 @@ export interface AIAnalysisResult {
     confidence: number;
     suggestions: string;
     risk_factors: string[];
+    sentiment_score?: number;
+    category?: string;
+    evidence_strength?: number;
+    processing_time_ms?: number;
+    parse_error?: boolean;
   };
   error?: string;
   updated_at?: string;
+  retry_count?: number;
 }
 
 export interface BackupStatus {
