@@ -16,6 +16,8 @@ import {
   ClipboardList,
   MoreHorizontal,
   Shield,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -26,6 +28,7 @@ import { API_BASE } from './types';
 import { toast } from 'sonner';
 import { DocReminder, ExternalLinkProvider } from './components';
 import { openExternalLink } from './components/ExternalLinkProvider';
+import { useTheme } from '@/hooks/useTheme';
 
 const DOC_URL = 'https://cloudblack.apifox.cn?pwd=PIMENGNB';
 
@@ -119,6 +122,7 @@ export function AdminLayout() {
   const [showUnbindDialog, setShowUnbindDialog] = useState(false);
   
   const data = useAdminData();
+  const { theme, toggle: toggleTheme } = useTheme();
   const { token, adminLevel, adminInfo, setAdminInfo, stats, isInitialized } = data;
 
   // Determine active tab from URL
@@ -358,14 +362,23 @@ export function AdminLayout() {
       <aside className={`fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50 transition-transform duration-300 md:translate-x-0 flex flex-col ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Header Logo */}
         <div className="p-6 pb-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
-              <LayoutDashboard className="w-5 h-5 text-brand" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center">
+                <LayoutDashboard className="w-5 h-5 text-brand" />
+              </div>
+              <div>
+                <h1 className="font-bold text-foreground">管理后台</h1>
+                <p className="text-xs text-muted-foreground">云黑库系统</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-foreground">管理后台</h1>
-              <p className="text-xs text-muted-foreground">云黑库系统</p>
-            </div>
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+              aria-label="切换主题"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
