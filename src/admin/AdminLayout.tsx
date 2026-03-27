@@ -1,25 +1,17 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  FileText, 
   Users, 
   LogOut, 
-  Settings,
-  UserCog,
-  ScrollText,
   Menu,
   X,
-  Bot,
-  Database,
   Edit3,
   RefreshCw,
-  ShieldAlert,
-  Image,
   ExternalLink,
   Link2,
   Link2Off,
-  ChevronDown,
   ChevronRight,
   ClipboardList,
   MoreHorizontal,
@@ -405,43 +397,54 @@ export function AdminLayout() {
               >
                 <group.icon className="w-5 h-5" />
                 <span className="flex-1 text-left text-sm font-medium">{group.label}</span>
-                {expandedGroups[group.id] ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
+                <motion.div
+                  animate={{ rotate: expandedGroups[group.id] ? 90 : 0 }}
+                  transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                >
                   <ChevronRight className="w-4 h-4" />
-                )}
+                </motion.div>
               </button>
               
               {/* 分组子项 */}
-              {expandedGroups[group.id] && (
-                <div className="ml-4 pl-4 border-l border-border space-y-1">
-                  {group.items.map(subItem => (
-                    <button
-                      key={subItem.id}
-                      onClick={() => {
-                        if (subItem.external) {
-                          openExternalLink(subItem.path);
-                        } else {
-                          handleNavClick(subItem.path);
-                        }
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
-                        activeTab === subItem.id 
-                          ? 'bg-brand/20 text-brand' 
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{subItem.label}</span>
-                      {subItem.id === 'appeals' && stats && stats.pending_appeals > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                          {stats.pending_appeals}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {expandedGroups[group.id] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="ml-4 pl-4 border-l border-border space-y-1 pt-1">
+                      {group.items.map(subItem => (
+                        <button
+                          key={subItem.id}
+                          onClick={() => {
+                            if (subItem.external) {
+                              openExternalLink(subItem.path);
+                            } else {
+                              handleNavClick(subItem.path);
+                            }
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
+                            activeTab === subItem.id 
+                              ? 'bg-brand/20 text-brand' 
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                          }`}
+                        >
+                          <span className="text-sm font-medium">{subItem.label}</span>
+                          {subItem.id === 'appeals' && stats && stats.pending_appeals > 0 && (
+                            <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                              {stats.pending_appeals}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </nav>
