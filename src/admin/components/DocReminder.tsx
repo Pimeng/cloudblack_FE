@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BookOpen, X, Copy, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { BookOpen, X, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { openExternalLink } from './ExternalLinkProvider';
 
 const STORAGE_KEY = 'doc_reminder_closed';
-const DOC_URL = 'https://cloudblack.apifox.cn';
-const DOC_PASSWORD = 'PIMENGNB';
+const DOC_URL = 'https://cloudblack.apifox.cn?pwd=PIMENGNB';
 
 export function DocReminder() {
   const [isVisible, setIsVisible] = useState(false);
@@ -37,11 +36,6 @@ export function DocReminder() {
     setIsVisible(false);
     localStorage.setItem(STORAGE_KEY, 'true');
     toast.info('如需查看文档，可点击左下角「刷新数据」旁的菜单重新显示');
-  };
-
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText(DOC_PASSWORD);
-    toast.success('密码已复制到剪贴板');
   };
 
   const handleOpenDoc = () => {
@@ -88,20 +82,6 @@ export function DocReminder() {
                 <span className="font-mono">{DOC_URL}</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
-            </div>
-
-            <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
-              <p className="text-xs text-muted-foreground mb-1.5">查看密码</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-mono text-foreground">{DOC_PASSWORD}</span>
-                <button
-                  onClick={handleCopyPassword}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="复制密码"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-              </div>
             </div>
 
             <button

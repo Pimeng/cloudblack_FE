@@ -19,6 +19,11 @@ import {
   ExternalLink,
   Link2,
   Link2Off,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  MoreHorizontal,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -28,18 +33,67 @@ import { useAdminData } from './hooks/useAdminData';
 import { API_BASE } from './types';
 import { toast } from 'sonner';
 import { DocReminder, ExternalLinkProvider } from './components';
+import { openExternalLink } from './components/ExternalLinkProvider';
 
-const navItems = [
+const DOC_URL = 'https://cloudblack.apifox.cn?pwd=PIMENGNB';
+
+// 独立菜单项
+type NavItem = {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  minLevel: number;
+};
+
+// 分组菜单项
+type NavGroup = {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  minLevel: number;
+  items: { id: string; label: string; path: string; minLevel: number; external?: boolean }[];
+};
+
+const standaloneNavItems: NavItem[] = [
   { id: 'dashboard', label: '仪表盘', icon: LayoutDashboard, path: '', minLevel: 1 },
-  { id: 'appeals', label: '申诉管理', icon: FileText, path: '/appeals', minLevel: 1 },
   { id: 'blacklist', label: '黑名单', icon: Users, path: '/blacklist', minLevel: 1 },
-  { id: 'level4-pending', label: '严重违规审核', icon: ShieldAlert, path: '/level4-pending', minLevel: 3 },
-  { id: 'images', label: '图片管理', icon: Image, path: '/images', minLevel: 3 },
-  { id: 'admins', label: '管理员', icon: UserCog, path: '/admins', minLevel: 4 },
-  { id: 'bots', label: 'Bot Token', icon: Bot, path: '/bots', minLevel: 2 },
-  { id: 'logs', label: '审计日志', icon: ScrollText, path: '/logs', minLevel: 2 },
-  { id: 'backup', label: '数据库备份', icon: Database, path: '/backup', minLevel: 3 },
-  { id: 'settings', label: '系统设置', icon: Settings, path: '/settings', minLevel: 4 },
+];
+
+const groupedNavItems: NavGroup[] = [
+  {
+    id: 'review',
+    label: '审核',
+    icon: ClipboardList,
+    minLevel: 1,
+    items: [
+      { id: 'appeals', label: '申诉管理', path: '/appeals', minLevel: 1 },
+      { id: 'level4-pending', label: '严重违规审核', path: '/level4-pending', minLevel: 3 },
+    ],
+  },
+  {
+    id: 'others',
+    label: '其他',
+    icon: MoreHorizontal,
+    minLevel: 2,
+    items: [
+      { id: 'bots', label: 'Bot Token', path: '/bots', minLevel: 2 },
+      { id: 'bot-docs', label: '对接文档', path: DOC_URL, minLevel: 2, external: true },
+    ],
+  },
+  {
+    id: 'system',
+    label: '系统管理',
+    icon: Shield,
+    minLevel: 2,
+    items: [
+      { id: 'admins', label: '管理员', path: '/admins', minLevel: 4 },
+      { id: 'images', label: '图片管理', path: '/images', minLevel: 3 },
+      { id: 'logs', label: '审计日志', path: '/logs', minLevel: 2 },
+      { id: 'backup', label: '数据库备份', path: '/backup', minLevel: 3 },
+      { id: 'settings', label: '系统设置', path: '/settings', minLevel: 4 },
+    ],
+  },
 ];
 
 export function AdminLayout() {
@@ -47,6 +101,16 @@ export function AdminLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  
+  // 折叠菜单状态
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    // 默认展开所有分组
+    return {
+      review: true,
+      others: true,
+      system: true,
+    };
+  });
   
   // Profile dialog state
   const [profileName, setProfileName] = useState('');
@@ -67,7 +131,15 @@ export function AdminLayout() {
 
   // Determine active tab from URL
   const currentPath = location.pathname.replace('/admin/dashboard', '');
-  const activeTab = navItems.find(item => item.path === currentPath)?.id || 'dashboard';
+  const activeTab = 
+    standaloneNavItems.find(item => item.path === currentPath)?.id ||
+    groupedNavItems.flatMap(g => g.items).find(item => item.path === currentPath)?.id ||
+    'dashboard';
+
+  // 切换分组展开状态
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   // Only redirect after initialization is complete
   useEffect(() => {
@@ -243,7 +315,16 @@ export function AdminLayout() {
     }
   };
 
-  const visibleNavItems = navItems.filter(item => adminLevel >= item.minLevel);
+  // 过滤可见的独立菜单项
+  const visibleStandaloneItems = standaloneNavItems.filter(item => adminLevel >= item.minLevel);
+  
+  // 过滤可见的分组菜单
+  const visibleGroups = groupedNavItems
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => adminLevel >= item.minLevel),
+    }))
+    .filter(group => group.items.length > 0 && adminLevel >= group.minLevel);
 
   const getLevelText = (level?: number) => {
     switch (level) {
@@ -297,8 +378,9 @@ export function AdminLayout() {
         </div>
 
         {/* Navigation - Scrollable */}
-        <nav className="flex-1 overflow-y-auto px-6 py-2 space-y-2">
-          {visibleNavItems.map(item => (
+        <nav className="flex-1 overflow-y-auto px-6 py-2 space-y-1">
+          {/* 独立菜单项 */}
+          {visibleStandaloneItems.map(item => (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.path)}
@@ -309,13 +391,58 @@ export function AdminLayout() {
               }`}
             >
               <item.icon className="w-5 h-5" />
-              {item.label}
-              {item.id === 'appeals' && stats && stats.pending_appeals > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {stats.pending_appeals}
-                </span>
-              )}
+              <span className="text-sm font-medium">{item.label}</span>
             </button>
+          ))}
+          
+          {/* 分组菜单 */}
+          {visibleGroups.map(group => (
+            <div key={group.id} className="space-y-1">
+              {/* 分组标题按钮 */}
+              <button
+                onClick={() => toggleGroup(group.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <group.icon className="w-5 h-5" />
+                <span className="flex-1 text-left text-sm font-medium">{group.label}</span>
+                {expandedGroups[group.id] ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </button>
+              
+              {/* 分组子项 */}
+              {expandedGroups[group.id] && (
+                <div className="ml-4 pl-4 border-l border-border space-y-1">
+                  {group.items.map(subItem => (
+                    <button
+                      key={subItem.id}
+                      onClick={() => {
+                        if (subItem.external) {
+                          openExternalLink(subItem.path);
+                        } else {
+                          handleNavClick(subItem.path);
+                        }
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
+                        activeTab === subItem.id 
+                          ? 'bg-brand/20 text-brand' 
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{subItem.label}</span>
+                      {subItem.id === 'appeals' && stats && stats.pending_appeals > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          {stats.pending_appeals}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 
