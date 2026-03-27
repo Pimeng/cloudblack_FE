@@ -161,14 +161,16 @@ function HomePage() {
           animate={{ width: currentIndex === 0 ? (isMobile ? 40 : 140) : 40 }}
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           className="relative flex items-center justify-center
-                     bg-brand/90 hover:bg-brand text-white rounded-full overflow-hidden
-                     shadow-lg shadow-brand/30 backdrop-blur-md
+                     bg-gradient-to-b from-brand to-brand/90
+                     hover:from-brand hover:to-brand
+                     text-white rounded-full overflow-hidden
+                     shadow-lg shadow-brand/30
                      hover:scale-105 hover:shadow-xl hover:shadow-brand/40
-                     border border-white/10"
+                     border border-white/20"
           style={{
             height: isMobile ? 40 : 44,
             minWidth: isMobile ? 40 : 44,
-            transition: 'background-color 0.3s, box-shadow 0.3s, transform 0.3s',
+            transition: 'all 0.3s',
           }}
         >
           {/* Appeal label — desktop only */}
