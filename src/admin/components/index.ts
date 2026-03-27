@@ -33,3 +33,4 @@ export {
 } from './StatusBadge';
 export { DocReminder } from './DocReminder';
 export { ExternalLinkProvider, openExternalLink } from './ExternalLinkProvider';
+export { CronEditor } from './CronEditor';

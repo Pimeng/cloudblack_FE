@@ -24,6 +24,7 @@ import {
   InlineSpinner,
   PageHeader,
 } from '../components';
+import { CronEditor } from '../components/CronEditor';
 
 export function SettingsPage() {
   const { token, adminLevel, config, setConfig, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
@@ -766,14 +767,12 @@ export function SettingsPage() {
                     <option value="false">禁用</option>
                   </select>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label>Cron 表达式</Label>
-                  <Input
+                  <CronEditor
                     value={editConfig.database_backup?.cron || ''}
-                    onChange={(e) => updateEditConfig('database_backup.cron', e.target.value)}
-                    className="bg-muted border-border"
+                    onChange={(value) => updateEditConfig('database_backup.cron', value)}
                     disabled={!canEditSensitiveConfig}
-                    placeholder="0 3 * * *"
                   />
                 </div>
                 <div className="space-y-2">
