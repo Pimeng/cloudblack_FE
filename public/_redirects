@@ -1,4 +1,21 @@
 # Cloudflare Pages SPA 路由配置
-# 将所有路由重定向到 index.html，让 React Router 处理前端路由
+# 排除静态资源，其他路由重写到 index.html
 
+/assets/* /assets/:splat 200
+/*.js /:splat 200
+/*.css /:splat 200
+/*.png /:splat 200
+/*.jpg /:splat 200
+/*.jpeg /:splat 200
+/*.gif /:splat 200
+/*.svg /:splat 200
+/*.ico /:splat 200
+/*.json /:splat 200
+/*.woff /:splat 200
+/*.woff2 /:splat 200
+/*.ttf /:splat 200
+/*.eot /:splat 200
+/*.otf /:splat 200
+
+# 将所有其他路由重写到 index.html（200 表示重写而非重定向）
 /* /index.html 200
