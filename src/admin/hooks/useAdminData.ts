@@ -331,8 +331,8 @@ export function useAdminData() {
       }
       
       const data = await response.json();
-      if (data.success && data.data.config) {
-        setConfig(data.data.config);
+      if (data.success && data.data) {
+        setConfig(data.data);
       }
     } catch (err) {
       toast.error('获取系统配置失败');

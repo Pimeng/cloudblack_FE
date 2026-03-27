@@ -94,7 +94,7 @@ export function AppealSection({ active }: { active?: boolean }) {
     setError('');
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.size > 5 * 1024 * 1024) { setError('图片大小不能超过5MB'); continue; }
+      if (file.size > 3 * 1024 * 1024) { setError('图片大小不能超过3MB'); continue; }
       // 本地预览，不立即上传
       const preview = URL.createObjectURL(file);
       setImages(prev => [...prev, { file, preview }]);
@@ -340,7 +340,7 @@ export function AppealSection({ active }: { active?: boolean }) {
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大5MB，提交时一并上传</p>
+                <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大3MB，提交时一并上传</p>
               </div>
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}

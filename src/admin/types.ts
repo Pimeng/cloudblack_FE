@@ -97,11 +97,6 @@ export interface AIAnalysisConfig {
   api_key?: string;
   base_url?: string;
   model?: string;
-  max_tokens?: number;
-  temperature?: number;
-  timeout?: number;
-  cache_file?: string;
-  public_url?: string;
 }
 
 export interface DatabaseBackupConfig {
@@ -123,8 +118,6 @@ export interface CORSConfig {
 export interface RateLimitConfig {
   rate_limit_max_requests: number;
   rate_limit_window: number;
-  ip_limit_max_attempts: number;
-  ip_limit_window: number;
 }
 
 export interface UploadConfig {
@@ -200,7 +193,6 @@ export interface SystemConfig {
   timezone: string;
   log_level: string;
   ip_header: string;
-  root_redirect_url: string;
   public_url?: string;
   frontend_url?: string;
   secret_key?: string;

@@ -117,8 +117,7 @@ export function LogsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
 
-  const localActionTypeMap: Record<string, string> = { 'file_delete': '删除图片' };
-  const getActionTypeLabel = (t: string) => localActionTypeMap[t] || actionTypes[t] || t;
+  const getActionTypeLabel = (t: string) => actionTypes[t] || t;
 
   // 用 ref 持有最新过滤值，避免闭包问题
   const filterRef = useRef({ logsPage, logsPerPage, logFilterAction, logFilterStatus, logStartDate, logEndDate });
@@ -338,7 +337,7 @@ export function LogsPage() {
             className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
           >
             <option value="">所有操作</option>
-            {Object.entries({ ...localActionTypeMap, ...actionTypes }).map(([key, label]) => (
+            {Object.entries(actionTypes).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
           </select>

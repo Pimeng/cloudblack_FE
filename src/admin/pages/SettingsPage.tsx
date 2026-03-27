@@ -319,14 +319,6 @@ export function SettingsPage() {
                   </select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>根域名重定向 URL</Label>
-                  <Input
-                    value={editConfig.root_redirect_url || ''}
-                    onChange={(e) => updateEditConfig('root_redirect_url', e.target.value)}
-                    className="bg-muted border-border"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
                   <Label>IP Header</Label>
                   <Input
                     value={editConfig.ip_header || ''}
@@ -516,57 +508,6 @@ export function SettingsPage() {
                     disabled={!canEditSensitiveConfig}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>最大 Token 数</Label>
-                  <Input
-                    type="number"
-                    value={editConfig.ai_analysis?.max_tokens || ''}
-                    onChange={(e) => updateEditConfig('ai_analysis.max_tokens', parseInt(e.target.value) || 0)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Temperature</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="2"
-                    value={editConfig.ai_analysis?.temperature || ''}
-                    onChange={(e) => updateEditConfig('ai_analysis.temperature', parseFloat(e.target.value) || 0)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>超时时间（秒）</Label>
-                  <Input
-                    type="number"
-                    value={editConfig.ai_analysis?.timeout || ''}
-                    onChange={(e) => updateEditConfig('ai_analysis.timeout', parseInt(e.target.value) || 0)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>缓存文件</Label>
-                  <Input
-                    value={editConfig.ai_analysis?.cache_file || ''}
-                    onChange={(e) => updateEditConfig('ai_analysis.cache_file', e.target.value)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Public URL</Label>
-                  <Input
-                    value={editConfig.ai_analysis?.public_url || ''}
-                    onChange={(e) => updateEditConfig('ai_analysis.public_url', e.target.value)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                </div>
               </div>
             </div>
           ) : null}
@@ -705,24 +646,7 @@ export function SettingsPage() {
                       className="bg-muted border-border"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>IP 最大尝试次数</Label>
-                    <Input
-                      type="number"
-                      value={editConfig.ip_limit_max_attempts || ''}
-                      onChange={(e) => updateEditConfig('ip_limit_max_attempts', parseInt(e.target.value) || 0)}
-                      className="bg-muted border-border"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>IP 限制窗口（秒）</Label>
-                    <Input
-                      type="number"
-                      value={editConfig.ip_limit_window || ''}
-                      onChange={(e) => updateEditConfig('ip_limit_window', parseInt(e.target.value) || 0)}
-                      className="bg-muted border-border"
-                    />
-                  </div>
+
                 </div>
               </div>
             </>
@@ -743,14 +667,56 @@ export function SettingsPage() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>最大上传大小（字节）</Label>
-                  <Input
-                    type="number"
-                    value={editConfig.max_upload_size || ''}
-                    onChange={(e) => updateEditConfig('max_upload_size', parseInt(e.target.value) || 0)}
-                    className="bg-muted border-border"
-                  />
-                  <p className="text-xs text-muted-foreground">{formatBytes(editConfig.max_upload_size || 0)}</p>
+                  <Label>最大上传大小</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={(() => {
+                        const bytes = editConfig.max_upload_size || 0;
+                        if (bytes >= 1024 * 1024 * 1024) return Math.round(bytes / (1024 * 1024 * 1024));
+                        if (bytes >= 1024 * 1024) return Math.round(bytes / (1024 * 1024));
+                        if (bytes >= 1024) return Math.round(bytes / 1024);
+                        return bytes;
+                      })()}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        const bytes = editConfig.max_upload_size || 0;
+                        let unit = 1;
+                        if (bytes >= 1024 * 1024 * 1024) unit = 1024 * 1024 * 1024;
+                        else if (bytes >= 1024 * 1024) unit = 1024 * 1024;
+                        else if (bytes >= 1024) unit = 1024;
+                        updateEditConfig('max_upload_size', val * unit);
+                      }}
+                      className="bg-muted border-border flex-1"
+                    />
+                    <select
+                      value={(() => {
+                        const bytes = editConfig.max_upload_size || 0;
+                        if (bytes >= 1024 * 1024 * 1024) return 'GB';
+                        if (bytes >= 1024 * 1024) return 'MB';
+                        if (bytes >= 1024) return 'KB';
+                        return 'B';
+                      })()}
+                      onChange={(e) => {
+                        const unit = e.target.value;
+                        const bytes = editConfig.max_upload_size || 0;
+                        let newBytes = bytes;
+                        if (unit === 'GB') newBytes = Math.round(bytes / (1024 * 1024 * 1024)) * 1024 * 1024 * 1024;
+                        else if (unit === 'MB') newBytes = Math.round(bytes / (1024 * 1024)) * 1024 * 1024;
+                        else if (unit === 'KB') newBytes = Math.round(bytes / 1024) * 1024;
+                        else newBytes = bytes;
+                        updateEditConfig('max_upload_size', newBytes);
+                      }}
+                      className="bg-muted border border-border rounded-lg px-3 py-2 text-foreground w-20"
+                    >
+                      <option value="B">B</option>
+                      <option value="KB">KB</option>
+                      <option value="MB">MB</option>
+                      <option value="GB">GB</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">实际存储: {formatBytes(editConfig.max_upload_size || 0)}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>上传目录</Label>

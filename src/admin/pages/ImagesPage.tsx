@@ -185,9 +185,9 @@ export function ImagesPage() {
       toast.error('不支持的文件类型，请上传 png, jpg, jpeg, gif 或 webp 格式的图片');
       return false;
     }
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('文件大小超过 5MB 限制');
+    // Validate file size (3MB)
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error('文件大小超过 3MB 限制');
       return false;
     }
     return true;
@@ -507,7 +507,7 @@ export function ImagesPage() {
                       <Upload className="w-12 h-12 text-muted-foreground" />
                       <p className="text-foreground/80">点击选择图片或拖拽到此处</p>
                       <p className="text-xs text-muted-foreground">
-                        支持 png, jpg, jpeg, gif, webp，最大 5MB
+                        支持 png, jpg, jpeg, gif, webp，最大 3MB
                       </p>
                     </>
                   )}
