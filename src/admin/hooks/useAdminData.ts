@@ -47,6 +47,7 @@ import type {
   BackupStatus,
   BackupConfig,
   Level4PendingItem,
+  BlacklistReport,
 } from '../types';
 import { API_BASE } from '../types';
 
@@ -117,6 +118,14 @@ export function useAdminData() {
   const [level4PendingPage, setLevel4PendingPage] = useState(1);
   const [level4PendingTotal, setLevel4PendingTotal] = useState(0);
   const [level4PendingStatus, setLevel4PendingStatus] = useState<'pending' | 'confirmed' | 'cancelled' | 'all'>('pending');
+  
+  // Blacklist Reports
+  const [blacklistReports, setBlacklistReports] = useState<BlacklistReport[]>([]);
+  const [blacklistReportsLoading, setBlacklistReportsLoading] = useState(false);
+  const [blacklistReportsPage, setBlacklistReportsPage] = useState(1);
+  const [blacklistReportsTotal, setBlacklistReportsTotal] = useState(0);
+  const [blacklistReportsFilter, setBlacklistReportsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [blacklistReportsPerPage, setBlacklistReportsPerPage] = useState(20);
   
   // Initialization state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -516,6 +525,47 @@ export function useAdminData() {
     }
   }, [level4PendingPage, level4PendingStatus, handleAuthError]);
 
+  const fetchBlacklistReports = useCallback(async (
+    authToken: string,
+    page = blacklistReportsPage,
+    filter = blacklistReportsFilter,
+    perPage = blacklistReportsPerPage,
+    includeAI = true
+  ) => {
+    setBlacklistReportsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: perPage.toString(),
+      });
+      if (filter !== 'all') {
+        params.append('status', filter);
+      }
+      if (includeAI) {
+        params.append('include_ai', 'true');
+      }
+      
+      const response = await fetch(`${API_BASE}/api/admin/blacklist/reports?${params}`, {
+        headers: { 'Authorization': authToken },
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError();
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setBlacklistReports(data.data.items);
+        setBlacklistReportsTotal(data.data.total);
+      }
+    } catch (err) {
+      toast.error('获取黑名单举报列表失败');
+    } finally {
+      setBlacklistReportsLoading(false);
+    }
+  }, [blacklistReportsPage, blacklistReportsFilter, blacklistReportsPerPage, handleAuthError]);
+
   // 强制刷新所有数据（清除缓存后重新获取）
   const refreshAll = useCallback(() => {
     if (token) {
@@ -641,6 +691,21 @@ export function useAdminData() {
     level4PendingStatus,
     setLevel4PendingStatus,
     fetchLevel4Pending: () => fetchLevel4Pending(token),
+    
+    // Blacklist Reports
+    blacklistReports,
+    setBlacklistReports,
+    blacklistReportsLoading,
+    blacklistReportsPage,
+    setBlacklistReportsPage,
+    blacklistReportsTotal,
+    blacklistReportsFilter,
+    setBlacklistReportsFilter,
+    blacklistReportsPerPage,
+    setBlacklistReportsPerPage,
+    fetchBlacklistReports: useCallback(() => {
+      if (token) fetchBlacklistReports(token);
+    }, [token, fetchBlacklistReports]),
     
     // Common
     loading,

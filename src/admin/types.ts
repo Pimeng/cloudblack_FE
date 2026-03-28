@@ -280,3 +280,91 @@ export interface LogtoConfig {
   app_id?: string;
   app_secret?: string;
 }
+
+// 黑名单举报相关类型
+export interface BlacklistReport {
+  report_id: string;
+  target_user_id: string;
+  target_user_type: 'user' | 'group';
+  reason: string;
+  evidence: string[];
+  reporter_contact?: string;
+  reporter_user_id?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string;
+  review?: {
+    action: 'approved' | 'rejected';
+    reason: string;
+    admin_id: string;
+    admin_name: string;
+    reviewed_at: string;
+  };
+}
+
+export interface BlacklistReportSubmitData {
+  target_user_id: string;
+  target_user_type: 'user' | 'group';
+  reason: string;
+  reporter_contact?: string;
+  reporter_user_id?: string;
+  evidence?: string[];
+  geetest?: {
+    lot_number: string;
+    captcha_output: string;
+    pass_token: string;
+    gen_time: string;
+  };
+}
+
+export interface BlacklistReportSubmitResponse {
+  report_id: string;
+  status: string;
+  target_user_type: string;
+  created_at: string;
+}
+
+// 管理员端黑名单举报相关类型
+export interface BlacklistReportDetail extends BlacklistReport {
+  admin_note?: string;
+  reviewed_by?: string;
+  ai_analysis?: ReportAIAnalysisResult;
+}
+
+export interface BlacklistReportReviewData {
+  action: 'approve' | 'reject';
+  reason: string;
+  admin_note?: string;
+  add_to_blacklist?: boolean;
+  level?: number;
+}
+
+export interface BlacklistReportReviewResponse {
+  report_id: string;
+  status: string;
+  added_to_blacklist?: boolean | 'level4_pending';
+}
+
+// 举报AI分析相关类型
+export interface ReportAIAnalysisResult {
+  status: 'pending' | 'completed' | 'failed';
+  recommendation?: string;
+  result?: {
+    summary: string;
+    reason_analysis: string;
+    recommendation: string;
+    confidence: number;
+    evidence_strength: number;
+    category: string;
+    risk_factors: string[];
+    suggestions: string;
+    processing_time_ms?: number;
+  };
+  error?: string;
+  updated_at?: string;
+}
+
+export interface BlacklistReportWithAI extends BlacklistReport {
+  ai_analysis?: ReportAIAnalysisResult;
+}

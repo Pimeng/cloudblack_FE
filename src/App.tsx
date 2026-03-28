@@ -10,6 +10,7 @@ import { FeaturesSection } from './sections/FeaturesSection';
 import { ProcessSection } from './sections/ProcessSection';
 import { StatsSection } from './sections/StatsSection';
 import { AppealSection } from './sections/AppealSection';
+import { BlacklistReportSection } from './sections/BlacklistReportSection';
 import { Footer } from './sections/Footer';
 import { Toaster } from '@/components/ui/sonner';
 import { ImageViewerProvider } from '@/hooks/useImageViewer';
@@ -36,6 +37,7 @@ const LogtoBindCallback = lazy(() => import('./admin/LogtoBindCallback').then(m 
 const DashboardPage = lazy(() => import('./admin/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const AppealsPage = lazy(() => import('./admin/pages/AppealsPage').then(m => ({ default: m.AppealsPage })));
 const BlacklistPage = lazy(() => import('./admin/pages/BlacklistPage').then(m => ({ default: m.BlacklistPage })));
+const BlacklistReportsPage = lazy(() => import('./admin/pages/BlacklistReportsPage').then(m => ({ default: m.BlacklistReportsPage })));
 const AdminsPage = lazy(() => import('./admin/pages/AdminsPage').then(m => ({ default: m.AdminsPage })));
 const BotsPage = lazy(() => import('./admin/pages/BotsPage').then(m => ({ default: m.BotsPage })));
 const LogsPage = lazy(() => import('./admin/pages/LogsPage').then(m => ({ default: m.LogsPage })));
@@ -303,6 +305,11 @@ function App() {
               <AppealsPage />
             </Suspense>
           } />
+          <Route path="blacklist-reports" element={
+            <Suspense fallback={<AdminPageFallback />}>
+              <BlacklistReportsPage />
+            </Suspense>
+          } />
           <Route path="blacklist" element={
             <Suspense fallback={<AdminPageFallback />}>
               <BlacklistPage />
@@ -344,6 +351,14 @@ function App() {
             </Suspense>
           } />
         </Route>
+        <Route path="/report" element={
+          <div className="relative min-h-screen">
+            <FluidBackground />
+            <div className="relative z-10">
+              <BlacklistReportSection active={true} />
+            </div>
+          </div>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </ImageViewerProvider>

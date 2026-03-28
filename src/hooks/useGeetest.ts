@@ -25,10 +25,19 @@ export interface UseGeetestOptions {
   product?: 'float' | 'popup' | 'bind';
   /** 语言 */
   language?: string;
+  /** 极验配置端点: admin-管理端(用于申诉), blacklist-黑名单举报端 */
+  configEndpoint?: 'admin' | 'blacklist';
 }
 
 export function useGeetest(options: UseGeetestOptions = {}) {
-  const { onSuccess, onError, onClose, product = 'float', language = 'zho' } = options;
+  const { 
+    onSuccess, 
+    onError, 
+    onClose, 
+    product = 'float', 
+    language = 'zho',
+    configEndpoint = 'admin'
+  } = options;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [result, setResult] = useState<GeetestResult | null>(null);
@@ -46,7 +55,10 @@ export function useGeetest(options: UseGeetestOptions = {}) {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/admin/geetest-config`);
+        const endpoint = configEndpoint === 'blacklist' 
+          ? '/api/blacklist/reports/geetest-config'
+          : '/api/admin/geetest-config';
+        const response = await fetch(`${API_BASE}${endpoint}`);
         const data = await response.json();
         
         if (data.success && data.data) {
@@ -70,7 +82,7 @@ export function useGeetest(options: UseGeetestOptions = {}) {
     };
 
     fetchConfig();
-  }, []);
+  }, [configEndpoint]);
 
   // 检查 Geetest 脚本是否加载完成
   useEffect(() => {
