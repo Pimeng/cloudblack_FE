@@ -1,4 +1,4 @@
-import { Mail, FileText, Shield, Heart } from 'lucide-react';
+import { Mail, Heart } from 'lucide-react';
 
 export function Footer() {
   return (
