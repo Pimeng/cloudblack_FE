@@ -1,16 +1,28 @@
 import { useState } from 'react';
 import { Menu, X, Shield, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal';
+export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report';
 
-const navItems: { key: PageKey; label: string }[] = [
-  { key: 'hero', label: '云黑查询' },
-  { key: 'features', label: '了解云黑' },
-  { key: 'process', label: '申诉流程' },
-  { key: 'stats', label: '数据统计' },
-  { key: 'appeal', label: '申诉中心' },
+const navItems: { key: PageKey; label: string; path: string }[] = [
+  { key: 'hero', label: '云黑查询', path: '/query' },
+  { key: 'features', label: '了解云黑', path: '/about' },
+  { key: 'process', label: '申诉流程', path: '/process' },
+  { key: 'stats', label: '数据统计', path: '/stats' },
+  { key: 'appeal', label: '申诉中心', path: '/appeal' },
+  { key: 'report', label: '提交举报', path: '/report' },
 ];
+
+// 路径到 PageKey 的映射
+const PATH_TO_KEY: Record<string, PageKey> = {
+  '/query': 'hero',
+  '/about': 'features',
+  '/process': 'process',
+  '/stats': 'stats',
+  '/appeal': 'appeal',
+  '/report': 'report',
+};
 
 interface NavbarProps {
   currentPage: PageKey;
@@ -22,8 +34,14 @@ interface NavbarProps {
 
 export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // 从当前路径确定当前页面，如果没有则使用 props 中的 currentPage
+  const effectivePage = PATH_TO_KEY[location.pathname] || currentPage;
 
-  const handleNav = (key: PageKey) => {
+  const handleNav = (key: PageKey, path: string) => {
+    navigate(path);
     onNavigate(key);
     setMenuOpen(false);
   };
@@ -41,7 +59,7 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo / Brand */}
           <button
-            onClick={() => handleNav('hero')}
+            onClick={() => handleNav('hero', '/query')}
             className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 rounded-lg bg-brand/20 border border-brand/40 flex items-center justify-center">
@@ -55,15 +73,15 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
             {navItems.map((item) => (
               <button
                 key={item.key}
-                onClick={() => handleNav(item.key)}
+                onClick={() => handleNav(item.key, item.path)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  currentPage === item.key
+                  effectivePage === item.key
                     ? 'text-foreground bg-foreground/10'
                     : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
                 }`}
               >
                 {item.label}
-                {currentPage === item.key && (
+                {effectivePage === item.key && (
                   <span className="block mx-auto mt-0.5 h-0.5 w-4 rounded-full bg-brand" />
                 )}
               </button>
@@ -126,9 +144,9 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
                     {navItems.map((item) => (
                       <button
                         key={item.key}
-                        onClick={() => handleNav(item.key)}
+                        onClick={() => handleNav(item.key, item.path)}
                         className={`px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-all duration-200 ${
-                          currentPage === item.key
+                          effectivePage === item.key
                             ? 'bg-foreground/15 text-foreground'
                             : 'text-muted-foreground hover:text-foreground hover:bg-foreground/10'
                         }`}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
 import { FileText, ArrowUp, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -48,8 +48,27 @@ const ImagesPage = lazy(() => import('./admin/pages/ImagesPage').then(m => ({ de
 
 gsap.registerPlugin(ScrollTrigger);
 
-type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal';
-const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal'];
+export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report';
+const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal', 'report'];
+
+// URL 路径映射
+const PAGE_PATHS: Record<string, PageKey> = {
+  'query': 'hero',
+  'about': 'features', 
+  'process': 'process',
+  'stats': 'stats',
+  'appeal': 'appeal',
+  'report': 'report',
+};
+
+const PATH_TO_URL: Record<PageKey, string> = {
+  'hero': '/query',
+  'features': '/about',
+  'process': '/process', 
+  'stats': '/stats',
+  'appeal': '/appeal',
+  'report': '/report',
+};
 
 // Admin 页面加载中的占位组件
 function AdminPageFallback() {
@@ -64,12 +83,32 @@ function AdminPageFallback() {
 }
 
 
-function HomePage() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+function HomePageContent() {
+  const { pagePath } = useParams<{ pagePath?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // 从 URL 路径确定当前页面索引
+  const getInitialIndex = useCallback(() => {
+    if (pagePath && PAGE_PATHS[pagePath]) {
+      return PAGES.indexOf(PAGE_PATHS[pagePath]);
+    }
+    return 0;
+  }, [pagePath]);
+  
+  const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
   const isAnimating = useRef(false);
   const touchStartY = useRef(0);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const { theme, toggle: toggleTheme } = useTheme();
+  
+  // 当 URL 路径变化时更新当前索引
+  useEffect(() => {
+    const newIndex = getInitialIndex();
+    if (newIndex !== currentIndex && !isAnimating.current) {
+      setCurrentIndex(newIndex);
+    }
+  }, [pagePath, getInitialIndex, currentIndex]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -81,12 +120,18 @@ function HomePage() {
     if (index < 0 || index >= PAGES.length || isAnimating.current) return;
     isAnimating.current = true;
     setCurrentIndex(index);
+    // 同步 URL
+    const pageKey = PAGES[index];
+    const targetPath = PATH_TO_URL[pageKey];
+    if (location.pathname !== targetPath) {
+      navigate(targetPath, { replace: true });
+    }
     // Refresh ScrollTrigger after transition so section animations fire
     setTimeout(() => {
       ScrollTrigger.refresh();
       isAnimating.current = false;
     }, 750);
-  }, []);
+  }, [navigate, location.pathname]);
 
   // Wheel handler
   useEffect(() => {
@@ -213,12 +258,18 @@ function HomePage() {
             {page === 'process' && <ProcessSection active={currentIndex === i} />}
             {page === 'stats' && <StatsSection active={currentIndex === i} />}
             {page === 'appeal' && <AppealSection active={currentIndex === i} />}
-            {page === 'appeal' && <Footer />}
+            {page === 'report' && <BlacklistReportSection active={currentIndex === i} />}
+            {page === 'report' && <Footer />}
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+// 包装组件，用于在 Routes 中使用
+function HomePage() {
+  return <HomePageContent />;
 }
 
 function WelcomeAlert() {
@@ -269,7 +320,13 @@ function App() {
       <ClarityNotice />
       <WelcomeAlert />
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<Navigate to="/query" replace />} />
+        <Route path="/query" element={<HomePage />} />
+        <Route path="/about" element={<HomePage />} />
+        <Route path="/process" element={<HomePage />} />
+        <Route path="/stats" element={<HomePage />} />
+        <Route path="/appeal" element={<HomePage />} />
+        <Route path="/report" element={<HomePage />} />
         <Route path="/admin" element={
           <Suspense fallback={<AdminPageFallback />}>
             <AdminLogin />
