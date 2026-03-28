@@ -116,7 +116,13 @@
   }
 }
 
-/* Custom scrollbar */
+/* Light mode: brand button text should be dark for contrast */
+.light .btn-brand {
+  color: hsl(222 47% 11%);
+}
+.light .btn-brand span {
+  color: hsl(222 47% 11%);
+}
 ::-webkit-scrollbar {
   width: 8px;
 }
