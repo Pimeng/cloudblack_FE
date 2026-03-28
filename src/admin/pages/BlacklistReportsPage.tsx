@@ -306,7 +306,7 @@ export function BlacklistReportsPage() {
       {blacklistReportsLoading ? (
         <LoadingSpinner />
       ) : blacklistReports.length === 0 ? (
-        <EmptyState icon={ShieldAlert} description="暂无黑名单举报" />
+        <EmptyState icon={ShieldAlert} description="暂无举报" />
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">

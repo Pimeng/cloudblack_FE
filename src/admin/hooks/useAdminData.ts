@@ -560,7 +560,7 @@ export function useAdminData() {
         setBlacklistReportsTotal(data.data.total);
       }
     } catch (err) {
-      toast.error('获取黑名单举报列表失败');
+      toast.error('获取举报列表失败');
     } finally {
       setBlacklistReportsLoading(false);
     }

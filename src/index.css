@@ -239,3 +239,13 @@
 .animate-scroll-arrow {
   animation: scroll-arrow 1.8s ease-in-out infinite;
 }
+
+/* 水平滑动箭头动画 */
+@keyframes scroll-arrow-horizontal {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50%       { opacity: 1; transform: translateX(8px); }
+}
+
+.animate-scroll-arrow-horizontal {
+  animation: scroll-arrow-horizontal 1.5s ease-in-out infinite;
+}

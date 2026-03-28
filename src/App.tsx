@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FluidBackground } from './components/FluidBackground';
-import { FileText, ArrowUp, Sun, Moon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Sun, Moon } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { ScrollIndicator } from './components/ScrollIndicator';
 import { HeroSection } from './sections/HeroSection';
@@ -98,8 +97,7 @@ function HomePageContent() {
   
   const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
   const isAnimating = useRef(false);
-  const touchStartY = useRef(0);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const touchStartX = useRef(0);
   const { theme, toggle: toggleTheme } = useTheme();
   
   // 当 URL 路径变化时更新当前索引
@@ -110,11 +108,7 @@ function HomePageContent() {
     }
   }, [pagePath, getInitialIndex, currentIndex]);
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+
 
   const goTo = useCallback((index: number) => {
     if (index < 0 || index >= PAGES.length || isAnimating.current) return;
@@ -133,7 +127,7 @@ function HomePageContent() {
     }, 750);
   }, [navigate, location.pathname]);
 
-  // Wheel handler
+  // Wheel handler - 水平滚动
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       // If the event target is inside a scrollable panel, only let it
@@ -141,14 +135,17 @@ function HomePageContent() {
       const target = e.target as HTMLElement;
       const panel = target.closest<HTMLElement>('[data-scrollable]');
       if (panel) {
-        const atTop = panel.scrollTop === 0;
-        const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
+        const atLeft = panel.scrollLeft === 0;
+        const atRight = panel.scrollLeft + panel.clientWidth >= panel.scrollWidth - 1;
         // Still has room to scroll internally — don't switch page
-        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return;
+        if ((e.deltaX < 0 && !atLeft) || (e.deltaX > 0 && !atRight)) return;
       }
 
+      // 优先使用 deltaX，如果没有则使用 deltaY（兼容普通鼠标滚轮）
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      
       e.preventDefault();
-      if (e.deltaY > 0) goTo(currentIndex + 1);
+      if (delta > 0) goTo(currentIndex + 1);
       else goTo(currentIndex - 1);
     };
 
@@ -156,13 +153,24 @@ function HomePageContent() {
     return () => window.removeEventListener('wheel', onWheel);
   }, [currentIndex, goTo]);
 
-  // Touch handler
+  // 键盘左右箭头支持
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+      else if (e.key === 'ArrowLeft') goTo(currentIndex - 1);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [currentIndex, goTo]);
+
+  // Touch handler - 水平滑动
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
-      touchStartY.current = e.touches[0].clientY;
+      touchStartX.current = e.touches[0].clientX;
     };
     const onTouchEnd = (e: TouchEvent) => {
-      const delta = touchStartY.current - e.changedTouches[0].clientY;
+      const delta = touchStartX.current - e.changedTouches[0].clientX;
       if (Math.abs(delta) < 30) return;
       if (delta > 0) goTo(currentIndex + 1);
       else goTo(currentIndex - 1);
@@ -201,67 +209,26 @@ function HomePageContent() {
 
       <ScrollIndicator visible={currentIndex === 0} />
 
-      {/* Quick Access Button — morphs between appeal and back-to-top */}
-      <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
-        <motion.button
-          onClick={() => goTo(currentIndex === 0 ? 4 : 0)}
-          animate={{ width: currentIndex === 0 ? (isMobile ? 40 : 140) : 40 }}
-          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="btn-brand relative flex items-center justify-center
-                     bg-brand/90 hover:bg-brand text-white rounded-full overflow-hidden
-                     shadow-lg shadow-brand/30 backdrop-blur-md
-                     hover:scale-105 hover:shadow-xl hover:shadow-brand/40
-                     border border-white/10"
-          style={{
-            height: isMobile ? 40 : 44,
-            minWidth: isMobile ? 40 : 44,
-            transition: 'background-color 0.3s, box-shadow 0.3s, transform 0.3s',
-          }}
-        >
-          {/* Appeal label — desktop only */}
-          <motion.span
-            animate={{ opacity: currentIndex === 0 ? 1 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 hidden md:flex items-center justify-center gap-2 px-4 whitespace-nowrap text-sm font-medium pointer-events-none"
-          >
-            <FileText className="w-4 h-4 flex-shrink-0" />
-            申诉中心
-          </motion.span>
-          {/* Mobile: always show icon, fade between FileText and ArrowUp */}
-          <motion.span
-            animate={{ opacity: currentIndex === 0 ? 1 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 flex md:hidden items-center justify-center pointer-events-none"
-          >
-            <FileText className="w-4 h-4" />
-          </motion.span>
-          {/* Back to top icon */}
-          <motion.span
-            animate={{ opacity: currentIndex === 0 ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <ArrowUp className="w-4 h-4 md:w-5 md:h-5" />
-          </motion.span>
-        </motion.button>
-      </div>
-
-      {/* Fullpage slider */}
+      {/* Fullpage slider - 水平滑动 */}
       <div
-        className="relative z-10 w-full transition-transform duration-700 ease-in-out"
-        style={{ transform: `translateY(-${currentIndex * 100}vh)` }}
+        className="relative z-10 h-full flex transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}vw)` }}
       >
         {PAGES.map((page, i) => (
-          <div key={page} className="h-screen w-full overflow-y-auto" data-scrollable>
+          <div key={page} className="h-screen w-screen flex-shrink-0 overflow-y-auto" data-scrollable>
             {page === 'hero' && <HeroSection />}
             {page === 'features' && <FeaturesSection active={currentIndex === i} />}
             {page === 'process' && <ProcessSection active={currentIndex === i} />}
             {page === 'stats' && <StatsSection active={currentIndex === i} />}
             {page === 'appeal' && <AppealSection active={currentIndex === i} />}
             {page === 'report' && <BlacklistReportSection active={currentIndex === i} />}
-            {page === 'report' && <Footer />}
           </div>
         ))}
+      </div>
+
+      {/* Footer - 固定在页面底部 */}
+      <div className="fixed bottom-0 left-0 right-0 z-20">
+        <Footer />
       </div>
     </div>
   );
