@@ -97,7 +97,7 @@ function HomePageContent() {
   
   const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
   const isAnimating = useRef(false);
-  const animationTimer = useRef<NodeJS.Timeout | null>(null);
+  const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef(0);
   const { theme, toggle: toggleTheme } = useTheme();
   
