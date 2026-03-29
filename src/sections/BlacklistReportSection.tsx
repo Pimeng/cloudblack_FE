@@ -136,12 +136,9 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
       formDataToSubmit.append('target_user_type', formData.target_user_type);
       formDataToSubmit.append('reason', formData.reason);
       
-      if (formData.reporter_contact) {
-        formDataToSubmit.append('reporter_contact', formData.reporter_contact);
-      }
-      if (formData.reporter_user_id) {
-        formDataToSubmit.append('reporter_user_id', formData.reporter_user_id);
-      }
+      // 始终添加联系方式字段（即使是空字符串）
+      formDataToSubmit.append('reporter_contact', formData.reporter_contact || '');
+      formDataToSubmit.append('reporter_user_id', formData.reporter_user_id || '');
       
       // 添加图片文件
       images.forEach((img) => {

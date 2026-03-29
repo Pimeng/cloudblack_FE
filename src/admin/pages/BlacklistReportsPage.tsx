@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, 
   RefreshCw, 
@@ -35,8 +35,10 @@ import {
   PageHeader,
   FormTextarea,
   Pagination,
+  AnimationLayer,
+  DetailView,
 } from '../components';
-import { useApiMutation } from '../hooks';
+import { useApiMutation, useExpandableDetail } from '../hooks';
 
 interface ReviewDialogState {
   open: boolean;
@@ -72,6 +74,20 @@ function AIRecommendationBadge({ recommendation }: { recommendation: string }) {
   );
 }
 
+// 状态标签组件
+function ReportStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'pending':
+      return <Badge variant="outline" className="border-yellow-500/30 text-yellow-400">待处理</Badge>;
+    case 'approved':
+      return <Badge variant="outline" className="border-green-500/30 text-green-400">已通过</Badge>;
+    case 'rejected':
+      return <Badge variant="outline" className="border-red-500/30 text-red-400">已拒绝</Badge>;
+    default:
+      return null;
+  }
+}
+
 export function BlacklistReportsPage() {
   const { 
     token, 
@@ -88,16 +104,15 @@ export function BlacklistReportsPage() {
     blacklistReportsLoading 
   } = useOutletContext<AdminDataContext>();
   
-  const { openImage } = useImageViewer();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const detailId = searchParams.get('id');
   
-  // 详情弹窗状态
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailReport, setDetailReport] = useState<BlacklistReportDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const { openImage } = useImageViewer();
   
   // AI分析详情状态
   const [aiAnalysisDetail, setAiAnalysisDetail] = useState<ReportAIAnalysisResult | null>(null);
-  const [aiAnalysisLoading] = useState(false);
+  const [detailReport, setDetailReport] = useState<BlacklistReportDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   
   // 审核弹窗状态
   const [reviewDialog, setReviewDialog] = useState<ReviewDialogState>({
@@ -117,10 +132,36 @@ export function BlacklistReportsPage() {
     reason: '',
   });
 
+  // 使用 expandable detail hook
+  const {
+    isOpen: detailOpen,
+    viewingItem,
+    animating,
+    animationPhase,
+    cardRect,
+    refs: cardRefs,
+    openDetail,
+    closeDetail,
+  } = useExpandableDetail<BlacklistReport & { ai_analysis?: ReportAIAnalysisResult }>();
+
   useEffect(() => {
     if (token) fetchBlacklistReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, blacklistReportsPage, blacklistReportsFilter, blacklistReportsPerPage]);
+
+  // 页面加载时检查 URL 参数，自动打开详情
+  useEffect(() => {
+    if (detailId && blacklistReports.length > 0 && !viewingItem) {
+      const report = blacklistReports.find((r) => r.report_id === detailId);
+      if (report) {
+        // 延迟一点执行，确保 DOM 已经渲染
+        setTimeout(() => {
+          openDetail(report, report.report_id);
+        }, 100);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailId, blacklistReports, viewingItem]);
 
   const canReviewReports = adminLevel >= 2;
   const canDeleteReports = adminLevel >= 3;
@@ -161,7 +202,6 @@ export function BlacklistReportsPage() {
       if (data.success && data.data) {
         setDetailReport(data.data);
         setAiAnalysisDetail(data.data.ai_analysis || null);
-        setDetailOpen(true);
       } else {
         toast.error(data.message || '获取举报详情失败');
       }
@@ -172,7 +212,29 @@ export function BlacklistReportsPage() {
     }
   }, [token]);
 
+  // 处理打开详情
+  const handleOpenDetail = useCallback((report: BlacklistReport & { ai_analysis?: ReportAIAnalysisResult }, reportId: string) => {
+    openDetail(report, reportId);
+    fetchReportDetail(reportId);
+    // 更新 URL 添加 id 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('id', report.report_id);
+      return newParams;
+    });
+  }, [openDetail, setSearchParams, fetchReportDetail]);
 
+  // 处理关闭详情
+  const handleCloseDetail = useCallback(() => {
+    closeDetail();
+    setDetailReport(null);
+    // 清除 URL 中的 id 参数
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete('id');
+      return newParams;
+    });
+  }, [closeDetail, setSearchParams]);
 
   // 刷新AI分析
   const refreshAIAnalysis = async (reportId: string) => {
@@ -219,6 +281,10 @@ export function BlacklistReportsPage() {
       toast.success(message);
       setReviewDialog({ ...reviewDialog, open: false, reason: '', adminNote: '' });
       fetchBlacklistReports();
+      // 如果详情打开着，刷新详情
+      if (viewingItem) {
+        fetchReportDetail(viewingItem.report_id);
+      }
     }
   };
 
@@ -238,6 +304,10 @@ export function BlacklistReportsPage() {
     if (result) {
       setDeleteDialog({ open: false, report: null, reason: '' });
       fetchBlacklistReports();
+      // 如果详情打开着，关闭详情
+      if (viewingItem) {
+        handleCloseDetail();
+      }
     }
   };
 
@@ -257,20 +327,6 @@ export function BlacklistReportsPage() {
   // 打开删除弹窗
   const openDeleteDialog = (report: BlacklistReport) => {
     setDeleteDialog({ open: true, report, reason: '' });
-  };
-
-  // 状态标签
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="border-yellow-500/30 text-yellow-400">待处理</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="border-green-500/30 text-green-400">已通过</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="border-red-500/30 text-red-400">已拒绝</Badge>;
-      default:
-        return null;
-    }
   };
 
   // 类型标签
@@ -313,7 +369,11 @@ export function BlacklistReportsPage() {
             {blacklistReports.map((report: BlacklistReport & { ai_analysis?: ReportAIAnalysisResult }) => (
               <div 
                 key={report.report_id} 
-                className="glass rounded-2xl p-6 hover:bg-muted/50 transition-colors"
+                ref={(el) => {
+                  if (el) cardRefs.current.set(report.report_id, el);
+                }}
+                className="glass rounded-2xl p-6 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleOpenDetail(report, report.report_id)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -324,7 +384,7 @@ export function BlacklistReportsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(report.status)}
+                      <ReportStatusBadge status={report.status} />
                     </div>
                   </div>
                   <div className="text-right">
@@ -384,7 +444,7 @@ export function BlacklistReportsPage() {
                 
                 {/* 证据图片预览 */}
                 {report.evidence && report.evidence.length > 0 && (
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-4" onClick={(e) => e.stopPropagation()}>
                     {report.evidence.slice(0, 3).map((img, idx) => (
                       <button
                         key={idx}
@@ -426,7 +486,10 @@ export function BlacklistReportsPage() {
 
                 <div className="flex gap-2">
                   <Button 
-                    onClick={() => fetchReportDetail(report.report_id)} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDetail(report, report.report_id);
+                    }} 
                     variant="outline" 
                     size="sm"
                     className="flex-1"
@@ -437,7 +500,10 @@ export function BlacklistReportsPage() {
                   {report.status === 'pending' && canReviewReports && (
                     <>
                       <Button 
-                        onClick={() => openReviewDialog(report, 'approve')} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openReviewDialog(report, 'approve');
+                        }} 
                         className="bg-green-600 hover:bg-green-700" 
                         size="sm"
                       >
@@ -445,7 +511,10 @@ export function BlacklistReportsPage() {
                         通过
                       </Button>
                       <Button 
-                        onClick={() => openReviewDialog(report, 'reject')} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openReviewDialog(report, 'reject');
+                        }} 
                         variant="destructive" 
                         size="sm"
                       >
@@ -456,7 +525,10 @@ export function BlacklistReportsPage() {
                   )}
                   {canDeleteReports && (
                     <Button 
-                      onClick={() => openDeleteDialog(report)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteDialog(report);
+                      }}
                       variant="ghost"
                       size="sm"
                       className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
@@ -480,283 +552,316 @@ export function BlacklistReportsPage() {
         </>
       )}
 
-      {/* 详情弹窗 */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <AdminDialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>举报详情</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {detailReport && `举报ID: ${detailReport.report_id}`}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {detailLoading ? (
-            <LoadingSpinner />
-          ) : detailReport ? (
-            <div className="space-y-6 py-4">
-              {/* 基本信息 */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">被举报者类型:</span>
-                  <p className="text-foreground">{getTypeBadge(detailReport.target_user_type)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">被举报者ID:</span>
-                  <p className="text-foreground font-mono">{detailReport.target_user_id}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">状态:</span>
-                  <p className="text-foreground">{getStatusBadge(detailReport.status)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">提交时间:</span>
-                  <p className="text-foreground">{new Date(detailReport.created_at).toLocaleString()}</p>
-                </div>
-                {detailReport.reporter_contact && (
-                  <div>
-                    <span className="text-muted-foreground">举报人邮箱:</span>
-                    <p className="text-foreground">{detailReport.reporter_contact}</p>
-                  </div>
-                )}
-                {detailReport.reporter_user_id && (
-                  <div>
-                    <span className="text-muted-foreground">举报人ID:</span>
-                    <p className="text-foreground font-mono">{detailReport.reporter_user_id}</p>
-                  </div>
-                )}
-              </div>
+      {/* Animation Layer */}
+      <AnimationLayer
+        animating={animating}
+        cardRect={cardRect}
+        animationPhase={animationPhase}
+      />
 
-              {/* 举报原因 */}
+      {/* Detail View */}
+      <DetailView
+        isOpen={detailOpen}
+        title="举报详情"
+        onClose={handleCloseDetail}
+      >
+        {detailLoading ? (
+          <LoadingSpinner />
+        ) : detailReport ? (
+          <div className="space-y-6 py-6 px-8 max-w-6xl mx-auto pb-20">
+            {/* 基本信息 */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground text-sm">举报原因:</span>
-                <div className="mt-2 bg-muted rounded-lg p-4">
-                  <p className="text-foreground whitespace-pre-wrap break-words">{detailReport.reason}</p>
-                </div>
+                <span className="text-muted-foreground">举报ID:</span>
+                <p className="text-foreground font-mono">{detailReport.report_id}</p>
               </div>
-
-              {/* AI 智能分析 */}
-              {(aiAnalysisDetail || detailReport.ai_analysis) && (
-                <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-500" />
-                      <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
-                      {(aiAnalysisDetail || detailReport.ai_analysis)?.status === 'pending' && (
-                        <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          分析中
-                        </Badge>
-                      )}
-                      {(aiAnalysisDetail || detailReport.ai_analysis)?.status === 'failed' && (
-                        <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
-                          分析失败
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {canRefreshAI && (aiAnalysisDetail?.status === 'completed' || detailReport.ai_analysis?.status === 'completed') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => detailReport && refreshAIAnalysis(detailReport.report_id)}
-                          className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {canDeleteAI && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => detailReport && deleteAIAnalysis(detailReport.report_id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* AI分析中 */}
-                  {((aiAnalysisDetail?.status === 'pending') || (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'pending')) && (
-                    <div className="flex items-center gap-3 text-muted-foreground py-4">
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                      <span>AI正在分析中，请稍后再查看...</span>
-                    </div>
-                  )}
-                  
-                  {/* AI分析失败 */}
-                  {((aiAnalysisDetail?.status === 'failed') || (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'failed')) && (
-                    <div className="text-muted-foreground py-2">
-                      <span className="text-red-400">分析失败</span>
-                      {(aiAnalysisDetail?.error || detailReport.ai_analysis?.error) && (
-                        <p className="text-sm mt-1">{aiAnalysisDetail?.error || detailReport.ai_analysis?.error}</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* AI分析完成 - 获取详情中 */}
-                  {aiAnalysisLoading && (
-                    <div className="flex items-center gap-3 text-muted-foreground py-4">
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                      <span>正在获取AI分析详情...</span>
-                    </div>
-                  )}
-                  
-                  {/* AI分析完成 - 展示详情 */}
-                  {((aiAnalysisDetail?.status === 'completed' && !aiAnalysisLoading) || 
-                    (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'completed')) && (
-                    <div className="space-y-3">
-                      {((aiAnalysisDetail?.result?.recommendation || detailReport.ai_analysis?.result?.recommendation)) && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">AI 建议:</span>
-                          <AIRecommendationBadge 
-                            recommendation={aiAnalysisDetail?.result?.recommendation || detailReport.ai_analysis?.result?.recommendation || ''} 
-                          />
-                          {(aiAnalysisDetail?.result?.confidence || detailReport.ai_analysis?.result?.confidence) && (
-                            <span className="text-xs text-muted-foreground">
-                              置信度: {aiAnalysisDetail?.result?.confidence || detailReport.ai_analysis?.result?.confidence}%
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.summary || detailReport.ai_analysis?.result?.summary) && (
-                        <div>
-                          <p className="text-sm text-purple-400 font-medium">举报要点</p>
-                          <p className="text-sm text-foreground/80">
-                            {aiAnalysisDetail?.result?.summary || detailReport.ai_analysis?.result?.summary}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.reason_analysis || detailReport.ai_analysis?.result?.reason_analysis) && (
-                        <div>
-                          <p className="text-sm text-purple-400 font-medium">理由分析</p>
-                          <p className="text-sm text-foreground/80">
-                            {aiAnalysisDetail?.result?.reason_analysis || detailReport.ai_analysis?.result?.reason_analysis}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.category || detailReport.ai_analysis?.result?.category) && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">举报类别:</span>
-                          <Badge variant="outline" className="text-xs">
-                            {aiAnalysisDetail?.result?.category || detailReport.ai_analysis?.result?.category}
-                          </Badge>
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.evidence_strength || detailReport.ai_analysis?.result?.evidence_strength) !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">证据强度:</span>
-                          <span className="text-sm text-foreground">
-                            {(aiAnalysisDetail?.result?.evidence_strength || detailReport.ai_analysis?.result?.evidence_strength)}%
-                          </span>
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors) && 
-                       (aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors || []).length > 0 && (
-                        <div>
-                          <p className="text-sm text-purple-400 font-medium">风险提示</p>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {(aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors || []).map((risk: string, idx: number) => (
-                              <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {(aiAnalysisDetail?.result?.suggestions || detailReport.ai_analysis?.result?.suggestions) && (
-                        <div>
-                          <p className="text-sm text-purple-400 font-medium">处理建议</p>
-                          <p className="text-sm text-foreground/80">
-                            {aiAnalysisDetail?.result?.suggestions || detailReport.ai_analysis?.result?.suggestions}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* 如果没有获取到详细结果，显示提示 */}
-                      {!aiAnalysisDetail?.result && !detailReport.ai_analysis?.result && (
-                        <div className="text-muted-foreground py-2">
-                          <span>暂无详细分析结果</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+              <div>
+                <span className="text-muted-foreground">状态:</span>
+                <div className="mt-1"><ReportStatusBadge status={detailReport.status} /></div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">被举报者类型:</span>
+                <p className="text-foreground">{getTypeBadge(detailReport.target_user_type)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">被举报者ID:</span>
+                <p className="text-foreground font-mono">{detailReport.target_user_id}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">提交时间:</span>
+                <p className="text-foreground">{new Date(detailReport.created_at).toLocaleString()}</p>
+              </div>
+              {detailReport.reporter_contact && (
+                <div>
+                  <span className="text-muted-foreground">举报人邮箱:</span>
+                  <p className="text-foreground">{detailReport.reporter_contact}</p>
                 </div>
               )}
-
-              {/* 证据图片 */}
-              {detailReport.evidence && detailReport.evidence.length > 0 && (
+              {detailReport.reporter_user_id && (
                 <div>
-                  <span className="text-muted-foreground text-sm">证据图片:</span>
-                  <div className="mt-2 flex gap-2 flex-wrap">
-                    {detailReport.evidence.map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
-                        className="w-24 h-24 rounded-lg overflow-hidden bg-muted relative group cursor-pointer"
-                      >
-                        <img 
-                          src={img.startsWith('http') ? img : `${API_BASE}${img}`}
-                          alt={`证据 ${idx + 1}`}
-                          className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ZoomIn className="w-6 h-6 text-foreground" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 审核信息 */}
-              {detailReport.review && (
-                <div>
-                  <span className="text-muted-foreground text-sm">审核信息:</span>
-                  <div className="mt-2 bg-muted rounded-lg p-4 space-y-2">
-                    <p className="text-foreground">
-                      <span className="text-muted-foreground">审核结果:</span>{' '}
-                      {detailReport.review.action === 'approved' ? '通过' : '拒绝'}
-                    </p>
-                    <p className="text-foreground">
-                      <span className="text-muted-foreground">审核人:</span>{' '}
-                      {detailReport.review.admin_name} ({detailReport.review.admin_id})
-                    </p>
-                    <p className="text-foreground">
-                      <span className="text-muted-foreground">审核时间:</span>{' '}
-                      {new Date(detailReport.review.reviewed_at).toLocaleString()}
-                    </p>
-                    <p className="text-foreground">
-                      <span className="text-muted-foreground">审核理由:</span>{' '}
-                      {detailReport.review.reason}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* 管理员备注 */}
-              {detailReport.admin_note && (
-                <div>
-                  <span className="text-muted-foreground text-sm">管理员备注:</span>
-                  <div className="mt-2 bg-muted rounded-lg p-4">
-                    <p className="text-foreground">{detailReport.admin_note}</p>
-                  </div>
+                  <span className="text-muted-foreground">举报人ID:</span>
+                  <p className="text-foreground font-mono">{detailReport.reporter_user_id}</p>
                 </div>
               )}
             </div>
-          ) : null}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>关闭</Button>
-          </DialogFooter>
-        </AdminDialogContent>
-      </Dialog>
+
+            {/* 举报原因 */}
+            <div>
+              <span className="text-muted-foreground text-sm">举报原因:</span>
+              <div className="mt-2 bg-muted rounded-lg p-4">
+                <p className="text-foreground whitespace-pre-wrap break-words">{detailReport.reason}</p>
+              </div>
+            </div>
+
+            {/* AI 智能分析 */}
+            {(aiAnalysisDetail || detailReport.ai_analysis) && (
+              <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                    <span className="text-lg font-medium text-purple-400">AI 智能分析</span>
+                    {(aiAnalysisDetail || detailReport.ai_analysis)?.status === 'pending' && (
+                      <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        分析中
+                      </Badge>
+                    )}
+                    {(aiAnalysisDetail || detailReport.ai_analysis)?.status === 'failed' && (
+                      <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
+                        分析失败
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {canRefreshAI && (aiAnalysisDetail?.status === 'completed' || detailReport.ai_analysis?.status === 'completed') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => detailReport && refreshAIAnalysis(detailReport.report_id)}
+                        className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canDeleteAI && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => detailReport && deleteAIAnalysis(detailReport.report_id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* AI分析中 */}
+                {((aiAnalysisDetail?.status === 'pending') || (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'pending')) && (
+                  <div className="flex items-center gap-3 text-muted-foreground py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                    <span>AI正在分析中，请稍后再查看...</span>
+                  </div>
+                )}
+                
+                {/* AI分析失败 */}
+                {((aiAnalysisDetail?.status === 'failed') || (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'failed')) && (
+                  <div className="text-muted-foreground py-2">
+                    <span className="text-red-400">分析失败</span>
+                    {(aiAnalysisDetail?.error || detailReport.ai_analysis?.error) && (
+                      <p className="text-sm mt-1">{aiAnalysisDetail?.error || detailReport.ai_analysis?.error}</p>
+                    )}
+                  </div>
+                )}
+                
+                {/* AI分析完成 - 展示详情 */}
+                {((aiAnalysisDetail?.status === 'completed') || 
+                  (!aiAnalysisDetail && detailReport.ai_analysis?.status === 'completed')) && (
+                  <div className="space-y-3">
+                    {((aiAnalysisDetail?.result?.recommendation || detailReport.ai_analysis?.result?.recommendation)) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">AI 建议:</span>
+                        <AIRecommendationBadge 
+                          recommendation={aiAnalysisDetail?.result?.recommendation || detailReport.ai_analysis?.result?.recommendation || ''} 
+                        />
+                        {(aiAnalysisDetail?.result?.confidence || detailReport.ai_analysis?.result?.confidence) && (
+                          <span className="text-xs text-muted-foreground">
+                            置信度: {aiAnalysisDetail?.result?.confidence || detailReport.ai_analysis?.result?.confidence}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.summary || detailReport.ai_analysis?.result?.summary) && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">举报要点</p>
+                        <p className="text-sm text-foreground/80">
+                          {aiAnalysisDetail?.result?.summary || detailReport.ai_analysis?.result?.summary}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.reason_analysis || detailReport.ai_analysis?.result?.reason_analysis) && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">理由分析</p>
+                        <p className="text-sm text-foreground/80">
+                          {aiAnalysisDetail?.result?.reason_analysis || detailReport.ai_analysis?.result?.reason_analysis}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.category || detailReport.ai_analysis?.result?.category) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">举报类别:</span>
+                        <Badge variant="outline" className="text-xs">
+                          {aiAnalysisDetail?.result?.category || detailReport.ai_analysis?.result?.category}
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.evidence_strength || detailReport.ai_analysis?.result?.evidence_strength) !== undefined && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">证据强度:</span>
+                        <span className="text-sm text-foreground">
+                          {(aiAnalysisDetail?.result?.evidence_strength || detailReport.ai_analysis?.result?.evidence_strength)}%
+                        </span>
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors) && 
+                     (aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors || []).length > 0 && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">风险提示</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {(aiAnalysisDetail?.result?.risk_factors || detailReport.ai_analysis?.result?.risk_factors || []).map((risk: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="border-red-500/30 text-red-400 text-xs">{risk}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {(aiAnalysisDetail?.result?.suggestions || detailReport.ai_analysis?.result?.suggestions) && (
+                      <div>
+                        <p className="text-sm text-purple-400 font-medium">处理建议</p>
+                        <p className="text-sm text-foreground/80">
+                          {aiAnalysisDetail?.result?.suggestions || detailReport.ai_analysis?.result?.suggestions}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* 如果没有获取到详细结果，显示提示 */}
+                    {!aiAnalysisDetail?.result && !detailReport.ai_analysis?.result && (
+                      <div className="text-muted-foreground py-2">
+                        <span>暂无详细分析结果</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 证据图片 */}
+            {detailReport.evidence && detailReport.evidence.length > 0 && (
+              <div>
+                <span className="text-muted-foreground text-sm">证据图片:</span>
+                <div className="mt-2 flex gap-2 flex-wrap">
+                  {detailReport.evidence.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => openImage(img.startsWith('http') ? img : `${API_BASE}${img}`)}
+                      className="w-24 h-24 rounded-lg overflow-hidden bg-muted relative group cursor-pointer"
+                    >
+                      <img 
+                        src={img.startsWith('http') ? img : `${API_BASE}${img}`}
+                        alt={`证据 ${idx + 1}`}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ZoomIn className="w-6 h-6 text-foreground" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 审核信息 */}
+            {detailReport.review && (
+              <div>
+                <span className="text-muted-foreground text-sm">审核信息:</span>
+                <div className="mt-2 bg-muted rounded-lg p-4 space-y-2">
+                  <p className="text-foreground">
+                    <span className="text-muted-foreground">审核结果:</span>{' '}
+                    {detailReport.review.action === 'approved' ? '通过' : '拒绝'}
+                  </p>
+                  <p className="text-foreground">
+                    <span className="text-muted-foreground">审核人:</span>{' '}
+                    {detailReport.review.admin_name} ({detailReport.review.admin_id})
+                  </p>
+                  <p className="text-foreground">
+                    <span className="text-muted-foreground">审核时间:</span>{' '}
+                    {new Date(detailReport.review.reviewed_at).toLocaleString()}
+                  </p>
+                  <p className="text-foreground">
+                    <span className="text-muted-foreground">审核理由:</span>{' '}
+                    {detailReport.review.reason}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 管理员备注 */}
+            {detailReport.admin_note && (
+              <div>
+                <span className="text-muted-foreground text-sm">管理员备注:</span>
+                <div className="mt-2 bg-muted rounded-lg p-4">
+                  <p className="text-foreground">{detailReport.admin_note}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 操作按钮区域 */}
+            <div className="pt-6 border-t border-border/50">
+              <span className="text-muted-foreground text-sm mb-3 block">操作:</span>
+              <div className="flex flex-wrap gap-3">
+                {/* 待审核状态显示通过/拒绝按钮 */}
+                {detailReport.status === 'pending' && canReviewReports && (
+                  <>
+                    <Button 
+                      onClick={() => openReviewDialog(detailReport, 'approve')} 
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      批准举报
+                    </Button>
+                    <Button 
+                      onClick={() => openReviewDialog(detailReport, 'reject')} 
+                      variant="destructive"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      拒绝举报
+                    </Button>
+                  </>
+                )}
+                {/* 删除按钮 */}
+                {canDeleteReports && (
+                  <Button 
+                    onClick={() => { 
+                      openDeleteDialog(detailReport); 
+                    }}
+                    variant="outline"
+                    className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    删除举报
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </DetailView>
 
       {/* 审核弹窗 */}
       <Dialog open={reviewDialog.open} onOpenChange={(open) => setReviewDialog({ ...reviewDialog, open })}>
