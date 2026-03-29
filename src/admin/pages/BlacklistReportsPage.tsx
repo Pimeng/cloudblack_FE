@@ -6,14 +6,14 @@ import {
   Trash2, 
   CheckCircle, 
   XCircle, 
-  Eye, 
   ZoomIn,
   User,
   Users,
   Mail,
-  Phone,
+  MessageCircleMore,
   Sparkles,
   Loader2,
+  Bot,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,24 @@ interface DeleteDialogState {
   open: boolean;
   report: BlacklistReport | null;
   reason: string;
+}
+
+// 批量AI分析响应
+interface BatchAIResponse {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  results: Array<{
+    report_id: string;
+    status: string;
+    result?: ReportAIAnalysisResult;
+  }>;
+}
+
+// 清理已处理响应
+interface ClearProcessedResponse {
+  deleted_count?: number;
 }
 
 // AI建议标签组件
@@ -167,7 +185,13 @@ export function BlacklistReportsPage() {
   const canDeleteReports = adminLevel >= 3;
   const canRefreshAI = adminLevel >= 2;
   const canDeleteAI = adminLevel >= 3;
+  const canBatchAI = adminLevel >= 2;  // 批量分析需要等级2+
+  const canClearProcessed = adminLevel >= 4;  // 仅超级管理员可操作
   const reportsTotalPages = blacklistReportsPerPage > 0 ? Math.ceil(blacklistReportsTotal / blacklistReportsPerPage) : 0;
+  
+  // 清理已处理弹窗状态
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearDays, setClearDays] = useState<number | ''>('');
 
   // API mutations
   interface ReviewResponse {
@@ -188,6 +212,14 @@ export function BlacklistReportsPage() {
   });
   const { mutate: deleteAIMutate } = useApiMutation(token, {
     successMessage: 'AI 分析已删除',
+  });
+  const { mutate: batchAIMutate, loading: batchAILoading } = useApiMutation<BatchAIResponse>(token, {
+    successMessage: '',
+    showSuccessToast: false,
+  });
+  const { mutate: clearProcessedMutate, loading: clearingLoading } = useApiMutation<ClearProcessedResponse>(token, {
+    successMessage: '',
+    showSuccessToast: false,
   });
 
   // 获取举报详情
@@ -254,6 +286,32 @@ export function BlacklistReportsPage() {
     });
     if (result) {
       setAiAnalysisDetail(null);
+      fetchBlacklistReports();
+    }
+  };
+  
+  // 清理已处理举报
+  const clearProcessedReports = async () => {
+    const body: { days?: number } = {};
+    if (clearDays !== '' && clearDays > 0) {
+      body.days = clearDays;
+    }
+    
+    const result = await clearProcessedMutate(
+      '/api/admin/blacklist/reports/clear-processed',
+      { method: 'POST' },
+      body
+    );
+    
+    if (result) {
+      const deletedCount = result?.deleted_count || 0;
+      if (deletedCount > 0) {
+        toast.success(`已清理 ${deletedCount} 条已处理举报`);
+      } else {
+        toast.info('没有需要清理的已处理举报');
+      }
+      setClearDialogOpen(false);
+      setClearDays('');
       fetchBlacklistReports();
     }
   };
@@ -356,6 +414,54 @@ export function BlacklistReportsPage() {
           <Button onClick={() => fetchBlacklistReports()} variant="outline" size="icon">
             <RefreshCw className="w-4 h-4" />
           </Button>
+          {canBatchAI && (
+            <Button 
+              onClick={async () => {
+                // 筛选出待审核且没有AI分析或AI分析失败的举报
+                const pendingReports = blacklistReports.filter(
+                  r => r.status === 'pending' && (!r.ai_analysis || r.ai_analysis.status === 'failed')
+                );
+                if (pendingReports.length === 0) {
+                  toast.info('没有需要批量分析的待处理举报');
+                  return;
+                }
+                
+                const result = await batchAIMutate(
+                  '/api/admin/blacklist/reports/ai-analysis/batch',
+                  { method: 'POST' },
+                  {
+                    report_ids: pendingReports.map(r => r.report_id),
+                  }
+                );
+                
+                if (result) {
+                  const { total, completed, failed, pending } = result;
+                  toast.success(`批量分析完成: 总计${total}条, 成功${completed}条, 失败${failed}条, 进行中${pending}条`);
+                  fetchBlacklistReports();
+                }
+              }}
+              variant="outline" 
+              disabled={batchAILoading}
+              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+            >
+              {batchAILoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Bot className="w-4 h-4 mr-2" />
+              )}
+              批量AI分析
+            </Button>
+          )}
+          {canClearProcessed && (
+            <Button 
+              onClick={() => setClearDialogOpen(true)}
+              variant="outline" 
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              清理已处理
+            </Button>
+          )}
         </div>
       </PageHeader>
 
@@ -478,25 +584,13 @@ export function BlacklistReportsPage() {
                   )}
                   {report.reporter_user_id && (
                     <span className="flex items-center gap-1">
-                      <Phone className="w-3 h-3" />
+                      <MessageCircleMore className="w-3 h-3" />
                       {report.reporter_user_id}
                     </span>
                   )}
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDetail(report, report.report_id);
-                    }} 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    查看详情
-                  </Button>
                   {report.status === 'pending' && canReviewReports && (
                     <>
                       <Button 
@@ -971,6 +1065,50 @@ export function BlacklistReportsPage() {
               variant="destructive"
             >
               确认删除
+            </LoadingButton>
+          </DialogFooter>
+        </AdminDialogContent>
+      </Dialog>
+      
+      {/* 清理已处理弹窗 */}
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AdminDialogContent>
+          <DialogHeader>
+            <DialogTitle>清理已处理举报</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              清理所有已批准和已拒绝的举报记录。待处理的举报不会被删除。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm text-foreground/80">清理范围（可选）</label>
+              <input
+                type="number"
+                min={0}
+                placeholder="输入天数，如：30（只清理30天前的记录），留空则清理所有"
+                value={clearDays}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClearDays(val === '' ? '' : parseInt(val) || 0);
+                }}
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+              />
+              <p className="text-xs text-muted-foreground">
+                输入天数阈值，只清理该天数前已处理的举报。留空则清理所有已处理的举报。
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>取消</Button>
+            <LoadingButton
+              onClick={clearProcessedReports}
+              loading={clearingLoading}
+              icon={Trash2}
+              variant="destructive"
+            >
+              确认清理
             </LoadingButton>
           </DialogFooter>
         </AdminDialogContent>

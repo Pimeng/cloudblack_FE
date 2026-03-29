@@ -301,6 +301,7 @@ export interface BlacklistReport {
     admin_name: string;
     reviewed_at: string;
   };
+  ai_analysis?: ReportAIAnalysisResult;
 }
 
 export interface BlacklistReportSubmitData {

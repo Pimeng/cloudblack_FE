@@ -30,16 +30,6 @@ export function ScrollIndicator({ visible }: ScrollIndicatorProps) {
           />
         </svg>
       </div>
-
-      {/* 页面指示器点 - 垂直排列更省空间 */}
-      <div className="flex flex-col gap-1.5">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-foreground/40"
-          />
-        ))}
-      </div>
     </div>
   );
 }

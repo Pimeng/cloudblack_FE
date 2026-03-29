@@ -1,10 +1,11 @@
 ﻿﻿import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, Image as ImageIcon, CheckCircle, Search, Clock, FileText } from 'lucide-react';
+import { Send, X, CheckCircle, Search, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useImageViewer } from '@/hooks/useImageViewer';
+import { ImageUploadDropzone, type PendingImage } from '@/components/ImageUploadDropzone';
 import { gsap } from 'gsap';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 
@@ -25,12 +26,6 @@ interface AppealItem {
   };
 }
 
-// 待上传的图片文件
-interface PendingImage {
-  file: File;
-  preview: string;
-}
-
 export function AppealSection({ active }: { active?: boolean }) {
   const [activeTab, setActiveTab] = useState<'submit' | 'query'>('submit');
   const [formData, setFormData] = useState({
@@ -41,6 +36,8 @@ export function AppealSection({ active }: { active?: boolean }) {
   });
   // 改用 PendingImage 存储文件和预览
   const [images, setImages] = useState<PendingImage[]>([]);
+  const maxImages = 3;
+  const maxSizeMB = 3;
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -87,30 +84,10 @@ export function AppealSection({ active }: { active?: boolean }) {
     );
   }, [active]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    if (images.length + files.length > 3) { setError('最多只能上传3张图片'); return; }
-    setError('');
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.size > 3 * 1024 * 1024) { setError('图片大小不能超过3MB'); continue; }
-      // 本地预览，不立即上传
-      const preview = URL.createObjectURL(file);
-      setImages(prev => [...prev, { file, preview }]);
-    }
-    // 清空 input 以便可以再次选择相同文件
-    e.target.value = '';
-  };
-
-  const removeImage = (index: number) => {
-    setImages(prev => {
-      const newImages = prev.filter((_, i) => i !== index);
-      // 释放预览 URL
-      URL.revokeObjectURL(prev[index].preview);
-      return newImages;
-    });
-  };
+  // 处理图片上传错误
+  const handleImageError = useCallback((message: string) => {
+    setError(message);
+  }, []);
 
   const queryAppeals = async () => {
     if (!queryUserId.trim()) { setError('请输入QQ号或群号'); return; }
@@ -321,26 +298,14 @@ export function AppealSection({ active }: { active?: boolean }) {
               {/* 截图上传 */}
               <div className="space-y-1.5">
                 <Label>相关截图（可选，最多3张）</Label>
-                <div className="flex flex-wrap gap-2">
-                  {images.map((img, index) => (
-                    <div key={index} className="relative w-14 h-14 rounded-lg overflow-hidden group cursor-pointer"
-                      onClick={() => openImage(img.preview)}>
-                      <img src={img.preview} alt={`待上传图片 ${index + 1}`} className="w-full h-full object-cover" />
-                      <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(index); }}
-                        className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <X className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-                  ))}
-                  {images.length < 3 && (
-                    <label className="w-14 h-14 rounded-lg border-2 border-dashed border-border/50 flex flex-col items-center justify-center cursor-pointer hover:border-brand/50 hover:bg-brand/5 transition-colors">
-                      <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" multiple className="hidden" onChange={handleImageUpload} />
-                      <ImageIcon className="w-4 h-4 text-muted-foreground mb-1" />
-                      <span className="text-xs text-muted-foreground">选择</span>
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">png/jpg/gif/webp，单张最大3MB，提交时一并上传</p>
+                <ImageUploadDropzone
+                  images={images}
+                  onImagesChange={setImages}
+                  maxImages={maxImages}
+                  maxSizeMB={maxSizeMB}
+                  onError={handleImageError}
+                  onImageClick={(src) => openImage(src)}
+                />
               </div>
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
