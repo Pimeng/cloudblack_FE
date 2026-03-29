@@ -97,6 +97,7 @@ function HomePageContent() {
   
   const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
   const isAnimating = useRef(false);
+  const animationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef(0);
   const { theme, toggle: toggleTheme } = useTheme();
   
@@ -111,7 +112,13 @@ function HomePageContent() {
 
 
   const goTo = useCallback((index: number) => {
-    if (index < 0 || index >= PAGES.length || isAnimating.current) return;
+    if (index < 0 || index >= PAGES.length) return;
+    
+    // 如果正在动画中，清除之前的定时器，打断当前动画
+    if (isAnimating.current && animationTimer.current) {
+      clearTimeout(animationTimer.current);
+    }
+    
     isAnimating.current = true;
     setCurrentIndex(index);
     // 同步 URL
@@ -121,10 +128,11 @@ function HomePageContent() {
       navigate(targetPath, { replace: true });
     }
     // Refresh ScrollTrigger after transition so section animations fire
-    setTimeout(() => {
+    animationTimer.current = setTimeout(() => {
       ScrollTrigger.refresh();
       isAnimating.current = false;
-    }, 750);
+      animationTimer.current = null;
+    }, 700);
   }, [navigate, location.pathname]);
 
   // Wheel handler - 水平滚动
