@@ -174,8 +174,16 @@ export function BlacklistReportsPage() {
       if (report) {
         // 延迟一点执行，确保 DOM 已经渲染
         setTimeout(() => {
-          openDetail(report, report.report_id);
+          handleOpenDetail(report, report.report_id);
         }, 100);
+      } else {
+        // 如果找不到对应的举报，清除 URL 中的 id 参数
+        toast.error('找不到该举报记录');
+        setSearchParams((prev) => {
+          const newParams = new URLSearchParams(prev);
+          newParams.delete('id');
+          return newParams;
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -224,7 +232,7 @@ export function BlacklistReportsPage() {
 
   // 获取举报详情
   const fetchReportDetail = useCallback(async (reportId: string) => {
-    if (!token) return;
+    if (!token) return false;
     setDetailLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/admin/blacklist/reports/${reportId}`, {
@@ -234,27 +242,35 @@ export function BlacklistReportsPage() {
       if (data.success && data.data) {
         setDetailReport(data.data);
         setAiAnalysisDetail(data.data.ai_analysis || null);
+        return true;
       } else {
         toast.error(data.message || '获取举报详情失败');
+        return false;
       }
     } catch (err) {
       toast.error('获取举报详情失败');
+      return false;
     } finally {
       setDetailLoading(false);
     }
   }, [token]);
 
   // 处理打开详情
-  const handleOpenDetail = useCallback((report: BlacklistReport & { ai_analysis?: ReportAIAnalysisResult }, reportId: string) => {
+  const handleOpenDetail = useCallback(async (report: BlacklistReport & { ai_analysis?: ReportAIAnalysisResult }, reportId: string) => {
     openDetail(report, reportId);
-    fetchReportDetail(reportId);
+    const success = await fetchReportDetail(reportId);
+    if (!success) {
+      // 获取详情失败，关闭详情面板
+      closeDetail();
+      return;
+    }
     // 更新 URL 添加 id 参数
     setSearchParams((prev) => {
       const newParams = new URLSearchParams(prev);
       newParams.set('id', report.report_id);
       return newParams;
     });
-  }, [openDetail, setSearchParams, fetchReportDetail]);
+  }, [openDetail, setSearchParams, fetchReportDetail, closeDetail]);
 
   // 处理关闭详情
   const handleCloseDetail = useCallback(() => {
@@ -507,30 +523,46 @@ export function BlacklistReportsPage() {
                 </div>
                 
                 {/* AI Analysis Summary */}
-                {report.ai_analysis && (
+                {report.ai_analysis ? (
                   <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm text-purple-400">AI 建议</span>
-                      {report.ai_analysis.status === 'pending' && (
-                        <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          分析中
-                        </Badge>
-                      )}
-                      {report.ai_analysis.status === 'failed' && (
-                        <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
-                          分析失败
-                        </Badge>
-                      )}
-                      {report.ai_analysis.status === 'completed' && (
-                        (report.ai_analysis.recommendation || report.ai_analysis.result?.recommendation) ? (
-                          <AIRecommendationBadge 
-                            recommendation={report.ai_analysis.recommendation || report.ai_analysis.result?.recommendation || ''} 
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">分析完成</span>
-                        )
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-500" />
+                        <span className="text-sm text-purple-400">AI 建议</span>
+                        {report.ai_analysis.status === 'pending' && (
+                          <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 text-xs">
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            分析中
+                          </Badge>
+                        )}
+                        {report.ai_analysis.status === 'failed' && (
+                          <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
+                            分析失败
+                          </Badge>
+                        )}
+                        {report.ai_analysis.status === 'completed' && (
+                          (report.ai_analysis.recommendation || report.ai_analysis.result?.recommendation) ? (
+                            <AIRecommendationBadge 
+                              recommendation={report.ai_analysis.recommendation || report.ai_analysis.result?.recommendation || ''} 
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">分析完成</span>
+                          )
+                        )}
+                      </div>
+                      {/* 刷新按钮 */}
+                      {canRefreshAI && report.ai_analysis.status === 'completed' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            refreshAIAnalysis(report.report_id);
+                          }}
+                          className="h-6 w-6 p-0 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </Button>
                       )}
                     </div>
                     {/* AI Analysis Summary Content - 仅completed状态展示 */}
@@ -546,6 +578,33 @@ export function BlacklistReportsPage() {
                       </p>
                     )}
                   </div>
+                ) : (
+                  /* 没有AI分析时显示开始分析按钮 */
+                  canRefreshAI && report.status === 'pending' && (
+                    <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20 border-dashed">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-500/60" />
+                          <span className="text-sm text-purple-400/80">AI 智能分析</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            refreshAIAnalysis(report.report_id);
+                          }}
+                          className="text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          开始分析
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        点击开始AI智能分析辅助审核
+                      </p>
+                    </div>
+                  )
                 )}
                 
                 {/* 证据图片预览 */}
@@ -708,7 +767,7 @@ export function BlacklistReportsPage() {
             </div>
 
             {/* AI 智能分析 */}
-            {(aiAnalysisDetail || detailReport.ai_analysis) && (
+            {(aiAnalysisDetail || detailReport.ai_analysis) ? (
               <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -852,6 +911,30 @@ export function BlacklistReportsPage() {
                   </div>
                 )}
               </div>
+            ) : (
+              /* 没有AI分析时显示开始分析区域 */
+              canRefreshAI && detailReport.status === 'pending' && (
+                <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-card border border-purple-500/20 border-dashed">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-500/60" />
+                      <span className="text-lg font-medium text-purple-400/80">AI 智能分析</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      使用AI智能分析辅助审核举报内容，自动生成审核建议
+                    </p>
+                    <Button
+                      onClick={() => detailReport && refreshAIAnalysis(detailReport.report_id)}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      开始AI分析
+                    </Button>
+                  </div>
+                </div>
+              )
             )}
 
             {/* 证据图片 */}
@@ -954,7 +1037,19 @@ export function BlacklistReportsPage() {
               </div>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <ShieldAlert className="w-12 h-12 mb-4 opacity-50" />
+            <p>无法加载举报详情</p>
+            <Button 
+              variant="outline" 
+              onClick={handleCloseDetail}
+              className="mt-4"
+            >
+              返回列表
+            </Button>
+          </div>
+        )}
       </DetailView>
 
       {/* 审核弹窗 */}
