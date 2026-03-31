@@ -613,8 +613,8 @@ export function useAdminData() {
     blacklistTypeFilter,
     setBlacklistTypeFilter,
     fetchBlacklist: useCallback(() => {
-      if (token) fetchBlacklist(token);
-    }, [token, fetchBlacklist]),
+      if (token) fetchBlacklist(token, blacklistPage, blacklistSearch, blacklistTypeFilter);
+    }, [token, fetchBlacklist, blacklistPage, blacklistSearch, blacklistTypeFilter]),
     
     // Admins
     admins,

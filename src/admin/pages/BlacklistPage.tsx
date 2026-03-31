@@ -45,11 +45,11 @@ interface AddBlacklistResponse {
 }
 
 export function BlacklistPage() {
-  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, fetchBlacklist, loading } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, blacklist, blacklistPage, setBlacklistPage, blacklistTotal, blacklistSearch, setBlacklistSearch, fetchBlacklist, loading, setBlacklistTypeFilter } = useOutletContext<AdminDataContext>();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // 从 URL 获取 tab 状态和详情 ID
-  const [blacklistTypeFilter, setBlacklistTypeFilter] = useUrlState<'all' | 'user' | 'group'>('tab', 'all');
+  const [blacklistTypeFilter, setBlacklistTypeFilterUrl] = useUrlState<'all' | 'user' | 'group'>('tab', 'all');
   const detailId = searchParams.get('id');
   const detailType = searchParams.get('type') as 'user' | 'group' | null;
   
@@ -101,6 +101,11 @@ export function BlacklistPage() {
     openDetail,
     closeDetail,
   } = useExpandableDetail<BlacklistItem>();
+
+  // 将 URL 中的 tab 状态同步到 useAdminData 的上下文
+  useEffect(() => {
+    setBlacklistTypeFilter(blacklistTypeFilter);
+  }, [blacklistTypeFilter, setBlacklistTypeFilter]);
 
   useEffect(() => {
     if (token) fetchBlacklist();
@@ -320,6 +325,7 @@ export function BlacklistPage() {
                   <button
                     key={tab.key}
                     onClick={() => {
+                      setBlacklistTypeFilterUrl(tab.key as typeof blacklistTypeFilter);
                       setBlacklistTypeFilter(tab.key as typeof blacklistTypeFilter);
                       setBlacklistPage(1);
                     }}
