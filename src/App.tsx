@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ClarityNotice } from '@/components/ClarityNotice';
 import { Spinner } from '@/components/ui/spinner';
+import { MarkdownPage } from '@/pages/MarkdownPage';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -302,6 +303,7 @@ function App() {
         <Route path="/stats" element={<HomePage />} />
         <Route path="/appeal" element={<HomePage />} />
         <Route path="/report" element={<HomePage />} />
+        <Route path="/docs/:fileKey" element={<MarkdownPage />} />
         <Route path="/admin" element={
           <Suspense fallback={<AdminPageFallback />}>
             <AdminLogin />

@@ -182,7 +182,7 @@ export function HeroSection() {
             <div className="relative">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-brand/30 animate-pulse-glow">
                 <img 
-                  src="https://q1.qlogo.cn/g?b=qq&nk=1470458485&s=640" 
+                  src="/avatar.png" 
                   alt="皮梦"
                   className="w-full h-full object-cover"
                 />

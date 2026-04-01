@@ -65,6 +65,7 @@ const groupedNavItems: NavGroup[] = [
       { id: 'appeals', label: '申诉管理', path: '/appeals', minLevel: 1 },
       { id: 'blacklist-reports', label: '用户举报', path: '/blacklist-reports', minLevel: 2 },
       { id: 'level4-pending', label: '严重违规审核', path: '/level4-pending', minLevel: 3 },
+      { id: 'review-rules', label: '审核准则', path: '/docs/review-rules', minLevel: 2, external: true },
     ],
   },
   {

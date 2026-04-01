@@ -75,6 +75,16 @@ const swalAnimation = `
 let openExternalLinkCallback: ((url: string) => void) | null = null;
 
 export function openExternalLink(url: string) {
+  // 判断是否为外部链接：以 http:// 或 https:// 开头，或者是 // 协议相对 URL
+  const isExternal = /^https?:\/\//i.test(url) || /^\/\//.test(url);
+  
+  if (!isExternal) {
+    // 内部地址直接跳转
+    window.open(url, '_blank');
+    return;
+  }
+  
+  // 外部链接显示确认弹窗
   if (openExternalLinkCallback) {
     openExternalLinkCallback(url);
   }

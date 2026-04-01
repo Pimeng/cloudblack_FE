@@ -1,4 +1,5 @@
-import { Mail, Heart } from 'lucide-react';
+import { Mail, Heart, Shield, Gavel } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
   return (
@@ -20,6 +21,20 @@ export function Footer() {
             <Shield className="w-3.5 h-3.5" />
             服务条款
           </a> */}
+          <Link 
+            to="/docs/admin-rules"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            管理准则
+          </Link>
+          <Link 
+            to="/docs/review-rules"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors"
+          >
+            <Gavel className="w-3.5 h-3.5" />
+            审核准则
+          </Link>
           <a 
             href="mailto:i@pmya.xyz" 
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors"
