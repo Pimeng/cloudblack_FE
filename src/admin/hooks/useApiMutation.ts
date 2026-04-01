@@ -47,16 +47,17 @@ export function useApiMutation<T = unknown, V = unknown>(
       setError(null);
 
       try {
+        const isFormData = body instanceof FormData;
         const headers: Record<string, string> = {
           Authorization: token,
-          ...(body && { 'Content-Type': 'application/json' }),
+          ...(body && !isFormData && { 'Content-Type': 'application/json' }),
           ...((requestOptions.headers as Record<string, string>) || {}),
         };
 
         const response = await fetch(`${API_BASE}${url}`, {
           ...requestOptions,
           headers,
-          body: body ? JSON.stringify(body) : requestOptions.body,
+          body: body ? (isFormData ? body : JSON.stringify(body)) : requestOptions.body,
         });
 
         const data = await response.json();

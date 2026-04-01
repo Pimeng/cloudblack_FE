@@ -585,13 +585,13 @@
   | `content` | string | 是 | 申诉内容，最多2000字 |
   | `contact_email` | string | 是 | 联系邮箱 |
   | **表单特有** ||||
-  | `files` | File[] | 否 | 图片文件（可多选），最多3张，最大5MB |
+  | `files` | File[] | **是** | 图片文件（可多选），**至少1张，最多3张**，最大5MB |
   | `geetest_lot_number` | string | 条件 | 极验验证流水号 |
   | `geetest_captcha_output` | string | 条件 | 极验验证输出信息 |
   | `geetest_pass_token` | string | 条件 | 极验验证通过标识 |
   | `geetest_gen_time` | string | 条件 | 极验验证通过时间戳 |
   | **JSON特有** ||||
-  | `images` | array | 否 | 图片URL列表，最多3张 |
+  | `images` | array | **是** | 图片URL列表，**至少1张**，最多3张 |
   | `geetest` | object | 否 | 极验验证数据对象 |
   | `geetest.lot_number` | string | 条件 | 验证流水号 |
   | `geetest.captcha_output` | string | 条件 | 验证输出信息 |
@@ -601,7 +601,7 @@
 - **文件限制说明**（表单上传时）：
   - 文件大小：单张最大5MB
   - 文件类型：png, jpg, jpeg, gif, webp
-  - 数量限制：最多3张
+  - 数量限制：**至少1张，最多3张**
   - 去重机制：系统基于MD5哈希自动去重，重复图片直接返回已有路径
 
 - **安全检查说明**（多层防护）：
@@ -649,7 +649,15 @@
       }
   }
   ```
-- **重复提交响应示例**（已有进行中的申诉）：
+- **错误响应示例**（未上传图片）：
+```json
+{
+    "success": false,
+    "message": "必须上传至少一张图片作为申诉证明"
+}
+```
+
+**重复提交响应示例**（已有进行中的申诉）：
   ```json
   {
       "success": false,
@@ -666,7 +674,7 @@
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
   | `user_id` | string | 是 | 用户ID或群号，用于验证是否本人的申诉 |
-  | `user_type` | string | 否 | 类型：`user`(个人)、`group`(群号)，不指定则同时匹配 |
+  | `user_type` | string | 否 | 类型：`user`(个人)、`group`(群号)，不指定则不验证类型 |
 - **响应示例**:
   ```json
   {
@@ -789,10 +797,10 @@
   ```
 
 ### 3.6 访问上传的文件
-- **接口地址**: `/uploads/{filename}`
+- **接口地址**: `/uploads/{path:filename}`
 - **请求方法**: `GET`
 - **鉴权**: 不需要
-- **说明**: 直接访问上传的图片文件
+- **说明**: 直接访问上传的图片文件，支持子目录访问（如 `/uploads/appeals/xxx.jpg`）
 
 ### 3.7 获取公共统计数据
 - **接口地址**: `/api/statistics`
@@ -916,13 +924,13 @@
   | `reporter_contact` | string | 否 | 举报人联系方式（邮箱） |
   | `reporter_user_id` | string | 否 | 举报人用户ID |
   | **表单特有** ||||
-  | `files` | File[] | 否 | 证据图片文件（可多选），最多3张，最大5MB |
+  | `files` | File[] | **是** | 证据图片文件（可多选），**至少1张，最多3张**，最大5MB |
   | `geetest_lot_number` | string | 条件 | 极验验证流水号 |
   | `geetest_captcha_output` | string | 条件 | 极验验证输出信息 |
   | `geetest_pass_token` | string | 条件 | 极验验证通过标识 |
   | `geetest_gen_time` | string | 条件 | 极验验证通过时间戳 |
   | **JSON特有** ||||
-  | `evidence` | array | 否 | 证据图片URL列表，最多3张 |
+  | `evidence` | array | **是** | 证据图片URL列表，**至少1张**，最多3张 |
   | `geetest` | object | 否 | 极验验证数据对象 |
   | `geetest.lot_number` | string | 条件 | 验证流水号 |
   | `geetest.captcha_output` | string | 条件 | 验证输出信息 |
@@ -932,7 +940,7 @@
 - **文件限制说明**（表单上传时）：
   - 文件大小：单张最大5MB
   - 文件类型：png, jpg, jpeg, gif, webp
-  - 数量限制：最多3张
+  - 数量限制：**至少1张，最多3张**
   - 去重机制：系统基于MD5哈希自动去重，重复图片直接返回已有路径
 
 - **安全检查说明**：同申诉接口，系统对上传的文件执行严格的安全检查
@@ -948,6 +956,13 @@
           "target_user_type": "user",
           "created_at": "2026-03-28 22:30:00"
       }
+  }
+  ```
+- **错误响应示例**（未上传图片）：
+  ```json
+  {
+      "success": false,
+      "message": "必须上传至少一张图片作为举报证明"
   }
   ```
 
@@ -1176,28 +1191,100 @@
 - **请求方法**: `POST`
 - **鉴权**: **需要（管理员 Token）**
 - **需要等级**: 3+
-- **请求体":
+- **说明**:
+  - 支持两种方式提交：**表单上传**（推荐）或 **JSON**
+  - 表单上传可一次性完成文件上传和黑名单添加
+  - **必须提供至少一张图片证明**才能添加黑名单
+- **方式一：表单上传（multipart/form-data）⭐ 推荐**
+  - 支持同时上传图片文件和提交黑名单数据
+  - 一次性完成所有操作，无需单独调用上传接口
+  
+  **请求示例**:
+  ```http
+  POST /api/admin/blacklist
+  Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+  
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="user_id"
+  
+  1234567890
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="user_type"
+  
+  user
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="reason"
+  
+  该用户多次发布违规广告，情节严重
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="level"
+  
+  3
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="files"; filename="screenshot1.jpg"
+  Content-Type: image/jpeg
+  
+  [图片文件内容]
+  ------WebKitFormBoundary
+  Content-Disposition: form-data; name="files"; filename="screenshot2.png"
+  Content-Type: image/png
+  
+  [图片文件内容]
+  ------WebKitFormBoundary--
+  ```
+
+- **方式二：JSON（application/json）**
+  - 图片需先通过上传接口获取URL
+  
+  **请求体**:
   ```json
   {
       "user_id": "1234567890",
       "user_type": "user",
       "reason": "严重违规",
-      "level": 4
+      "level": 4,
+      "evidence": ["/uploads/blacklist_evidence/xxx.jpg", "/uploads/blacklist_evidence/yyy.png"]
   }
   ```
-- **参数说明**:
+
+- **参数说明**（表单方式字段名与JSON方式对应）：
   | 参数名 | 类型 | 必填 | 说明 |
   | :--- | :--- | :--- | :--- |
   | `user_id` | string | 是 | 用户ID或群号 |
   | `user_type` | string | 否 | 类型：`user`(用户，默认)、`group`(群聊) |
   | `reason` | string | 是 | 加入黑名单的原因 |
   | `level` | int | 否 | 严重等级（1-4），默认1。详见[黑名单严重等级说明](#黑名单严重等级说明) |
+  | **表单特有** ||||
+  | `files` | File[] | **是** | 证据图片文件（可多选），**至少1张，最多3张**，最大5MB |
+  | **JSON特有** ||||
+  | `evidence` | array | **是** | 证据图片URL列表，**至少1张**，最多3张 |
+
+- **文件限制说明**（表单上传时）：
+  - 文件大小：单张最大5MB
+  - 文件类型：png, jpg, jpeg, gif, webp
+  - 数量限制：**至少1张，最多3张**
+  - 去重机制：系统基于MD5哈希自动去重，重复图片直接返回已有路径
+
+- **安全检查说明**：同申诉接口，系统对上传的文件执行严格的安全检查
+
 - **响应示例**（等级1-3直接添加成功）:
   ```json
   {
       "success": true,
       "message": "添加用户成功",
-      "data": { ... }
+      "data": {
+          "blacklist": [
+              {
+                  "user_id": "1234567890",
+                  "user_type": "user",
+                  "reason": "严重违规",
+                  "level": 3,
+                  "added_by": "admin:张三",
+                  "added_at": "2026-03-22 21:50:00"
+              }
+          ],
+          "updateAt": "2026-03-22 21:50:00"
+      }
   }
   ```
 - **响应示例**（等级4提交待确认）:
@@ -1213,6 +1300,13 @@
           "first_admin": "admin:张三",
           "created_at": "2026-03-22 21:50:00"
       }
+  }
+  ```
+- **错误响应示例**（未上传图片）：
+  ```json
+  {
+      "success": false,
+      "message": "必须上传至少一张图片作为添加黑名单的证明"
   }
   ```
 

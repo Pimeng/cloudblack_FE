@@ -143,7 +143,7 @@ export function ImagesPage() {
   const fetchSubfolders = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${API_BASE}/api/admin/images/subfolders`, {
+      const response = await fetch(`${API_BASE}/api/admin/images/subdirectories`, {
         headers: { 'Authorization': token },
       });
 
@@ -246,7 +246,7 @@ export function ImagesPage() {
 
     // Custom fetch for FormData (multipart/form-data)
     try {
-      const response = await fetch(`${API_BASE}/api/admin/images`, {
+      const response = await fetch(`${API_BASE}/api/admin/images/upload`, {
         method: 'POST',
         headers: {
           'Authorization': token || '',
@@ -275,8 +275,10 @@ export function ImagesPage() {
   const deleteImage = async () => {
     if (!deletingImage) return;
 
+    const params = new URLSearchParams();
+    params.append('path', deletingImage.path);
     const result = await deleteMutate(
-      `/api/admin/images/${encodeURIComponent(deletingImage.path)}`,
+      `/api/admin/images?${params}`,
       { method: 'DELETE' }
     );
     

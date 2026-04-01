@@ -37,7 +37,7 @@ export function AppealSection({ active }: { active?: boolean }) {
   // 改用 PendingImage 存储文件和预览
   const [images, setImages] = useState<PendingImage[]>([]);
   const maxImages = 3;
-  const maxSizeMB = 3;
+  const maxSizeMB = 5;
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -198,6 +198,7 @@ export function AppealSection({ active }: { active?: boolean }) {
     if (!formData.content.trim()) { setError('请输入申诉内容'); return; }
     if (formData.content.trim().length < 20) { setError('申诉内容至少需要20个字符'); return; }
     if (formData.content.length > 2000) { setError('申诉内容不能超过2000字'); return; }
+    if (images.length < 1) { setError('请至少上传1张图片作为申诉证明'); return; }
     
     // 如果启用了极验，先触发验证
     if (isEnabled) {
@@ -297,7 +298,7 @@ export function AppealSection({ active }: { active?: boolean }) {
 
               {/* 截图上传 */}
               <div className="space-y-1.5">
-                <Label>相关截图（可选，最多3张）</Label>
+                <Label>相关截图（必填，至少1张，最多3张）</Label>
                 <ImageUploadDropzone
                   images={images}
                   onImagesChange={setImages}

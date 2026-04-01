@@ -89,7 +89,7 @@ export function BackupPage() {
 
   const createBackup = async () => {
     const result = await createBackupMutate(
-      '/api/admin/backup',
+      '/api/admin/backup/create',
       { method: 'POST' },
       { remark: createRemark || undefined }
     );

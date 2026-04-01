@@ -169,6 +169,7 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
     if (!formData.reason.trim()) { setError('请输入举报原因'); return; }
     if (formData.reason.trim().length < 10) { setError('举报原因至少需要10个字符'); return; }
     if (formData.reason.length > 2000) { setError('举报原因不能超过2000字'); return; }
+    if (images.length < 1) { setError('请至少上传1张图片作为举报证明'); return; }
     
     // 如果启用了极验，先触发验证
     if (isEnabled) {
@@ -278,7 +279,7 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {/* 截图上传 */}
               <div className="space-y-1.5">
-                <Label>证据截图（可选，最多3张）</Label>
+                <Label>证据截图（必填，至少1张，最多3张）</Label>
                 <ImageUploadDropzone
                   images={images}
                   onImagesChange={setImages}

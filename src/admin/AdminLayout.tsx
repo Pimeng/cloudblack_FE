@@ -111,7 +111,9 @@ export function AdminLayout() {
   
   // Profile dialog state
   const [profileName, setProfileName] = useState('');
-  const [profilePassword, setProfilePassword] = useState('');
+  const [profileOldPassword, setProfileOldPassword] = useState('');
+  const [profileNewPassword, setProfileNewPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [profileAvatar, setProfileAvatar] = useState('');
   const [updatingProfile, setUpdatingProfile] = useState(false);
   
@@ -159,7 +161,8 @@ export function AdminLayout() {
     if (profileDialogOpen && adminInfo) {
       setProfileName(adminInfo.name || '');
       setProfileAvatar(adminInfo.avatar || '');
-      setProfilePassword('');
+      setProfileOldPassword('');
+      setProfileNewPassword('');
       fetchLogtoStatus();
     }
   }, [profileDialogOpen, adminInfo]);
@@ -246,7 +249,7 @@ export function AdminLayout() {
   const handleLogout = async () => {
     if (token) {
       try {
-        await fetch(`${API_BASE}/api/admin/logout`, {
+        await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
           headers: { 'Authorization': token },
         });
@@ -272,14 +275,6 @@ export function AdminLayout() {
       const body: any = {};
       if (profileName !== adminInfo.name) body.name = profileName;
       if (profileAvatar !== adminInfo.avatar) body.avatar = profileAvatar;
-      if (profilePassword) {
-        if (profilePassword.length < 6) {
-          toast.error('密码至少6位');
-          setUpdatingProfile(false);
-          return;
-        }
-        body.password = profilePassword;
-      }
       
       if (Object.keys(body).length === 0) {
         toast.info('没有修改内容');
@@ -287,7 +282,7 @@ export function AdminLayout() {
         return;
       }
 
-      const response = await fetch(`${API_BASE}/api/admin/admins/${adminInfo.admin_id}`, {
+      const response = await fetch(`${API_BASE}/api/admin/me`, {
         method: 'PUT',
         headers: {
           'Authorization': token,
@@ -310,6 +305,51 @@ export function AdminLayout() {
       toast.error('更新失败');
     } finally {
       setUpdatingProfile(false);
+    }
+  };
+
+  const updatePassword = async () => {
+    if (!token) return;
+    
+    if (!profileOldPassword) {
+      toast.error('请输入旧密码');
+      return;
+    }
+    if (!profileNewPassword) {
+      toast.error('请输入新密码');
+      return;
+    }
+    if (profileNewPassword.length < 6) {
+      toast.error('新密码至少6位');
+      return;
+    }
+    
+    setUpdatingPassword(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/me/password`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          old_password: profileOldPassword,
+          new_password: profileNewPassword,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('密码已更新');
+        setProfileOldPassword('');
+        setProfileNewPassword('');
+      } else {
+        toast.error(data.message || '密码更新失败');
+      }
+    } catch (err) {
+      toast.error('密码更新失败');
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -543,9 +583,33 @@ export function AdminLayout() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>新密码（留空则不修改）</Label>
-              <Input type="password" value={profilePassword} onChange={(e) => setProfilePassword(e.target.value)} placeholder="请输入新密码（至少6位）" className="bg-muted border-border" />
+            <div className="space-y-2 pt-4 border-t border-border">
+              <Label className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                修改密码
+              </Label>
+              <div className="space-y-2">
+                <Input type="password" value={profileOldPassword} onChange={(e) => setProfileOldPassword(e.target.value)} placeholder="请输入旧密码" className="bg-muted border-border" />
+                <Input type="password" value={profileNewPassword} onChange={(e) => setProfileNewPassword(e.target.value)} placeholder="请输入新密码（至少6位）" className="bg-muted border-border" />
+                <Button 
+                  onClick={updatePassword} 
+                  disabled={updatingPassword || !profileOldPassword || !profileNewPassword}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {updatingPassword ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-brand/30 border-t-brand rounded-full animate-spin mr-2" />
+                      修改中...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4 mr-2" />
+                      修改密码
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">

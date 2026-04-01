@@ -2,6 +2,8 @@
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useUrlState } from '../hooks';
 import { Users, Search, RefreshCw, Ban, Edit3, Trash2, User, UsersRound, Eye, ShieldAlert } from 'lucide-react';
+import { useImageViewer } from '@/hooks/useImageViewer';
+import { ImageUploadDropzone, type PendingImage } from '@/components/ImageUploadDropzone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -64,6 +66,12 @@ export function BlacklistPage() {
     user_id: string;
   } | null>(null);
   
+  // 图片上传相关状态
+  const [evidenceImages, setEvidenceImages] = useState<PendingImage[]>([]);
+  const maxImages = 3;
+  const maxSizeMB = 5;
+  const { openImage } = useImageViewer();
+  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BlacklistItem | null>(null);
   const [editReason, setEditReason] = useState('');
@@ -123,17 +131,29 @@ export function BlacklistPage() {
 
   const addToBlacklist = async () => {
     if (!newUserId.trim() || !newReason.trim()) return;
+    if (evidenceImages.length < 1) {
+      toast.error('请至少上传1张图片作为添加黑名单的证明');
+      return;
+    }
     
     setPendingConfirmation(null);
+    
+    // 使用 FormData 进行表单上传
+    const formData = new FormData();
+    formData.append('user_id', newUserId);
+    formData.append('user_type', newUserType);
+    formData.append('reason', newReason);
+    formData.append('level', String(newLevel));
+    
+    // 添加图片文件
+    evidenceImages.forEach((img) => {
+      formData.append('files', img.file);
+    });
+    
     const result = await addToBlacklistMutate(
       '/api/admin/blacklist',
       { method: 'POST' },
-      {
-        user_id: newUserId,
-        user_type: newUserType,
-        reason: newReason,
-        level: newLevel,
-      }
+      formData
     );
     
     if (result) {
@@ -151,6 +171,9 @@ export function BlacklistPage() {
         setNewUserType('user');
         setNewReason('');
         setNewLevel(1);
+        // 清理图片预览
+        evidenceImages.forEach(img => URL.revokeObjectURL(img.preview));
+        setEvidenceImages([]);
         fetchBlacklist();
       }
     }
@@ -519,6 +542,19 @@ export function BlacklistPage() {
               textareaClassName="min-h-[100px]"
             />
             
+            {/* 证据图片上传 */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">证据图片（必填，至少1张，最多3张）</label>
+              <ImageUploadDropzone
+                images={evidenceImages}
+                onImagesChange={setEvidenceImages}
+                maxImages={maxImages}
+                maxSizeMB={maxSizeMB}
+                onError={(msg) => toast.error(msg)}
+                onImageClick={(src) => openImage(src)}
+              />
+            </div>
+            
             {pendingConfirmation && (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                 <p className="text-sm text-yellow-400 mb-2">
@@ -535,7 +571,13 @@ export function BlacklistPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddDialogOpen(false); setPendingConfirmation(null); }}>
+            <Button variant="outline" onClick={() => { 
+              setAddDialogOpen(false); 
+              setPendingConfirmation(null);
+              // 清理图片预览
+              evidenceImages.forEach(img => URL.revokeObjectURL(img.preview));
+              setEvidenceImages([]);
+            }}>
               {pendingConfirmation ? '关闭' : '取消'}
             </Button>
             {!pendingConfirmation && (
@@ -543,7 +585,7 @@ export function BlacklistPage() {
                 onClick={addToBlacklist}
                 loading={addingLoading}
                 icon={Ban}
-                disabled={!newUserId.trim() || !newReason.trim()}
+                disabled={!newUserId.trim() || !newReason.trim() || evidenceImages.length < 1}
                 className={newLevel === 4 ? 'bg-red-600 hover:bg-red-700' : 'bg-red-600 hover:bg-red-700'}
               >
                 {newLevel === 4 ? '提交审核' : '确认添加'}
