@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { openExternalLink } from './ExternalLinkProvider';
 
 const STORAGE_KEY = 'doc_reminder_closed';
-const DOC_URL = 'https://cloudblack.apifox.cn?pwd=PIMENGNB';
+const DOC_URL = 'https://cloudblack-doc.07210700.xyz?pwd=PIMENGNB';
 
 export function DocReminder() {
   const [isVisible, setIsVisible] = useState(false);

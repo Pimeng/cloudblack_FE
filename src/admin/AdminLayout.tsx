@@ -30,7 +30,7 @@ import { DocReminder, ExternalLinkProvider } from './components';
 import { openExternalLink } from './components/ExternalLinkProvider';
 import { useTheme } from '@/hooks/useTheme';
 
-const DOC_URL = 'https://cloudblack.apifox.cn?pwd=PIMENGNB';
+const DOC_URL = 'https://cloudblack-doc.07210700.xyz?pwd=PIMENGNB';
 
 // 独立菜单项
 type NavItem = {
