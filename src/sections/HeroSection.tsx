@@ -3,13 +3,20 @@ import { Search, AlertCircle, Shield, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
+import { useImageViewer } from '@/hooks/useImageViewer';
 import { gsap } from 'gsap';
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://cloudblack-api.07210700.xyz';
 
 interface BlacklistResult {
   in_blacklist: boolean;
   data?: {
     user_id: string;
+    user_type?: 'user' | 'group';
     reason: string;
+    level?: number;
+    evidence?: string[];
+    admin_note?: string;
     added_by?: string;
     added_at: string;
   };
@@ -24,6 +31,7 @@ export function HeroSection() {
   const [result, setResult] = useState<BlacklistResult | null>(null);
   const [queryTime, setQueryTime] = useState<string>('');
   const [error, setError] = useState('');
+  const { openImage } = useImageViewer();
   
   // 使用 bind 模式的极验验证，点击查询按钮时触发
   const { 
@@ -125,6 +133,9 @@ export function HeroSection() {
         data: {
           user_id: userId,
           reason: '发布违规广告',
+          level: 3,
+          evidence: ['/uploads/blacklist_evidence/xxx.jpg'],
+          admin_note: '已核实，证据充分',
           added_by: 'system',
           added_at: '2026-03-10 14:30:00'
         }
@@ -304,6 +315,11 @@ export function HeroSection() {
                       <p className="text-white/90">
                         <span className="text-white/60">封禁原因:</span> {result.data.reason}
                       </p>
+                      {typeof result.data.level === 'number' && (
+                        <p className="text-white/90">
+                          <span className="text-white/60">违规等级:</span> Level {result.data.level}
+                        </p>
+                      )}
                       <p className="text-white/90">
                         <span className="text-white/60">添加时间:</span> {result.data.added_at}
                       </p>
@@ -311,6 +327,35 @@ export function HeroSection() {
                         <p className="text-white/90">
                           <span className="text-white/60">操作者:</span> {result.data.added_by}
                         </p>
+                      )}
+                      {result.data.admin_note && (
+                        <p className="text-white/90">
+                          <span className="text-white/60">处理备注:</span> {result.data.admin_note}
+                        </p>
+                      )}
+                      {result.data.evidence && result.data.evidence.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-white/60 mb-2">相关证据:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {result.data.evidence.map((img, idx) => {
+                              const src = img.startsWith('http') ? img : `${API_BASE}${img}`;
+                              return (
+                                <button
+                                  key={`${img}-${idx}`}
+                                  type="button"
+                                  onClick={() => openImage(src)}
+                                  className="w-14 h-14 rounded-lg overflow-hidden bg-white/10 border border-white/15 hover:border-white/35 transition-colors"
+                                >
+                                  <img
+                                    src={src}
+                                    alt={`证据 ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

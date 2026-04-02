@@ -35,6 +35,8 @@ export interface BlacklistItem {
   user_type: 'user' | 'group';
   reason: string;
   level?: number;
+  evidence?: string[];
+  admin_note?: string;
   added_by?: string;
   added_at: string;
   updated_at?: string;
@@ -288,6 +290,7 @@ export interface BlacklistReport {
   target_user_type: 'user' | 'group';
   reason: string;
   evidence: string[];
+  admin_note?: string;
   reporter_contact?: string;
   reporter_user_id?: string;
   status: 'pending' | 'approved' | 'rejected';

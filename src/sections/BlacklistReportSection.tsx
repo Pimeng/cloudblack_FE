@@ -377,6 +377,9 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
                         <p className="text-xs text-muted-foreground">审核人: {queryResult.review.admin_name}</p>
                         <p className="text-xs text-muted-foreground">审核时间: {new Date(queryResult.review.reviewed_at).toLocaleString()}</p>
                         <p className="text-xs text-foreground/80 mt-1">审核理由: {queryResult.review.reason}</p>
+                        {queryResult.admin_note && (
+                          <p className="text-xs text-foreground/80 mt-1">处理备注: {queryResult.admin_note}</p>
+                        )}
                       </div>
                     )}
                     {/* 证据图片 */}

@@ -324,6 +324,8 @@
                   "user_type": "user",
                   "reason": "发布违规广告",
                   "level": 3,
+                "evidence": ["/uploads/blacklist_evidence/xxx.jpg"],
+                "admin_note": "已核实，证据充分",
                   "added_by": "yll",
                   "added_at": "2026-02-01 00:50:00"
               },
@@ -332,6 +334,8 @@
                   "user_type": "group",
                   "reason": "群聊违规",
                   "level": 2,
+                "evidence": ["/uploads/blacklist_evidence/group-1.png"],
+                "admin_note": "",
                   "added_by": "yll",
                   "added_at": "2026-02-01 01:00:00"
               }
@@ -368,6 +372,8 @@
           "user_type": "user",
           "reason": "发布违规广告",
           "level": 3,
+          "evidence": ["/uploads/blacklist_evidence/xxx.jpg"],
+          "admin_note": "已核实，证据充分",
           "added_by": "yll",
           "added_at": "2026-02-01 00:50:00"
       }
@@ -1184,7 +1190,29 @@
   | `user_type` | string | 类型筛选：`user`(用户)、`group`(群聊) |
   | `page` | int | 页码（默认1） |
   | `per_page` | int | 每页数量（默认50，最大200） |
-- **响应示例**: 同 4.1 格式
+- **说明**: 返回的每条黑名单记录包含 `evidence`（证据图片URL列表）和 `admin_note`（管理员内部备注）字段
+- **响应示例**:
+  ```json
+  {
+      "success": true,
+      "data": {
+          "blacklist": [
+              {
+                  "user_id": "1234567890",
+                  "user_type": "user",
+                  "reason": "严重违规",
+                  "level": 3,
+                  "evidence": ["/uploads/blacklist_evidence/xxx.jpg", "/uploads/blacklist_evidence/yyy.png"],
+                  "admin_note": "已人工核实",
+                  "added_by": "admin:张三",
+                  "added_at": "2026-03-22 21:50:00",
+                  "updated_at": "2026-03-22 21:50:00"
+              }
+          ],
+          "updateAt": "2026-03-22 21:50:00"
+      }
+  }
+  ```
 
 ### 5.6 手动添加黑名单（管理端）
 - **接口地址**: `/api/admin/blacklist`
@@ -1279,6 +1307,8 @@
                   "user_type": "user",
                   "reason": "严重违规",
                   "level": 3,
+                  "evidence": ["/uploads/blacklist_evidence/xxx.jpg", "/uploads/blacklist_evidence/yyy.png"],
+                  "admin_note": "",
                   "added_by": "admin:张三",
                   "added_at": "2026-03-22 21:50:00"
               }
@@ -1332,6 +1362,8 @@
                   "user_id": "1234567890",
                   "user_type": "user",
                   "reason": "诈骗行为",
+                  "evidence": ["/uploads/reports/xxx.jpg", "/uploads/reports/yyy.png"],
+                  "admin_note": "经核实，建议按等级4处理",
                   "first_admin_id": "admin001",
                   "first_admin_name": "张三",
                   "first_confirmed_at": "2026-03-22 21:50:00",
@@ -2421,6 +2453,7 @@ DELETE /api/admin/blacklist/105823395?reason=误封已处理
 - **说明**: 
   - 批准举报时可选择是否将被举报用户加入黑名单
   - 等级4需要等级3+权限，且需要第二名管理员确认
+  - 批准并加入黑名单时，会继承举报中的 `evidence`，并将审核原因/管理员备注写入黑名单记录；若为等级4待确认，也会先写入待确认记录
 - **请求体**:
   ```json
   {
