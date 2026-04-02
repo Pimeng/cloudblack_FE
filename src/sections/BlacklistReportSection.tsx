@@ -72,6 +72,17 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
     );
   }, [active]);
 
+  useEffect(() => {
+    if (!formRef.current || submitted) return;
+
+    if (!hasAnimated.current) {
+      gsap.set(formRef.current, { opacity: active ? 1 : 0, y: active ? 0 : 50 });
+      return;
+    }
+
+    gsap.set(formRef.current, { opacity: 1, y: 0 });
+  }, [active, submitted, activeTab]);
+
   // 处理图片上传错误
   const handleImageError = useCallback((message: string) => {
     setError(message);

@@ -87,16 +87,14 @@ function HomePageContent() {
   const { pagePath } = useParams<{ pagePath?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const getIndexFromPath = useCallback((pathname: string) => {
+    const normalizedPath = pathname.replace(/^\/+/, '') || 'query';
+    const pageKey = PAGE_PATHS[normalizedPath];
+    return pageKey ? PAGES.indexOf(pageKey) : 0;
+  }, []);
   
   // 从 URL 路径确定当前页面索引
-  const getInitialIndex = useCallback(() => {
-    if (pagePath && PAGE_PATHS[pagePath]) {
-      return PAGES.indexOf(PAGE_PATHS[pagePath]);
-    }
-    return 0;
-  }, [pagePath]);
-  
-  const [currentIndex, setCurrentIndex] = useState(getInitialIndex);
+  const [currentIndex, setCurrentIndex] = useState(() => getIndexFromPath(location.pathname));
   const isAnimating = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef(0);
@@ -104,22 +102,32 @@ function HomePageContent() {
   
   // 当 URL 路径变化时更新当前索引
   useEffect(() => {
-    const newIndex = getInitialIndex();
+    if (pagePath && !PAGE_PATHS[pagePath]) {
+      navigate('/query', { replace: true });
+    }
+  }, [navigate, pagePath]);
+
+  useEffect(() => {
+    const newIndex = getIndexFromPath(location.pathname);
     if (newIndex !== currentIndex && !isAnimating.current) {
       setCurrentIndex(newIndex);
     }
-  }, [pagePath, getInitialIndex, currentIndex]);
+  }, [location.pathname, getIndexFromPath, currentIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimer.current) {
+        clearTimeout(animationTimer.current);
+      }
+    };
+  }, []);
 
 
 
   const goTo = useCallback((index: number) => {
-    if (index < 0 || index >= PAGES.length) return;
+    if (index < 0 || index >= PAGES.length || index === currentIndex || isAnimating.current) return;
     
     // 如果正在动画中，清除之前的定时器，打断当前动画
-    if (isAnimating.current && animationTimer.current) {
-      clearTimeout(animationTimer.current);
-    }
-    
     isAnimating.current = true;
     setCurrentIndex(index);
     // 同步 URL
@@ -134,7 +142,7 @@ function HomePageContent() {
       isAnimating.current = false;
       animationTimer.current = null;
     }, 700);
-  }, [navigate, location.pathname]);
+  }, [currentIndex, navigate, location.pathname]);
 
   // Wheel handler - 水平滚动
   useEffect(() => {
@@ -297,12 +305,7 @@ function App() {
       <WelcomeAlert />
       <Routes>
         <Route path="/" element={<Navigate to="/query" replace />} />
-        <Route path="/query" element={<HomePage />} />
-        <Route path="/about" element={<HomePage />} />
-        <Route path="/process" element={<HomePage />} />
-        <Route path="/stats" element={<HomePage />} />
-        <Route path="/appeal" element={<HomePage />} />
-        <Route path="/report" element={<HomePage />} />
+        <Route path="/:pagePath" element={<HomePage />} />
         <Route path="/docs/:fileKey" element={<MarkdownPage />} />
         <Route path="/admin" element={
           <Suspense fallback={<AdminPageFallback />}>
@@ -385,14 +388,6 @@ function App() {
             </Suspense>
           } />
         </Route>
-        <Route path="/report" element={
-          <div className="relative min-h-screen">
-            <FluidBackground />
-            <div className="relative z-10">
-              <BlacklistReportSection active={true} />
-            </div>
-          </div>
-        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </ImageViewerProvider>

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import { Search, MessageSquare, Scale } from 'lucide-react';
 import { gsap } from 'gsap';
 
@@ -35,39 +35,58 @@ export function FeaturesSection({ active }: FeaturesSectionProps) {
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
   const hasAnimated = useRef(false);
 
-  useEffect(() => {
-    if (!active || hasAnimated.current) return;
-    hasAnimated.current = true;
+  useLayoutEffect(() => {
+    const cards = cardsRef.current.filter(Boolean) as HTMLDivElement[];
+    if (cards.length === 0) return;
 
-    cardsRef.current.forEach((card, index) => {
-      if (!card) return;
-
-      gsap.fromTo(card,
-        { z: -500, opacity: 0, rotateY: -30 },
-        {
-          z: 0,
+    const ctx = gsap.context(() => {
+      if (!active) {
+        gsap.set(cards, {
           opacity: 1,
+          z: 0,
           rotateY: 0,
-          duration: 1,
-          delay: index * 0.2,
-          ease: 'elastic.out(1, 0.5)',
-        }
-      );
+          rotateX: 0,
+          translateZ: 0,
+        });
+        gsap.set('.feature-icon', { rotation: 0, scale: 1 });
+        return;
+      }
 
-      const icon = card.querySelector('.feature-icon');
-      if (icon) {
-        gsap.fromTo(icon,
-          { rotation: -180, scale: 0 },
+      if (hasAnimated.current) return;
+      hasAnimated.current = true;
+
+      cards.forEach((card, index) => {
+        gsap.fromTo(card,
+          { z: -500, opacity: 0, rotateY: -30 },
           {
-            rotation: 0,
-            scale: 1,
-            duration: 0.6,
-            delay: index * 0.2 + 0.3,
+            z: 0,
+            opacity: 1,
+            rotateY: 0,
+            duration: 1,
+            delay: index * 0.2,
             ease: 'elastic.out(1, 0.5)',
+            overwrite: 'auto',
           }
         );
-      }
-    });
+
+        const icon = card.querySelector('.feature-icon');
+        if (icon) {
+          gsap.fromTo(icon,
+            { rotation: -180, scale: 0 },
+            {
+              rotation: 0,
+              scale: 1,
+              duration: 0.6,
+              delay: index * 0.2 + 0.3,
+              ease: 'elastic.out(1, 0.5)',
+              overwrite: 'auto',
+            }
+          );
+        }
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
   }, [active]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>, index: number) => {
@@ -107,7 +126,7 @@ export function FeaturesSection({ active }: FeaturesSectionProps) {
               className="relative group"
               style={{
                 transformStyle: 'preserve-3d',
-                opacity: 0,
+                opacity: 1,
               }}
               onMouseMove={(e) => handleMouseMove(e, index)}
               onMouseLeave={() => handleMouseLeave(index)}
