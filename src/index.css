@@ -114,6 +114,15 @@
   .glow-soft {
     box-shadow: 0 0 20px oklch(0.75 0.14 250 / 0.2);
   }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Light mode: brand button text should be dark for contrast */

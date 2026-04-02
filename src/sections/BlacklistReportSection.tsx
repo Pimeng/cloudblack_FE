@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, X, CheckCircle, Search, Clock, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useImageViewer } from '@/hooks/useImageViewer';
 import { ImageUploadDropzone, type PendingImage } from '@/components/ImageUploadDropzone';
+import { ReportPageShell } from '@/components/ReportPageShell';
 import { gsap } from 'gsap';
 import { useGeetest, type GeetestResult } from '@/hooks/useGeetest';
 import type { BlacklistReport } from '@/admin/types';
@@ -193,7 +194,7 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
   if (submitted) {
     return (
-      <section ref={sectionRef} className="relative py-10 px-8 h-screen flex flex-col justify-center items-center">
+      <section ref={sectionRef} className="relative min-h-screen px-4 pt-24 pb-28 md:px-8 md:py-10 md:h-screen flex flex-col justify-start md:justify-center items-center">
         <div className="success-message glass-strong rounded-3xl p-10 text-center max-w-md w-full">
           <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-500" />
@@ -209,26 +210,27 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
   }
 
   return (
-    <section ref={sectionRef} className="relative py-4 md:py-10 px-8 min-h-screen md:h-screen flex flex-col justify-center items-stretch">
-      <div className="text-center mb-3 md:mb-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-gradient mb-2">我要举报</h2>
-        <p className="text-muted-foreground">举报违规用户，共建良好社区环境</p>
-      </div>
-
-      <div className="w-full max-w-md mx-auto mb-3">
-        <div className="flex gap-2 p-1 bg-muted/50 rounded-xl">
-          <button type="button" onClick={() => { setActiveTab('submit'); setError(''); setQueryResult(null); }}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'submit' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground'}`}>
-            <ShieldAlert className="w-4 h-4" />提交举报
-          </button>
-          <button type="button" onClick={() => { setActiveTab('query'); setError(''); setSubmitted(false); }}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${activeTab === 'query' ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground'}`}>
-            <Search className="w-4 h-4" />查询举报
-          </button>
-        </div>
-      </div>
-
-      <div ref={formRef} className="w-full max-w-md mx-auto" style={{ opacity: 0 }}>
+    <section ref={sectionRef} className="relative min-h-screen px-4 pt-20 pb-28 md:px-8 md:pt-24 md:pb-28 md:h-screen flex flex-col justify-start items-stretch">
+      <ReportPageShell
+        title="我要举报"
+        description="举报违规用户，共建良好社区环境"
+        activeTab={activeTab}
+        tabs={[
+          {
+            key: 'submit',
+            label: '提交举报',
+            icon: <ShieldAlert className="w-4 h-4" />,
+            onClick: () => { setActiveTab('submit'); setError(''); setQueryResult(null); },
+          },
+          {
+            key: 'query',
+            label: '查询举报',
+            icon: <Search className="w-4 h-4" />,
+            onClick: () => { setActiveTab('query'); setError(''); setSubmitted(false); },
+          },
+        ]}
+      >
+      <div ref={formRef} style={{ opacity: 0 }}>
         {activeTab === 'submit' ? (
           <div className="glass-strong rounded-3xl p-4 md:p-6">
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -391,6 +393,7 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
           </div>
         )}
       </div>
+      </ReportPageShell>
     </section>
   );
 }

@@ -98,6 +98,7 @@ function HomePageContent() {
   const isAnimating = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const { theme, toggle: toggleTheme } = useTheme();
   
   // 当 URL 路径变化时更新当前索引
@@ -144,6 +145,38 @@ function HomePageContent() {
     }, 700);
   }, [currentIndex, navigate, location.pathname]);
 
+  const canScrollVertically = useCallback((element: HTMLElement, deltaY: number) => {
+    if (element.scrollHeight <= element.clientHeight) return false;
+
+    const atTop = element.scrollTop <= 0;
+    const atBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 1;
+
+    if (deltaY < 0) return !atTop;
+    if (deltaY > 0) return !atBottom;
+    return false;
+  }, []);
+
+  useEffect(() => {
+    const onWheelCapture = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      const panel = target.closest<HTMLElement>('[data-scrollable]');
+      const swipeLocked = target.closest('[data-lock-horizontal-swipe]');
+      const isVerticalIntent = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
+
+      if (swipeLocked) {
+        e.stopPropagation();
+        return;
+      }
+
+      if (panel && isVerticalIntent && canScrollVertically(panel, e.deltaY)) {
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener('wheel', onWheelCapture, { capture: true, passive: true });
+    return () => window.removeEventListener('wheel', onWheelCapture, true);
+  }, [canScrollVertically]);
+
   // Wheel handler - 水平滚动
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
@@ -183,19 +216,45 @@ function HomePageContent() {
 
   // Touch handler - 水平滑动
   useEffect(() => {
+    const onTouchStartCapture = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+    const onTouchEndCapture = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const swipeLocked = target.closest('[data-lock-horizontal-swipe]');
+      const deltaX = touchStartX.current - e.changedTouches[0].clientX;
+      const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+
+      if (swipeLocked) {
+        e.stopPropagation();
+        return;
+      }
+
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        e.stopPropagation();
+      }
+    };
     const onTouchStart = (e: TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
     };
     const onTouchEnd = (e: TouchEvent) => {
-      const delta = touchStartX.current - e.changedTouches[0].clientX;
-      if (Math.abs(delta) < 30) return;
-      if (delta > 0) goTo(currentIndex + 1);
+      const deltaX = touchStartX.current - e.changedTouches[0].clientX;
+      const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+      if (Math.abs(deltaX) < 30) return;
+      if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+      if (deltaX > 0) goTo(currentIndex + 1);
       else goTo(currentIndex - 1);
     };
 
+    window.addEventListener('touchstart', onTouchStartCapture, { capture: true, passive: true });
+    window.addEventListener('touchend', onTouchEndCapture, { capture: true, passive: true });
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
     return () => {
+      window.removeEventListener('touchstart', onTouchStartCapture, true);
+      window.removeEventListener('touchend', onTouchEndCapture, true);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
     };
