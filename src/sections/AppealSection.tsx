@@ -74,6 +74,8 @@ export function AppealSection({ active }: { active?: boolean }) {
 
   const sectionRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const shouldAutoResizeRef = useRef(false);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
@@ -84,6 +86,19 @@ export function AppealSection({ active }: { active?: boolean }) {
       { y: 0, opacity: 1, duration: 0.8, ease: 'power2.out' }
     );
   }, [active]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    shouldAutoResizeRef.current = window.matchMedia('(pointer: coarse)').matches;
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoResizeRef.current || !contentTextareaRef.current) return;
+
+    const textarea = contentTextareaRef.current;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(textarea.scrollHeight, 80)}px`;
+  }, [formData.content]);
 
   useEffect(() => {
     if (!formRef.current || submitted) return;
@@ -301,10 +316,10 @@ export function AppealSection({ active }: { active?: boolean }) {
               {/* 申诉内容 */}
               <div className="space-y-1.5">
                 <Label htmlFor="content">申诉内容 <span className="text-red-500">*</span></Label>
-                <Textarea id="content" placeholder="请详细描述您被拉黑的情况，包括：&#10;1. 您认为被误封的原因&#10;2. 相关事件经过&#10;3. 您希望如何处理"
+                <Textarea ref={contentTextareaRef} id="content" placeholder="请详细描述您被拉黑的情况，包括：&#10;1. 您认为被误封的原因&#10;2. 相关事件经过&#10;3. 您希望如何处理"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-none"
+                  className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-y overflow-hidden"
                   maxLength={2000} />
                 <p className="text-xs text-muted-foreground text-right">{formData.content.length}/2000</p>
               </div>

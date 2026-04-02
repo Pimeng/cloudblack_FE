@@ -62,6 +62,8 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
   const sectionRef = useRef<HTMLElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const reasonTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const shouldAutoResizeRef = useRef(false);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
@@ -72,6 +74,19 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
       { y: 0, opacity: 1, duration: 0.8, ease: 'power2.out' }
     );
   }, [active]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    shouldAutoResizeRef.current = window.matchMedia('(pointer: coarse)').matches;
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoResizeRef.current || !reasonTextareaRef.current) return;
+
+    const textarea = reasonTextareaRef.current;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(textarea.scrollHeight, 80)}px`;
+  }, [formData.reason]);
 
   useEffect(() => {
     if (!formRef.current || submitted) return;
@@ -282,10 +297,10 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
               {/* 举报原因 */}
               <div className="space-y-1.5">
                 <Label htmlFor="reason">举报原因 <span className="text-red-500">*</span></Label>
-                <Textarea id="reason" placeholder="请详细描述违规行为，包括：&#10;1. 违规行为发生的时间和场景&#10;2. 具体的违规内容或行为&#10;3. 是否有其他受害者&#10;请尽量提供详细信息，帮助我们快速核实"
+                <Textarea ref={reasonTextareaRef} id="reason" placeholder="请详细描述违规行为，包括：&#10;1. 违规行为发生的时间和场景&#10;2. 具体的违规内容或行为&#10;3. 是否有其他受害者&#10;请尽量提供详细信息，帮助我们快速核实"
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-none"
+                  className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-y overflow-hidden"
                   maxLength={2000} />
                 <p className="text-xs text-muted-foreground text-right">{formData.reason.length}/2000</p>
               </div>
