@@ -175,12 +175,13 @@ export function Level4PendingPage() {
             <ShieldAlert className="w-6 h-6 text-red-500" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-1">双管理员确认机制</h3>
-            <p className="text-muted-foreground text-sm">
-              等级4（严重违规）需要两名管理员共同确认才能生效。
-              第一位管理员提交后，需要另一位管理员进行确认。
-              您不能确认自己提交的记录。
-            </p>
+            <h3 className="text-lg font-semibold text-foreground mb-2">双管理员确认机制</h3>
+            <ul className="text-muted-foreground text-sm space-y-1 list-disc list-inside">
+              <li>等级4（严重违规）需要<strong>两名管理员</strong>共同确认才能生效</li>
+              <li>第一位管理员提交后，需要另一位管理员进行确认</li>
+              <li><span className="text-yellow-400">您不能确认自己提交的记录</span></li>
+              <li>只有提交者本人或超级管理员可以取消待确认记录</li>
+            </ul>
           </div>
         </div>
       </div>

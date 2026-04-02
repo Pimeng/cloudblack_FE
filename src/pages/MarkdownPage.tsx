@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { ArrowLeft, FileText, Shield, Gavel } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, Gavel, WrapText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FluidBackground } from '@/components/FluidBackground';
 import 'highlight.js/styles/github-dark.css';
@@ -29,6 +29,8 @@ export function MarkdownPage() {
   const [error, setError] = useState<string>('');
 
   const fileInfo = fileKey ? markdownFiles[fileKey] : null;
+  const codeWrapStateRef = useRef<Record<string, boolean>>({});
+  const [, forceUpdate] = useState({});
 
   useEffect(() => {
     if (!fileInfo) {
@@ -86,7 +88,7 @@ export function MarkdownPage() {
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-          <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="mx-auto md:max-w-4xl px-4 h-14 flex items-center justify-between">
             <button
               onClick={handleBack}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -105,11 +107,11 @@ export function MarkdownPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 py-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-card/80 backdrop-blur-sm border border-border rounded-xl overflow-hidden">
-              <ScrollArea className="h-[calc(100vh-8rem)]">
-                <div className="p-6 md:p-8">
+        <main className="flex-1 flex flex-col px-0 md:px-4 overflow-hidden">
+          <div className="flex-1 flex flex-col mx-auto md:max-w-4xl w-full min-w-0">
+            <div className="flex-1 md:bg-card/80 bg-transparent md:backdrop-blur-sm border-0 md:border border-transparent md:border-border rounded-none md:rounded-xl overflow-hidden md:shadow-lg min-w-0">
+              <ScrollArea className="h-full w-full [&>[data-slot=scroll-area-viewport]]:min-w-0 [&>[data-slot=scroll-area-viewport]>div]:!block [&>[data-slot=scroll-area-viewport]>div]:w-full [&>[data-slot=scroll-area-viewport]>div]:min-w-0 [&>[data-slot=scroll-area-viewport]>div]:bg-background md:[&>[data-slot=scroll-area-viewport]>div]:bg-transparent">
+                <div className="px-4 pt-8 md:p-8 pb-8">
                   {loading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
@@ -119,64 +121,124 @@ export function MarkdownPage() {
                       <p className="text-destructive">{error}</p>
                     </div>
                   ) : (
-                    <article className="max-w-none">
+                    <article className="max-w-full w-full overflow-x-hidden min-w-0">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeHighlight]}
                         components={{
                           h1: ({ children }) => (
-                            <h1 className="text-3xl font-bold text-foreground mb-6 pb-4 border-b border-border">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-border leading-tight break-all">
                               {children}
                             </h1>
                           ),
                           h2: ({ children }) => (
-                            <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">
+                            <h2 className="text-xl sm:text-2xl font-semibold text-foreground mt-6 sm:mt-8 mb-3 sm:mb-4 leading-tight break-all">
                               {children}
                             </h2>
                           ),
                           h3: ({ children }) => (
-                            <h3 className="text-xl font-semibold text-foreground mt-6 mb-3">
+                            <h3 className="text-lg sm:text-xl font-semibold text-foreground mt-4 sm:mt-6 mb-2 sm:mb-3 leading-tight break-all">
                               {children}
                             </h3>
                           ),
                           p: ({ children }) => (
-                            <p className="text-muted-foreground leading-relaxed mb-4">
+                            <p className="text-sm sm:text-base text-muted-foreground leading-7 sm:leading-relaxed mb-4 break-all">
                               {children}
                             </p>
                           ),
                           ul: ({ children }) => (
-                            <ul className="list-disc list-inside text-muted-foreground space-y-2 mb-4">
+                            <ul className="list-disc pl-4 sm:pl-5 text-muted-foreground space-y-2 sm:space-y-2 mb-4 text-sm sm:text-base">
                               {children}
                             </ul>
                           ),
                           ol: ({ children }) => (
-                            <ol className="list-decimal list-inside text-muted-foreground space-y-2 mb-4">
+                            <ol className="list-decimal pl-4 sm:pl-5 text-muted-foreground space-y-2 sm:space-y-2 mb-4 text-sm sm:text-base">
                               {children}
                             </ol>
                           ),
                           li: ({ children }) => (
-                            <li className="leading-relaxed">{children}</li>
+                            <li className="leading-7 sm:leading-relaxed pl-1">{children}</li>
                           ),
                           blockquote: ({ children }) => (
-                            <blockquote className="border-l-4 border-brand pl-4 italic text-muted-foreground my-4">
+                            <blockquote className="border-l-4 border-brand pl-3 sm:pl-4 italic text-muted-foreground my-4 text-sm sm:text-base">
                               {children}
                             </blockquote>
                           ),
-                          code: ({ children, className }) => {
+                          code: ({ children, className, node }) => {
                             const isInline = !className;
+                            const codeId = node?.position?.start?.offset?.toString() || 'inline-code';
+                            const isWrapEnabled = codeWrapStateRef.current[codeId] || false;
+                            
+                            // Split code into lines for line numbers
+                            const codeString = String(children);
+                            const lines = codeString.split('\n').filter((_, i, arr) => !(i === arr.length - 1 && arr[i] === ''));
+                            
+                            const toggleWrap = () => {
+                              codeWrapStateRef.current = { 
+                                ...codeWrapStateRef.current, 
+                                [codeId]: !codeWrapStateRef.current[codeId] 
+                              };
+                              forceUpdate({}); // Re-render to apply changes
+                            };
+                            
                             return isInline ? (
                               <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground">
                                 {children}
                               </code>
                             ) : (
-                              <pre className="bg-muted rounded-lg p-4 overflow-x-auto my-4">
-                                <code className={className}>{children}</code>
-                              </pre>
+                              <div className="my-4" data-code-id={codeId}>
+                                {/* Toolbar */}
+                                <div className="bg-muted/80 border-b border-border sm:rounded-t-lg px-3 py-2 flex items-center justify-between">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="font-mono text-[10px] bg-muted-foreground/10 px-1.5 py-0.5 rounded">
+                                      {lines.length}L
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={toggleWrap}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
+                                      isWrapEnabled 
+                                        ? 'bg-brand/20 text-brand' 
+                                        : 'hover:bg-muted-foreground/10 text-muted-foreground'
+                                    }`}
+                                    title={isWrapEnabled ? '关闭自动换行' : '开启自动换行'}
+                                  >
+                                    <WrapText className="w-3.5 h-3.5" />
+                                    <span>{isWrapEnabled ? '已换行' : '换行'}</span>
+                                  </button>
+                                </div>
+                                {/* Code block */}
+                                <div 
+                                  className={`bg-muted sm:rounded-b-lg overflow-x-auto ${isWrapEnabled ? 'overflow-x-hidden' : ''}`}
+                                >
+                                  <div className="flex">
+                                    {/* Line numbers */}
+                                    <div className="select-none border-r border-border/50 bg-muted/50 py-3 sm:py-4 px-2 sm:px-3 text-right">
+                                      {lines.map((_, i) => (
+                                        <div key={i} className="text-[10px] sm:text-xs text-muted-foreground/50 font-mono leading-5 w-4 sm:w-6">
+                                          {i + 1}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {/* Code content */}
+                                    <pre className="p-3 sm:p-4 m-0 flex-1 overflow-visible" style={{ minWidth: isWrapEnabled ? 'auto' : 'max-content' }}>
+                                      <code className={`${className} text-sm font-mono block leading-5 ${
+                                        isWrapEnabled ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'
+                                      }`}>{children}</code>
+                                    </pre>
+                                  </div>
+                                </div>
+                                {!isWrapEnabled && (
+                                  <p className="text-[10px] text-muted-foreground mt-1.5 text-center sm:hidden">
+                                    ← 左右滑动查看，或点击「换行」按钮 →
+                                  </p>
+                                )}
+                              </div>
                             );
                           },
                           table: ({ children }) => (
-                            <div className="overflow-x-auto my-4">
-                              <table className="w-full border-collapse border border-border">
+                            <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0 my-4">
+                              <table className="w-full border-collapse border border-border text-sm sm:text-base">
                                 {children}
                               </table>
                             </div>
@@ -185,26 +247,26 @@ export function MarkdownPage() {
                             <thead className="bg-muted">{children}</thead>
                           ),
                           th: ({ children }) => (
-                            <th className="border border-border px-4 py-2 text-left font-semibold text-foreground">
+                            <th className="border border-border px-2 sm:px-4 py-2 text-left font-semibold text-foreground whitespace-nowrap sm:whitespace-normal">
                               {children}
                             </th>
                           ),
                           td: ({ children }) => (
-                            <td className="border border-border px-4 py-2 text-muted-foreground">
+                            <td className="border border-border px-2 sm:px-4 py-2 text-muted-foreground">
                               {children}
                             </td>
                           ),
                           a: ({ children, href }) => (
                             <a
                               href={href}
-                              className="text-brand hover:underline"
+                              className="text-brand hover:underline break-all"
                               target={href?.startsWith('http') ? '_blank' : undefined}
                               rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
                             >
                               {children}
                             </a>
                           ),
-                          hr: () => <hr className="border-border my-6" />,
+                          hr: () => <hr className="border-border my-4 sm:my-6" />,
                         }}
                       >
                         {content}

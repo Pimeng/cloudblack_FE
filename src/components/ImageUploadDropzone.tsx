@@ -239,8 +239,13 @@ export function ImageUploadDropzone({
               {isDragOver ? '释放以上传图片' : '点击选择、拖拽或粘贴图片'}
             </p>
             <p className="text-xs text-muted-foreground">
-              支持 png/jpg/gif/webp，单张最大 {maxSizeMB}MB，最多 {maxImages} 张
+              支持格式：PNG、JPG、GIF、WebP | 单张最大 {maxSizeMB}MB | 最多 {maxImages} 张
             </p>
+            {images.length === 0 && (
+              <p className="text-xs text-yellow-500 mt-1">
+                ⚠️ 请至少上传 1 张图片作为证明
+              </p>
+            )}
           </div>
         </div>
       )}

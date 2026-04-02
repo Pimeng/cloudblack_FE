@@ -535,16 +535,21 @@ export function BlacklistPage() {
               </div>
             )}
             <FormTextarea
-              label="封禁原因"
+              label="封禁原因 *"
               value={newReason}
               onChange={(e) => setNewReason(e.target.value)}
-              placeholder="请输入封禁原因..."
+              placeholder="请详细说明封禁原因，包括违规行为的描述、发生时间、证据来源等，便于后续审核和申诉处理..."
               textareaClassName="min-h-[100px]"
             />
             
             {/* 证据图片上传 */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">证据图片（必填，至少1张，最多3张）</label>
+              <label className="text-sm font-medium">
+                证据图片 <span className="text-red-500">*</span> <span className="text-xs text-muted-foreground font-normal">（至少1张，最多3张）</span>
+              </label>
+              <p className="text-xs text-muted-foreground">
+                上传能证明违规行为的截图，系统将对图片进行安全检测和去重处理
+              </p>
               <ImageUploadDropzone
                 images={evidenceImages}
                 onImagesChange={setEvidenceImages}

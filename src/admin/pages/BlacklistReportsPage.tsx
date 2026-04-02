@@ -14,6 +14,7 @@ import {
   Sparkles,
   Loader2,
   Bot,
+  AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1064,23 +1065,23 @@ export function BlacklistReportsPage() {
 
           <div className="space-y-4 py-4">
             <FormTextarea
-              label="审核理由"
+              label="审核理由 *"
               value={reviewDialog.reason}
               onChange={(e) => setReviewDialog({ ...reviewDialog, reason: e.target.value })}
-              placeholder="请输入审核理由..."
+              placeholder="请详细说明审核理由：&#10;- 批准：说明举报属实的原因和依据&#10;- 拒绝：说明举报不成立的原因，如证据不足、不属违规等"
               textareaClassName="min-h-[100px]"
             />
             
             <FormTextarea
-              label="管理员备注（仅内部可见）"
+              label="管理员备注"
               value={reviewDialog.adminNote}
               onChange={(e) => setReviewDialog({ ...reviewDialog, adminNote: e.target.value })}
-              placeholder="可选，仅管理员可见..."
+              placeholder="可选，仅管理员内部可见，可用于记录额外的处理信息..."
               textareaClassName="min-h-[80px]"
             />
 
             {reviewDialog.action === 'approve' && (
-              <>
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 space-y-3">
                 <div className="flex items-center gap-2">
                   <input 
                     type="checkbox" 
@@ -1089,30 +1090,33 @@ export function BlacklistReportsPage() {
                     onChange={(e) => setReviewDialog({ ...reviewDialog, addToBlacklist: e.target.checked })} 
                     className="rounded border-border bg-muted" 
                   />
-                  <label htmlFor="addToBlacklist" className="text-sm cursor-pointer">同时将被举报者加入黑名单</label>
+                  <label htmlFor="addToBlacklist" className="text-sm cursor-pointer font-medium text-green-400">
+                    同时将被举报者加入黑名单
+                  </label>
                 </div>
                 
                 {reviewDialog.addToBlacklist && (
-                  <div className="space-y-2">
-                    <label className="text-sm">黑名单等级</label>
+                  <div className="space-y-2 ml-5">
+                    <label className="text-sm text-muted-foreground">黑名单等级</label>
                     <select
                       value={reviewDialog.level}
                       onChange={(e) => setReviewDialog({ ...reviewDialog, level: parseInt(e.target.value) })}
                       className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
                     >
-                      <option value={1}>等级1 - 轻微违规</option>
-                      <option value={2}>等级2 - 一般违规</option>
-                      <option value={3}>等级3 - 严重违规</option>
-                      <option value={4}>等级4 - 极端违规（需双管理员确认）</option>
+                      <option value={1}>等级1 - 轻微违规（人身攻击、低素质言论）</option>
+                      <option value={2}>等级2 - 一般违规（多次警告无效、轻度骚扰）</option>
+                      <option value={3}>等级3 - 严重违规（违反平台协议、广告 spam）</option>
+                      <option value={4}>等级4 - 极其严重（诈骗、威胁、传播非法内容）</option>
                     </select>
                     {reviewDialog.level === 4 && (
-                      <p className="text-xs text-yellow-500">
-                        等级4需要另一名管理员确认后才会生效
-                      </p>
+                      <div className="flex items-start gap-2 text-xs text-yellow-500">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>等级4需要双管理员确认机制，提交后需要另一名管理员确认才能生效</span>
+                      </div>
                     )}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
@@ -1137,16 +1141,20 @@ export function BlacklistReportsPage() {
           <DialogHeader>
             <DialogTitle>删除举报</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {deleteDialog.report && `确定要删除对 ${deleteDialog.report.target_user_id} 的举报吗？此操作不可恢复。`}
+              {deleteDialog.report && `确定要删除对 ${deleteDialog.report.target_user_id} 的举报吗？`}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <p className="text-sm text-yellow-400 font-medium mb-1">⚠️ 警告</p>
+              <p className="text-xs text-muted-foreground">删除后该举报记录将永久消失且无法恢复。此操作会被记录到审计日志。</p>
+            </div>
             <FormTextarea
-              label="删除原因（可选）"
+              label="删除原因（建议填写）"
               value={deleteDialog.reason}
               onChange={(e) => setDeleteDialog({ ...deleteDialog, reason: e.target.value })}
-              placeholder="请输入删除原因，如：重复举报，已合并处理..."
+              placeholder="请说明删除原因，如：重复举报已合并、证据不足、误报等..."
               textareaClassName="min-h-[80px]"
             />
           </div>
@@ -1171,11 +1179,19 @@ export function BlacklistReportsPage() {
           <DialogHeader>
             <DialogTitle>清理已处理举报</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              清理所有已批准和已拒绝的举报记录。待处理的举报不会被删除。
+              批量清理已处理的举报记录以释放存储空间
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <p className="text-sm text-blue-400 font-medium mb-1">ℹ️ 说明</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>仅清理状态为<span className="text-green-400">已通过</span>或<span className="text-red-400">已拒绝</span>的举报</li>
+                <li><span className="text-yellow-400">待处理</span>的举报不会被删除</li>
+                <li>清理后的记录无法恢复，请谨慎操作</li>
+              </ul>
+            </div>
             <div className="space-y-2">
               <label className="text-sm text-foreground/80">清理范围（可选）</label>
               <input
@@ -1190,7 +1206,7 @@ export function BlacklistReportsPage() {
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground"
               />
               <p className="text-xs text-muted-foreground">
-                输入天数阈值，只清理该天数前已处理的举报。留空则清理所有已处理的举报。
+                建议保留最近30天的记录以便查阅。输入天数阈值，只清理该天数前已处理的举报。
               </p>
             </div>
           </div>

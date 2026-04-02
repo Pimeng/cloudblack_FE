@@ -249,8 +249,8 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {/* 举报人联系方式*/}
               <div className="space-y-1.5">
-                <Label htmlFor="reporter_contact">联系邮箱</Label>
-                <Input id="reporter_contact" type="email" placeholder="请输入您的邮箱地址，用于接收处理结果"
+                <Label htmlFor="reporter_contact">联系邮箱 <span className="text-xs text-muted-foreground font-normal">（选填，用于接收处理结果通知）</span></Label>
+                <Input id="reporter_contact" type="email" placeholder="您的邮箱地址将严格保密，仅用于通知处理结果"
                   value={formData.reporter_contact}
                   onChange={(e) => setFormData({ ...formData, reporter_contact: e.target.value })}
                   className="bg-background/50 border-border/50 focus:border-brand" />
@@ -258,9 +258,9 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {/* 举报人用户ID */}
               <div className="space-y-1.5">
-                <Label htmlFor="reporter_user_id">您的QQ号</Label>
+                <Label htmlFor="reporter_user_id">您的QQ号 <span className="text-xs text-muted-foreground font-normal">（选填，方便我们核实情况）</span></Label>
                 <Input id="reporter_user_id" type="text" inputMode="numeric" pattern="[0-9]*"
-                  placeholder="请输入您的QQ号"
+                  placeholder="您的QQ号将严格保密，仅用于核实举报内容"
                   value={formData.reporter_user_id}
                   onChange={(e) => setFormData({ ...formData, reporter_user_id: e.target.value.replace(/\D/g, '') })}
                   className="bg-background/50 border-border/50 focus:border-brand" />
@@ -268,8 +268,8 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {/* 举报原因 */}
               <div className="space-y-1.5">
-                <Label htmlFor="reason">举报原因</Label>
-                <Textarea id="reason" placeholder="请详细说明举报原因，包括违规行为的具体描述..."
+                <Label htmlFor="reason">举报原因 <span className="text-red-500">*</span></Label>
+                <Textarea id="reason" placeholder="请详细描述违规行为，包括：&#10;1. 违规行为发生的时间和场景&#10;2. 具体的违规内容或行为&#10;3. 是否有其他受害者&#10;请尽量提供详细信息，帮助我们快速核实"
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                   className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-none"
@@ -279,7 +279,7 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {/* 截图上传 */}
               <div className="space-y-1.5">
-                <Label>证据截图（必填，至少1张，最多3张）</Label>
+                <Label>证据截图 <span className="text-red-500">*</span> <span className="text-xs text-muted-foreground font-normal">（至少1张，最多3张，请上传能证明违规行为的真实截图）</span></Label>
                 <ImageUploadDropzone
                   images={images}
                   onImagesChange={setImages}
@@ -292,25 +292,35 @@ export function BlacklistReportSection({ active }: { active?: boolean }) {
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
 
-              <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
-                className="w-full py-3 text-base font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
-                {submitting
-                  ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>
-                  : <span className="flex items-center gap-2"><Send className="w-5 h-5" />提交举报</span>}
-              </Button>
+              <div className="space-y-2">
+                <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
+                  className="w-full py-3 text-base font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
+                  {submitting
+                    ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>
+                    : <span className="flex items-center gap-2"><Send className="w-5 h-5" />提交举报</span>}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  我们会对您的举报信息严格保密，审核通过后将及时处理
+                </p>
+              </div>
             </form>
           </div>
         ) : (
           <div className="glass-strong rounded-3xl p-6">
             <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm text-blue-400">
+                  💡 提示：使用举报时获得的举报ID可查询处理进度和结果
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="query_report_id">举报ID</Label>
                 <Input id="query_report_id" type="text"
-                  placeholder="请输入举报ID"
+                  placeholder="请输入举报ID，如：REP-1234567890"
                   value={queryReportId}
                   onChange={(e) => setQueryReportId(e.target.value)}
                   className="bg-background/50 border-border/50 focus:border-brand" />
-                <p className="text-xs text-muted-foreground">举报提交后会返回举报ID，可用于查询处理进度</p>
+                <p className="text-xs text-muted-foreground">举报提交成功后会返回举报ID，请妥善保存以便查询</p>
               </div>
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}

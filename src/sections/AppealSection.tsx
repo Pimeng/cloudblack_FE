@@ -287,8 +287,8 @@ export function AppealSection({ active }: { active?: boolean }) {
 
               {/* 申诉内容 */}
               <div className="space-y-1.5">
-                <Label htmlFor="content">申诉内容</Label>
-                <Textarea id="content" placeholder="请详细说明您的情况..."
+                <Label htmlFor="content">申诉内容 <span className="text-red-500">*</span></Label>
+                <Textarea id="content" placeholder="请详细描述您被拉黑的情况，包括：&#10;1. 您认为被误封的原因&#10;2. 相关事件经过&#10;3. 您希望如何处理"
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   className="bg-background/50 border-border/50 focus:border-brand min-h-[80px] resize-none"
@@ -298,7 +298,7 @@ export function AppealSection({ active }: { active?: boolean }) {
 
               {/* 截图上传 */}
               <div className="space-y-1.5">
-                <Label>相关截图（必填，至少1张，最多3张）</Label>
+                <Label>相关截图 <span className="text-red-500">*</span> <span className="text-xs text-muted-foreground font-normal">（至少1张，最多3张，用于证明您的申诉理由）</span></Label>
                 <ImageUploadDropzone
                   images={images}
                   onImagesChange={setImages}
@@ -311,17 +311,27 @@ export function AppealSection({ active }: { active?: boolean }) {
 
               {error && <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">{error}</div>}
 
-              <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
-                className="w-full py-3 text-base font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
-                {submitting
-                  ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>
-                  : <span className="flex items-center gap-2"><Send className="w-5 h-5" />提交申诉</span>}
-              </Button>
+              <div className="space-y-2">
+                <Button type="submit" disabled={submitting || geetestLoading || (isEnabled && !isReady)}
+                  className="w-full py-3 text-base font-medium bg-brand hover:bg-brand-dark text-white rounded-xl transition-all duration-300 hover:shadow-glow">
+                  {submitting
+                    ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />提交中...</span>
+                    : <span className="flex items-center gap-2"><Send className="w-5 h-5" />提交申诉</span>}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  提交后我们会尽快审核，处理结果将发送至您的邮箱
+                </p>
+              </div>
             </form>
           </div>
         ) : (
           <div className="glass-strong rounded-3xl p-6">
             <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm text-blue-400">
+                  💡 提示：输入您的QQ号或群号可查询所有相关的申诉记录及处理状态
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label>查询类型</Label>
                 <div className="flex gap-2">

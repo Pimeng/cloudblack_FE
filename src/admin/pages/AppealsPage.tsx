@@ -528,17 +528,22 @@ export function AppealsPage() {
 
           <div className="space-y-4 py-4">
             <FormTextarea
-              label="审核理由"
+              label="审核理由 *"
               value={reviewReason}
               onChange={(e) => setReviewReason(e.target.value)}
-              placeholder="请输入审核理由..."
+              placeholder="请详细说明您的审核理由，包括：&#10;- 通过：说明申诉成立的原因，如误封、已改正等&#10;- 拒绝：说明申诉不成立的具体原因"
               textareaClassName="min-h-[100px]"
             />
 
             {reviewAction === 'approve' && (
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="removeFromBlacklist" checked={removeFromBlacklist} onChange={(e) => setRemoveFromBlacklist(e.target.checked)} className="rounded border-border bg-muted" />
-                <label htmlFor="removeFromBlacklist" className="text-sm cursor-pointer">同时从黑名单中移除该用户</label>
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <input type="checkbox" id="removeFromBlacklist" checked={removeFromBlacklist} onChange={(e) => setRemoveFromBlacklist(e.target.checked)} className="rounded border-border bg-muted" />
+                  <label htmlFor="removeFromBlacklist" className="text-sm cursor-pointer font-medium text-green-400">同时从黑名单中移除该用户</label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-5">
+                  建议勾选：如果申诉通过，通常应该将用户从黑名单中移除
+                </p>
               </div>
             )}
           </div>
@@ -569,11 +574,15 @@ export function AppealsPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <p className="text-sm text-yellow-400 font-medium mb-1">⚠️ 警告</p>
+              <p className="text-xs text-muted-foreground">删除申诉后，该记录将永久消失且无法恢复。此操作会被记录到审计日志。</p>
+            </div>
             <FormTextarea
-              label="删除原因（可选）"
+              label="删除原因（建议填写）"
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
-              placeholder="请输入删除原因，如：申诉内容涉及敏感信息，应用户要求删除..."
+              placeholder="请说明删除原因，如：申诉内容涉及敏感信息、重复提交、测试数据等..."
               textareaClassName="min-h-[80px]"
             />
           </div>
@@ -598,11 +607,19 @@ export function AppealsPage() {
           <DialogHeader>
             <DialogTitle>清理已处理申诉</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              清理所有已批准和已拒绝的申诉记录。待审核的申诉不会被删除。
+              批量清理已处理的申诉记录以释放存储空间
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <p className="text-sm text-blue-400 font-medium mb-1">ℹ️ 说明</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>仅清理状态为<span className="text-green-400">已通过</span>或<span className="text-red-400">已拒绝</span>的申诉</li>
+                <li><span className="text-yellow-400">待审核</span>的申诉不会被删除</li>
+                <li>清理后的记录无法恢复，请谨慎操作</li>
+              </ul>
+            </div>
             <FormInput
               label="清理范围（可选）"
               type="number"
@@ -613,7 +630,7 @@ export function AppealsPage() {
                 const val = e.target.value;
                 setClearDays(val === '' ? '' : parseInt(val) || 0);
               }}
-              hint="输入天数阈值，只清理该天数前已处理的申诉。留空则清理所有已处理的申诉。"
+              hint="建议保留最近30天的记录以便查阅。输入天数阈值，只清理该天数前已处理的申诉。"
             />
           </div>
 
