@@ -1,7 +1,10 @@
 import { Mail, Heart, Shield, Gavel } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export function Footer() {
+  const location = useLocation();
+  const gotoPath = `${location.pathname}${location.search}${location.hash}`;
+
   return (
     <footer className="relative py-4 px-4 border-t border-border/30 bg-background/50 backdrop-blur-sm">
       <div className="max-w-4xl mx-auto">
@@ -22,14 +25,14 @@ export function Footer() {
             服务条款
           </a> */}
           <Link 
-            to="/docs/admin-rules"
+            to={`/docs/admin-rules?goto=${encodeURIComponent(gotoPath)}`}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors"
           >
             <Shield className="w-3.5 h-3.5" />
             管理准则
           </Link>
           <Link 
-            to="/docs/review-rules"
+            to={`/docs/review-rules?goto=${encodeURIComponent(gotoPath)}`}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors"
           >
             <Gavel className="w-3.5 h-3.5" />

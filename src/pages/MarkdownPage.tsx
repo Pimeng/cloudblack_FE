@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -24,6 +24,7 @@ const markdownFiles: Record<string, { title: string; path: string; icon: React.R
 export function MarkdownPage() {
   const { fileKey } = useParams<{ fileKey: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -31,6 +32,7 @@ export function MarkdownPage() {
   const fileInfo = fileKey ? markdownFiles[fileKey] : null;
   const codeWrapStateRef = useRef<Record<string, boolean>>({});
   const [, forceUpdate] = useState({});
+  const gotoPath = searchParams.get('goto');
 
   useEffect(() => {
     if (!fileInfo) {
@@ -57,7 +59,7 @@ export function MarkdownPage() {
   }, [fileInfo]);
 
   const handleBack = () => {
-    navigate('/');
+    navigate(gotoPath || '/');
   };
 
   if (!fileInfo) {
