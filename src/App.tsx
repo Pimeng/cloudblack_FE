@@ -10,6 +10,7 @@ import { ProcessSection } from './sections/ProcessSection';
 import { StatsSection } from './sections/StatsSection';
 import { AppealSection } from './sections/AppealSection';
 import { BlacklistReportSection } from './sections/BlacklistReportSection';
+import { JoinSection } from './sections/JoinSection';
 import { Footer } from './sections/Footer';
 import { Toaster } from '@/components/ui/sonner';
 import { ImageViewerProvider } from '@/hooks/useImageViewer';
@@ -48,8 +49,8 @@ const ImagesPage = lazy(() => import('./admin/pages/ImagesPage').then(m => ({ de
 
 gsap.registerPlugin(ScrollTrigger);
 
-export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report';
-const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal', 'report'];
+export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report' | 'join';
+const PAGES: PageKey[] = ['hero', 'features', 'process', 'stats', 'appeal', 'report', 'join'];
 
 // URL 路径映射
 const PAGE_PATHS: Record<string, PageKey> = {
@@ -59,6 +60,7 @@ const PAGE_PATHS: Record<string, PageKey> = {
   'stats': 'stats',
   'appeal': 'appeal',
   'report': 'report',
+  'join': 'join',
 };
 
 const PATH_TO_URL: Record<PageKey, string> = {
@@ -68,6 +70,7 @@ const PATH_TO_URL: Record<PageKey, string> = {
   'stats': '/stats',
   'appeal': '/appeal',
   'report': '/report',
+  'join': '/join',
 };
 
 // Admin 页面加载中的占位组件
@@ -298,6 +301,7 @@ function HomePageContent() {
             {page === 'stats' && <StatsSection active={currentIndex === i} />}
             {page === 'appeal' && <AppealSection active={currentIndex === i} />}
             {page === 'report' && <BlacklistReportSection active={currentIndex === i} />}
+            {page === 'join' && <JoinSection active={currentIndex === i} />}
           </div>
         ))}
       </div>

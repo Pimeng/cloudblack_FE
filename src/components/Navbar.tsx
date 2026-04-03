@@ -3,7 +3,7 @@ import { Menu, X, Shield, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report';
+export type PageKey = 'hero' | 'features' | 'process' | 'stats' | 'appeal' | 'report' | 'join';
 
 const navItems: { key: PageKey; label: string; path: string }[] = [
   { key: 'hero', label: '云黑查询', path: '/query' },
@@ -12,9 +12,9 @@ const navItems: { key: PageKey; label: string; path: string }[] = [
   { key: 'stats', label: '数据统计', path: '/stats' },
   { key: 'appeal', label: '申诉中心', path: '/appeal' },
   { key: 'report', label: '提交举报', path: '/report' },
+  { key: 'join', label: '加入我们', path: '/join' },
 ];
 
-// 路径到 PageKey 的映射
 const PATH_TO_KEY: Record<string, PageKey> = {
   '/query': 'hero',
   '/about': 'features',
@@ -22,6 +22,7 @@ const PATH_TO_KEY: Record<string, PageKey> = {
   '/stats': 'stats',
   '/appeal': 'appeal',
   '/report': 'report',
+  '/join': 'join',
 };
 
 interface NavbarProps {
@@ -36,8 +37,7 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // 从当前路径确定当前页面，如果没有则使用 props 中的 currentPage
+
   const effectivePage = PATH_TO_KEY[location.pathname] || currentPage;
 
   const handleNav = (key: PageKey, path: string) => {
@@ -57,7 +57,6 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
     >
       <div className="w-full border-b border-foreground/8 bg-background/30 backdrop-blur-2xl" style={{ WebkitBackdropFilter: 'blur(24px)' }}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo / Brand */}
           <button
             onClick={() => handleNav('hero', '/query')}
             className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity"
@@ -68,7 +67,6 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
             <span className="font-semibold text-base tracking-tight">皮梦云黑库</span>
           </button>
 
-          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
               <button
@@ -97,7 +95,6 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
             )}
           </div>
 
-          {/* Mobile hamburger */}
           <div className="md:hidden flex items-center gap-1">
             {onToggleTheme && (
               <button
@@ -113,7 +110,6 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="relative w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
-                {/* Menu / X icon crossfade */}
                 <motion.span
                   animate={{ opacity: menuOpen ? 0 : 1, rotate: menuOpen ? 90 : 0, scale: menuOpen ? 0.5 : 1 }}
                   transition={{ duration: 0.2 }}
@@ -130,7 +126,6 @@ export function Navbar({ currentPage, onNavigate, visible, theme, onToggleTheme 
                 </motion.span>
               </button>
 
-              {/* Dropdown menu */}
               <AnimatePresence>
                 {menuOpen && (
                   <motion.div
