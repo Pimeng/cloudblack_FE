@@ -27,7 +27,7 @@ import {
 import { useApiMutation } from '../hooks';
 
 export function BackupPage() {
-  const { token, adminLevel, backups, backupStatus, backupConfig, backupLoading, fetchBackups, fetchBackupStatus, fetchBackupConfig } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, configApiMode, backups, backupStatus, backupConfig, backupLoading, fetchBackups, fetchBackupStatus, fetchBackupConfig } = useOutletContext<AdminDataContext>();
   
   // Permissions
   const canCreateBackup = adminLevel >= 4;
@@ -135,8 +135,12 @@ export function BackupPage() {
   };
 
   const updateBackupConfig = async () => {
+    const configEndpoint = configApiMode === 'legacy'
+      ? '/api/admin/backup/config'
+      : '/api/admin/config/database-backup';
+
     const result = await updateConfigMutate(
-      '/api/admin/config/database-backup',
+      configEndpoint,
       { method: 'PUT' },
       editBackupConfig
     );
@@ -154,36 +158,48 @@ export function BackupPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/admin/config/database-backup/validate-cron`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cron }),
-      });
+      const urls = configApiMode === 'legacy'
+        ? ['/api/admin/backup/validate-cron']
+        : ['/api/admin/config/database-backup/validate-cron', '/api/admin/backup/validate-cron'];
 
-      const data = await response.json();
-      if (response.status === 401 || response.status === 403) {
-        return { valid: false, message: '登录已过期，请重新登录' };
+      for (const url of urls) {
+        const response = await fetch(`${API_BASE}${url}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ cron }),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          return { valid: false, message: '登录已过期，请重新登录' };
+        }
+
+        if (response.status === 404 || response.status === 405) {
+          continue;
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+          return { valid: false, message: data.message || 'CRON 表达式无效' };
+        }
+
+        const payload = data.data || {};
+        const nextRuns = Array.isArray(payload.next_runs)
+          ? payload.next_runs
+          : payload.next_run
+            ? [payload.next_run]
+            : [];
+
+        return {
+          valid: payload.valid ?? true,
+          message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
+          nextRuns,
+        };
       }
 
-      if (!data.success) {
-        return { valid: false, message: data.message || 'CRON 表达式无效' };
-      }
-
-      const payload = data.data || {};
-      const nextRuns = Array.isArray(payload.next_runs)
-        ? payload.next_runs
-        : payload.next_run
-          ? [payload.next_run]
-          : [];
-
-      return {
-        valid: payload.valid ?? true,
-        message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
-        nextRuns,
-      };
+      return { valid: false, message: '校验接口不可用（404/405）' };
     } catch {
       return { valid: false, message: '校验请求失败，请稍后重试' };
     }

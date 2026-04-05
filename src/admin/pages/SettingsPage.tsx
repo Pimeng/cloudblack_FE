@@ -27,7 +27,7 @@ import {
 import { CronEditor } from '../components/CronEditor';
 
 export function SettingsPage() {
-  const { token, adminLevel, config, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, config, configApiMode, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
   const [editConfig, setEditConfig] = useState<Partial<SystemConfig>>({});
   const [changedFields, setChangedFields] = useState<Set<string>>(new Set());
   const [updatingConfig, setUpdatingConfig] = useState(false);
@@ -38,6 +38,24 @@ export function SettingsPage() {
   
   // 从 URL 获取 tab 状态
   const [activeTab, setActiveTab] = useUrlState<'basic' | 'smtp' | 'ai' | 'security' | 'upload' | 'backup' | 'server'>('tab', 'basic');
+  const getSectionsByTab = (tab: typeof activeTab): Array<'basic' | 'smtp' | 'ai-analysis' | 'security' | 'file-upload' | 'database-backup'> => {
+    switch (tab) {
+      case 'basic':
+        return ['basic'];
+      case 'smtp':
+        return ['smtp'];
+      case 'ai':
+        return ['ai-analysis'];
+      case 'security':
+        return ['security'];
+      case 'upload':
+        return ['file-upload'];
+      case 'backup':
+        return ['database-backup'];
+      default:
+        return ['basic'];
+    }
+  };
   
   // 处理 Logto 绑定结果
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,10 +78,13 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (token) {
-      fetchConfig();
-      fetchSystemInfo();
+      if (activeTab === 'server') {
+        fetchSystemInfo();
+        return;
+      }
+      fetchConfig(getSectionsByTab(activeTab));
     }
-  }, [token]);
+  }, [token, activeTab, fetchConfig, fetchSystemInfo]);
 
   useEffect(() => {
     if (config) {
@@ -167,6 +188,29 @@ export function SettingsPage() {
       };
       if (updateReason.trim()) {
         requestBody._update_reason = updateReason.trim();
+      }
+
+      if (configApiMode === 'legacy') {
+        const response = await fetch(`${API_BASE}/api/admin/config`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          toast.error(data.message || '更新失败');
+          return;
+        }
+
+        toast.success('配置已更新，重启后生效');
+        fetchConfig(getSectionsByTab(activeTab));
+        setUpdateReason('');
+        setChangedFields(new Set());
+        return;
       }
 
       const sectionsToUpdate = new Set<string>();
@@ -281,7 +325,7 @@ export function SettingsPage() {
       }
 
       toast.success('配置已更新，重启后生效');
-      fetchConfig();
+      fetchConfig(Array.from(sectionsToUpdate) as Array<'basic' | 'smtp' | 'ai-analysis' | 'security' | 'file-upload' | 'database-backup'>);
       setUpdateReason('');
       setChangedFields(new Set());
     } catch (err) {
@@ -321,36 +365,48 @@ export function SettingsPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/admin/config/database-backup/validate-cron`, {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cron }),
-      });
+      const urls = configApiMode === 'legacy'
+        ? ['/api/admin/backup/validate-cron']
+        : ['/api/admin/config/database-backup/validate-cron', '/api/admin/backup/validate-cron'];
 
-      const data = await response.json();
-      if (response.status === 401 || response.status === 403) {
-        return { valid: false, message: '登录已过期，请重新登录' };
+      for (const url of urls) {
+        const response = await fetch(`${API_BASE}${url}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ cron }),
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          return { valid: false, message: '登录已过期，请重新登录' };
+        }
+
+        if (response.status === 404 || response.status === 405) {
+          continue;
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+          return { valid: false, message: data.message || 'CRON 表达式无效' };
+        }
+
+        const payload = data.data || {};
+        const nextRuns = Array.isArray(payload.next_runs)
+          ? payload.next_runs
+          : payload.next_run
+            ? [payload.next_run]
+            : [];
+
+        return {
+          valid: payload.valid ?? true,
+          message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
+          nextRuns,
+        };
       }
 
-      if (!data.success) {
-        return { valid: false, message: data.message || 'CRON 表达式无效' };
-      }
-
-      const payload = data.data || {};
-      const nextRuns = Array.isArray(payload.next_runs)
-        ? payload.next_runs
-        : payload.next_run
-          ? [payload.next_run]
-          : [];
-
-      return {
-        valid: payload.valid ?? true,
-        message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
-        nextRuns,
-      };
+      return { valid: false, message: '校验接口不可用（404/405）' };
     } catch {
       return { valid: false, message: '校验请求失败，请稍后重试' };
     }
@@ -388,6 +444,10 @@ export function SettingsPage() {
       />
     );
   };
+
+  const safeCpuPercent = Number(systemInfo?.cpu_percent ?? 0);
+  const safeMemory = systemInfo?.memory ?? { total: 0, available: 0, percent: 0 };
+  const safeDisk = systemInfo?.disk ?? { total: 0, free: 0, percent: 0 };
 
   return (
     <div className="space-y-6">
@@ -1074,10 +1134,10 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-foreground">{systemInfo.cpu_percent}%</span>
+                    <span className="text-foreground">{safeCpuPercent}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 transition-all" style={{ width: `${systemInfo.cpu_percent}%` }} />
+                    <div className="h-full bg-green-500 transition-all" style={{ width: `${safeCpuPercent}%` }} />
                   </div>
                 </div>
               </div>
@@ -1090,14 +1150,14 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-foreground">{systemInfo.memory.percent}%</span>
+                    <span className="text-foreground">{safeMemory.percent}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${systemInfo.memory.percent}%` }} />
+                    <div className="h-full bg-blue-500 transition-all" style={{ width: `${safeMemory.percent}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>可用: {formatBytes(systemInfo.memory.available)}</span>
-                    <span>总计: {formatBytes(systemInfo.memory.total)}</span>
+                    <span>可用: {formatBytes(safeMemory.available)}</span>
+                    <span>总计: {formatBytes(safeMemory.total)}</span>
                   </div>
                 </div>
               </div>
@@ -1110,14 +1170,14 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">使用率</span>
-                    <span className="text-foreground">{systemInfo.disk.percent}%</span>
+                    <span className="text-foreground">{safeDisk.percent}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 transition-all" style={{ width: `${systemInfo.disk.percent}%` }} />
+                    <div className="h-full bg-orange-500 transition-all" style={{ width: `${safeDisk.percent}%` }} />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>可用: {formatBytes(systemInfo.disk.free)}</span>
-                    <span>总计: {formatBytes(systemInfo.disk.total)}</span>
+                    <span>可用: {formatBytes(safeDisk.free)}</span>
+                    <span>总计: {formatBytes(safeDisk.total)}</span>
                   </div>
                 </div>
               </div>

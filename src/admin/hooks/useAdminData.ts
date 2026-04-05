@@ -52,6 +52,113 @@ import type {
 import { API_BASE } from '../types';
 
 type ConfigSection = 'basic' | 'smtp' | 'ai-analysis' | 'security' | 'file-upload' | 'database-backup';
+type ConfigApiMode = 'legacy' | 'sectioned';
+
+const isMethodOrRouteUnsupported = (status: number) => status === 404 || status === 405;
+
+const tryParseJson = async (response: Response): Promise<any | null> => {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return null;
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+const toSafeNumber = (value: unknown, defaultValue = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return defaultValue;
+};
+
+const normalizeSystemInfo = (raw: any): SystemInfo => {
+  const memoryRaw = raw?.memory ?? raw?.mem ?? {};
+  const diskRaw = raw?.disk ?? raw?.storage ?? {};
+
+  const memoryTotal = toSafeNumber(memoryRaw.total ?? raw?.memory_total ?? raw?.mem_total, 0);
+  const memoryAvailable = toSafeNumber(memoryRaw.available ?? raw?.memory_available ?? raw?.mem_available, 0);
+  const memoryPercentFromPayload = memoryRaw.percent ?? raw?.memory_percent ?? raw?.mem_percent;
+  const memoryPercent = memoryPercentFromPayload !== undefined
+    ? toSafeNumber(memoryPercentFromPayload, 0)
+    : (memoryTotal > 0 ? Math.min(100, Math.max(0, ((memoryTotal - memoryAvailable) / memoryTotal) * 100)) : 0);
+
+  const diskTotal = toSafeNumber(diskRaw.total ?? raw?.disk_total, 0);
+  const diskFree = toSafeNumber(diskRaw.free ?? raw?.disk_free, 0);
+  const diskUsed = toSafeNumber(diskRaw.used ?? raw?.disk_used, Math.max(0, diskTotal - diskFree));
+  const diskPercentFromPayload = diskRaw.percent ?? raw?.disk_percent;
+  const diskPercent = diskPercentFromPayload !== undefined
+    ? toSafeNumber(diskPercentFromPayload, 0)
+    : (diskTotal > 0 ? Math.min(100, Math.max(0, (diskUsed / diskTotal) * 100)) : 0);
+
+  return {
+    platform: raw?.platform || raw?.os || '-',
+    python_version: raw?.python_version || raw?.python || '-',
+    cpu_percent: toSafeNumber(raw?.cpu_percent ?? raw?.cpu ?? raw?.cpu_usage, 0),
+    memory: {
+      total: memoryTotal,
+      available: memoryAvailable,
+      percent: memoryPercent,
+    },
+    disk: {
+      total: diskTotal,
+      used: diskUsed,
+      free: diskFree,
+      percent: diskPercent,
+    },
+    uptime: toSafeNumber(raw?.uptime ?? raw?.uptime_seconds, 0),
+  };
+};
+
+const normalizeConfigSectionPayload = (payload: any) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+  if ('config' in payload && payload.config && typeof payload.config === 'object') {
+    return payload.config;
+  }
+  return payload;
+};
+
+const applySectionToConfig = (
+  previousConfig: SystemConfig | null,
+  section: ConfigSection,
+  payload: any
+): SystemConfig => {
+  const prev = previousConfig || ({} as SystemConfig);
+
+  switch (section) {
+    case 'basic':
+      return { ...prev, ...(payload || {}) };
+    case 'smtp':
+      return { ...prev, smtp: payload || {} };
+    case 'ai-analysis':
+      return { ...prev, ai_analysis: payload || {} };
+    case 'security': {
+      const merged = { ...prev, ...(payload || {}) };
+      if (merged.rate_limit && !('rate_limit_max_requests' in merged)) {
+        merged.rate_limit_max_requests = merged.rate_limit.rate_limit_max_requests;
+      }
+      if (merged.rate_limit && !('rate_limit_window' in merged)) {
+        merged.rate_limit_window = merged.rate_limit.rate_limit_window;
+      }
+      return merged;
+    }
+    case 'file-upload': {
+      const uploadPayload = payload?.upload || payload || {};
+      return { ...prev, ...uploadPayload };
+    }
+    case 'database-backup':
+      return { ...prev, database_backup: payload || {} };
+    default:
+      return prev;
+  }
+};
 
 // Type definition for the context provided by useAdminData
 export type AdminDataContext = ReturnType<typeof useAdminData>;
@@ -104,6 +211,7 @@ export function useAdminData() {
   
   // Settings
   const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [configApiMode, setConfigApiMode] = useState<ConfigApiMode | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [configLoading, setConfigLoading] = useState(false);
   
@@ -329,56 +437,73 @@ export function useAdminData() {
     }
   }, [handleAuthError]);
 
-  const fetchConfig = useCallback(async (authToken: string) => {
+  const fetchConfig = useCallback(async (
+    authToken: string,
+    sections: ConfigSection[] = ['basic', 'smtp', 'ai-analysis', 'security', 'file-upload', 'database-backup']
+  ) => {
     setConfigLoading(true);
     try {
-      const sections: ConfigSection[] = ['basic', 'smtp', 'ai-analysis', 'security', 'file-upload', 'database-backup'];
+      if (configApiMode !== 'legacy') {
+        try {
+          const sectionResults = await Promise.all(
+            sections.map(async (section) => {
+              const response = await fetch(`${API_BASE}/api/admin/config/${section}`, {
+                headers: { 'Authorization': authToken },
+              });
 
-      const sectionResults = await Promise.all(
-        sections.map(async (section) => {
-          const response = await fetch(`${API_BASE}/api/admin/config/${section}`, {
-            headers: { 'Authorization': authToken },
+              if (response.status === 401 || response.status === 403) {
+                throw new Error('AUTH_ERROR');
+              }
+
+              if (isMethodOrRouteUnsupported(response.status)) {
+                throw new Error('SECTIONED_UNSUPPORTED');
+              }
+
+              const data = await tryParseJson(response);
+              return {
+                section,
+                success: Boolean(data?.success),
+                payload: normalizeConfigSectionPayload(data?.data),
+              };
+            })
+          );
+
+          setConfig((previousConfig) => {
+            return sectionResults.reduce((acc, item) => {
+              if (!item.success) return acc;
+              return applySectionToConfig(acc, item.section as ConfigSection, item.payload);
+            }, previousConfig as SystemConfig | null) as SystemConfig;
           });
-
-          if (response.status === 401 || response.status === 403) {
-            throw new Error('AUTH_ERROR');
+          setConfigApiMode('sectioned');
+          return;
+        } catch (err) {
+          if (err instanceof Error && (err.message === 'AUTH_ERROR' || err.message === 'SECTIONED_UNSUPPORTED')) {
+            if (err.message === 'AUTH_ERROR') {
+              throw err;
+            }
+          } else {
+            throw err;
           }
-
-          const data = await response.json();
-          return {
-            section,
-            success: data.success,
-            payload: data.data,
-          };
-        })
-      );
-
-      const basicConfig = sectionResults.find((item) => item.section === 'basic' && item.success)?.payload || {};
-      const smtpConfig = sectionResults.find((item) => item.section === 'smtp' && item.success)?.payload;
-      const aiAnalysisConfig = sectionResults.find((item) => item.section === 'ai-analysis' && item.success)?.payload;
-      const securityConfig = sectionResults.find((item) => item.section === 'security' && item.success)?.payload || {};
-      const fileUploadConfig = sectionResults.find((item) => item.section === 'file-upload' && item.success)?.payload || {};
-      const databaseBackupConfig = sectionResults.find((item) => item.section === 'database-backup' && item.success)?.payload;
-
-      const normalizedUploadConfig = fileUploadConfig.upload || fileUploadConfig;
-
-      const mergedConfig: SystemConfig = {
-        ...basicConfig,
-        ...securityConfig,
-        ...normalizedUploadConfig,
-        ...(smtpConfig ? { smtp: smtpConfig } : {}),
-        ...(aiAnalysisConfig ? { ai_analysis: aiAnalysisConfig } : {}),
-        ...(databaseBackupConfig ? { database_backup: databaseBackupConfig } : {}),
-      };
-
-      if (mergedConfig.rate_limit && !('rate_limit_max_requests' in mergedConfig)) {
-        mergedConfig.rate_limit_max_requests = mergedConfig.rate_limit.rate_limit_max_requests;
-      }
-      if (mergedConfig.rate_limit && !('rate_limit_window' in mergedConfig)) {
-        mergedConfig.rate_limit_window = mergedConfig.rate_limit.rate_limit_window;
+        }
       }
 
-      setConfig(mergedConfig);
+      const legacyResponse = await fetch(`${API_BASE}/api/admin/config`, {
+        headers: { 'Authorization': authToken },
+      });
+
+      if (legacyResponse.status === 401 || legacyResponse.status === 403) {
+        handleAuthError();
+        return;
+      }
+
+      const legacyData = await tryParseJson(legacyResponse);
+      if (legacyData?.success && legacyData?.data) {
+        setConfig(legacyData.data);
+        setConfigApiMode('legacy');
+        return;
+      }
+
+      toast.error(legacyData?.message || '获取系统配置失败');
     } catch (err) {
       if (err instanceof Error && err.message === 'AUTH_ERROR') {
         handleAuthError();
@@ -388,21 +513,42 @@ export function useAdminData() {
     } finally {
       setConfigLoading(false);
     }
-  }, [handleAuthError]);
+  }, [configApiMode, handleAuthError]);
 
   const fetchSystemInfo = useCallback(async (authToken: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/config/server-status`, {
-        headers: { 'Authorization': authToken },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSystemInfo(data.data);
+      const sectionedUrl = `${API_BASE}/api/admin/config/server-status`;
+      const legacyUrl = `${API_BASE}/api/admin/system-info`;
+
+      const candidateUrls = configApiMode === 'legacy' ? [legacyUrl] : [sectionedUrl, legacyUrl];
+
+      for (const url of candidateUrls) {
+        const response = await fetch(url, {
+          headers: { 'Authorization': authToken },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          handleAuthError();
+          return;
+        }
+
+        if (isMethodOrRouteUnsupported(response.status)) {
+          continue;
+        }
+
+        const data = await tryParseJson(response);
+        if (data?.success) {
+          setSystemInfo(normalizeSystemInfo(data.data));
+          if (url === legacyUrl) {
+            setConfigApiMode('legacy');
+          }
+          return;
+        }
       }
     } catch (err) {
       console.error('获取系统信息失败:', err);
     }
-  }, []);
+  }, [configApiMode, handleAuthError]);
 
   const fetchLogs = useCallback(async (authToken: string, page = 1, perPage = 50, action = '', status: 'all' | 'success' | 'failure' = 'all', startDate = '', endDate = '') => {
     setLogsLoading(true);
@@ -511,24 +657,38 @@ export function useAdminData() {
   const fetchBackupConfig = useCallback(async (authToken: string) => {
     setBackupConfigLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/config/database-backup`, {
-        headers: { 'Authorization': authToken },
-      });
-      
-      if (response.status === 401 || response.status === 403) {
-        return;
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setBackupConfig(data.data);
+      const sectionedUrl = `${API_BASE}/api/admin/config/database-backup`;
+      const legacyUrl = `${API_BASE}/api/admin/backup/config`;
+      const candidateUrls = configApiMode === 'legacy' ? [legacyUrl] : [sectionedUrl, legacyUrl];
+
+      for (const url of candidateUrls) {
+        const response = await fetch(url, {
+          headers: { 'Authorization': authToken },
+        });
+        
+        if (response.status === 401 || response.status === 403) {
+          return;
+        }
+
+        if (isMethodOrRouteUnsupported(response.status)) {
+          continue;
+        }
+        
+        const data = await tryParseJson(response);
+        if (data?.success) {
+          setBackupConfig(data.data);
+          if (url === legacyUrl) {
+            setConfigApiMode('legacy');
+          }
+          return;
+        }
       }
     } catch (err) {
       console.error('获取备份配置失败:', err);
     } finally {
       setBackupConfigLoading(false);
     }
-  }, []);
+  }, [configApiMode]);
 
   const fetchLevel4Pending = useCallback(async (
     authToken: string,
@@ -614,6 +774,17 @@ export function useAdminData() {
       toast.success('数据已刷新');
     }
   }, [token, fetchStats]);
+
+  // Stable wrappers for settings page effects to avoid repeated requests caused by new function identities.
+  const fetchConfigForView = useCallback((sections?: ConfigSection[]) => {
+    if (!token) return;
+    return fetchConfig(token, sections);
+  }, [token, fetchConfig]);
+
+  const fetchSystemInfoForView = useCallback(() => {
+    if (!token) return;
+    return fetchSystemInfo(token);
+  }, [token, fetchSystemInfo]);
 
   return {
     // Auth
@@ -702,11 +873,12 @@ export function useAdminData() {
     
     // Settings
     config,
+    configApiMode,
     setConfig,
     systemInfo,
     configLoading,
-    fetchConfig: () => fetchConfig(token),
-    fetchSystemInfo: () => fetchSystemInfo(token),
+    fetchConfig: fetchConfigForView,
+    fetchSystemInfo: fetchSystemInfoForView,
     
     // Backup
     backups,
