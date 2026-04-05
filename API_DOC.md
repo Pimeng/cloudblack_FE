@@ -55,10 +55,16 @@
    - [5.21 修改 Bot Token](#421-修改-bot-token)
    - [5.22 删除 Bot Token](#422-删除-bot-token)
    - [5.23 获取 Bot Token 原文](#423-获取-bot-token-原文)
-   - [5.24 获取系统配置](#424-获取系统配置)
-   - [5.25 更新系统配置](#425-更新系统配置)
-   - [5.26 重启服务器](#426-重启服务器)
-   - [5.27 获取系统信息](#427-获取系统信息)
+  - [5.24 获取基础配置](#524-获取基础配置)
+  - [5.24a 获取 SMTP 邮件服务配置](#524a-获取-smtp-邮件服务配置)
+  - [5.24b 获取 AI 分析配置](#524b-获取-ai-分析配置)
+  - [5.24c 获取安全设置](#524c-获取安全设置)
+  - [5.24d 获取文件上传配置](#524d-获取文件上传配置)
+  - [5.24e 获取数据库自动备份配置](#524e-获取数据库自动备份配置)
+  - [5.24f 获取服务器状态](#524f-获取服务器状态)
+  - [5.25 更新分组配置](#525-更新分组配置)
+  - [5.25a 验证数据库备份 CRON 表达式](#525a-验证数据库备份-cron-表达式)
+  - [5.26 重启服务器](#526-重启服务器)
    - [5.28 查询审计日志](#428-查询审计日志)
    - [5.29 获取日志统计](#429-获取日志统计)
    - [5.30 获取操作类型](#430-获取操作类型)
@@ -66,9 +72,9 @@
    - [5.32 列出所有备份](#432-列出所有备份)
    - [5.33 创建备份](#433-创建备份)
    - [5.34 删除备份](#434-删除备份)
-   - [5.35 获取备份配置](#435-获取备份配置)
-   - [5.36 更新备份配置](#436-更新备份配置)
-   - [5.37 验证CRON表达式](#437-验证cron表达式)
+  - [5.35 获取备份配置（已合并到 5.24e）](#105-获取备份配置)
+  - [5.36 更新备份配置（已合并到 5.25）](#106-更新备份配置)
+  - [5.37 验证CRON表达式（已合并到 5.25a）](#107-验证cron表达式)
    - [5.38 更新备份备注](#438-更新备份备注)
    - [5.39 获取图片列表](#439-获取图片列表)
    - [5.40 上传图片](#440-上传图片)
@@ -2073,89 +2079,90 @@ DELETE /api/admin/blacklist/105823395?reason=误封已处理
   }
   ```
 
-### 5.24 获取系统配置
-- **接口地址**: `/api/admin/config`
+### 5.24 获取基础配置
+- **接口地址**: `/api/admin/config/basic`
 - **请求方法**: `GET`
 - **鉴权**: **需要（管理员 Token）**
 - **需要等级**: 4（超级管理员）
-- **说明**: 获取系统核心配置信息（`config.json` 内容）
-  
-  注意：所有敏感信息（密码、密钥等）都会完整返回
-- **响应示例**:
-  ```json
-  {
-      "success": true,
-      "data": {
-          "host": "0.0.0.0",
-          "port": 8080,
-          "debug": false,
-          "smtp": {
-              "host": "smtp.example.com",
-              "port": 465,
-              "username": "user@example.com",
-              "password": "actual_password"
-          },
-          "geetest": {
-              "enabled": true,
-              "captcha_id": "76443218de0908087c97c1e5f9a59272",
-              "captcha_key": "your-geetest-captcha-key"
-          }
-      }
-  }
-  ```
+- **说明**: 获取基础运行配置（如端口、日志等级、时区等）
 
-### 5.25 更新系统配置
-- **接口地址**: `/api/admin/config`
+### 5.24a 获取 SMTP 邮件服务配置
+- **接口地址**: `/api/admin/config/smtp`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+
+### 5.24b 获取 AI 分析配置
+- **接口地址**: `/api/admin/config/ai-analysis`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+
+### 5.24c 获取安全设置
+- **接口地址**: `/api/admin/config/security`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+- **说明**: 包含密钥、IP Header、极验、限流、审计保留、Logto、防盗链等安全相关配置
+
+### 5.24d 获取文件上传配置
+- **接口地址**: `/api/admin/config/file-upload`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+
+### 5.24e 获取数据库自动备份配置
+- **接口地址**: `/api/admin/config/database-backup`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+
+### 5.24f 获取服务器状态
+- **接口地址**: `/api/admin/config/server-status`
+- **请求方法**: `GET`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
+- **说明**: 原 `GET /api/admin/system-info` 已合并到该接口
+
+### 5.25 更新分组配置
+- **接口地址**: `/api/admin/config/{section}`
 - **请求方法**: `PUT`
 - **鉴权**: **需要（管理员 Token）**
 - **需要等级**: 4（超级管理员）
-- **说明**: 
-  - 部分更新配置，修改后需要重启生效。等级4管理员可以修改任何配置，包括敏感配置（smtp、geetest）
+- **说明**:
+  - 仅支持更新以下分组：`basic`、`smtp`、`ai-analysis`、`security`、`file-upload`、`database-backup`
+  - `server-status` 为运行时信息，不支持更新
   - 支持通过 `_update_reason` 字段记录更新原因，将写入审计日志
+- **请求体示例（更新 SMTP）**:
+  ```json
+  {
+      "_update_reason": "切换邮件服务商",
+      "host": "smtp.example.com",
+      "port": 465,
+      "username": "user@example.com",
+      "password": "new_password"
+  }
+  ```
+- **请求体示例（更新基础配置）**:
+  ```json
+  {
+      "_update_reason": "调整服务监听端口",
+      "port": 8081,
+      "log_level": "INFO"
+  }
+  ```
+
+### 5.25a 验证数据库备份 CRON 表达式
+- **接口地址**: `/api/admin/config/database-backup/validate-cron`
+- **请求方法**: `POST`
+- **鉴权**: **需要（管理员 Token）**
+- **需要等级**: 4（超级管理员）
 - **请求体**:
   ```json
   {
-      "_update_reason": "修改SMTP配置以支持新的邮件服务商",
-      "port": 8080,
-      "debug": false,
-      "temp_token_ttl": 7200,
-      "smtp": {
-          "host": "smtp.example.com",
-          "port": 465,
-          "username": "user@example.com",
-          "password": "new_password"
-      },
-      "geetest": {
-          "enabled": true,
-          "captcha_id": "76443218de0908087c97c1e5f9a59272",
-          "captcha_key": "your-geetest-captcha-key"
-      }
+      "cron": "0 2 * * *"
   }
   ```
-- **参数说明**:
-  | 参数名 | 类型 | 必填 | 说明 |
-  | :--- | :--- | :--- | :--- |
-  | `_update_reason` | string | 否 | 更新原因/备注，将记录到审计日志 |
-  | 其他配置项 | - | 否 | 要更新的配置项，支持嵌套更新 |
-- **响应示例**:
-  ```json
-  {
-      "success": true,
-      "message": "配置已更新，重启后生效",
-      "data": {
-          "host": "0.0.0.0",
-          "port": 8080,
-          "debug": false,
-          "smtp": {...},
-          "geetest": {...}
-      }
-  }
-  ```
-- **审计日志**: 配置更新会记录详细的审计日志，包括：
-  - 更新的配置段列表 (`updated_sections`)
-  - 更新的配置路径 (`updated_paths`)
-  - 更新前的原值 (`original_values`，敏感值会被脱敏显示为 `***`)
-  - 更新原因 (`update_reason`)
 
 ### 5.26 重启服务器
 - **接口地址**: `/api/admin/restart`
@@ -2171,36 +2178,6 @@ DELETE /api/admin/blacklist/105823395?reason=误封已处理
   {
       "success": true,
       "message": "服务器正在重启，Docker 将自动重新启动容器..."
-  }
-  ```
-
-### 5.27 获取系统信息
-- **接口地址**: `/api/admin/system-info`
-- **请求方法**: `GET`
-- **鉴权**: **需要（管理员 Token）**
-- **需要等级**: 3+
-- **说明**: 获取服务器运行状态、资源使用情况
-- **响应示例**:
-  ```json
-  {
-      "success": true,
-      "data": {
-          "platform": "Linux-5.4.0",
-          "python_version": "3.9.0",
-          "cpu_percent": 15.2,
-          "memory": {
-              "total": 8589934592,
-              "available": 4294967296,
-              "percent": 50.0
-          },
-          "disk": {
-              "total": 107374182400,
-              "used": 53687091200,
-              "free": 53687091200,
-              "percent": 50.0
-          },
-          "uptime": 86400
-      }
   }
   ```
 
@@ -3651,7 +3628,7 @@ bot-blacklist-api/
 
 获取当前的备份配置。
 
-**接口**: `GET /api/admin/backup/config`
+**接口**: `GET /api/admin/config/database-backup`
 
 **鉴权**: 管理员 Token（需要等级 4，超级管理员）
 
@@ -3675,7 +3652,7 @@ bot-blacklist-api/
 
 更新备份配置参数。
 
-**接口**: `PUT /api/admin/backup/config`
+**接口**: `PUT /api/admin/config/database-backup`
 
 **鉴权**: 管理员 Token（需要等级 4，超级管理员）
 
@@ -3724,7 +3701,7 @@ bot-blacklist-api/
 
 验证 CRON 表达式是否有效，并返回下次执行时间。
 
-**接口**: `POST /api/admin/backup/validate-cron`
+**接口**: `POST /api/admin/config/database-backup/validate-cron`
 
 **鉴权**: 管理员 Token（需要等级 4，超级管理员）
 

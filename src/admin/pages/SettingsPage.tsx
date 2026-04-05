@@ -27,7 +27,7 @@ import {
 import { CronEditor } from '../components/CronEditor';
 
 export function SettingsPage() {
-  const { token, adminLevel, config, setConfig, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
+  const { token, adminLevel, config, systemInfo, configLoading, fetchConfig, fetchSystemInfo } = useOutletContext<AdminDataContext>();
   const [editConfig, setEditConfig] = useState<Partial<SystemConfig>>({});
   const [changedFields, setChangedFields] = useState<Set<string>>(new Set());
   const [updatingConfig, setUpdatingConfig] = useState(false);
@@ -129,6 +129,10 @@ export function SettingsPage() {
     try {
       // 只提取修改过的字段
       let configToUpdate = extractChangedFields();
+
+      const changedFieldList = Array.from(changedFields);
+      const hasFieldPrefix = (prefix: string) => changedFieldList.some((field) => field === prefix || field.startsWith(`${prefix}.`));
+      const hasAnyFieldPrefix = (prefixes: string[]) => prefixes.some((prefix) => hasFieldPrefix(prefix));
       
       // 非超级管理员需要过滤敏感字段
       if (adminLevel < 4) {
@@ -136,10 +140,19 @@ export function SettingsPage() {
         configToUpdate = allowedConfig;
         
         // 检查是否有尝试修改敏感字段
-        const hasSensitiveChanges = changedFields.has('smtp') || 
-          changedFields.has('geetest') || 
-          changedFields.has('ai_analysis') || 
-          changedFields.has('database_backup');
+        const hasSensitiveChanges = hasAnyFieldPrefix([
+          'smtp',
+          'geetest',
+          'ai_analysis',
+          'database_backup',
+          'secret_key',
+          'logto',
+          'audit_log',
+          'hotlink_protection',
+          'rate_limit',
+          'rate_limit_max_requests',
+          'rate_limit_window',
+        ]);
         
         if (hasSensitiveChanges) {
           toast.error('您没有权限修改敏感配置（SMTP、极验、AI分析、数据库备份）');
@@ -155,29 +168,122 @@ export function SettingsPage() {
       if (updateReason.trim()) {
         requestBody._update_reason = updateReason.trim();
       }
-      
-      const response = await fetch(`${API_BASE}/api/admin/config`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        toast.success('配置已更新，重启后生效');
-        // 使用后端返回的完整配置数据
-        if (data.data) {
-          setConfig(data.data);
-          setEditConfig(data.data);
-        }
-        setUpdateReason('');
-        setChangedFields(new Set()); // 清空修改记录
-      } else {
-        toast.error(data.message || '更新失败');
+
+      const sectionsToUpdate = new Set<string>();
+
+      if (hasAnyFieldPrefix(['smtp'])) sectionsToUpdate.add('smtp');
+      if (hasAnyFieldPrefix(['ai_analysis'])) sectionsToUpdate.add('ai-analysis');
+      if (hasAnyFieldPrefix(['geetest', 'secret_key', 'logto', 'audit_log', 'hotlink_protection', 'rate_limit', 'rate_limit_max_requests', 'rate_limit_window', 'ip_header'])) {
+        sectionsToUpdate.add('security');
       }
+      if (hasAnyFieldPrefix(['upload', 'max_upload_size', 'upload_folder', 'allowed_extensions'])) {
+        sectionsToUpdate.add('file-upload');
+      }
+      if (hasAnyFieldPrefix(['database_backup'])) sectionsToUpdate.add('database-backup');
+
+      const nonBasicPrefixes = ['smtp', 'ai_analysis', 'geetest', 'secret_key', 'logto', 'audit_log', 'hotlink_protection', 'rate_limit', 'rate_limit_max_requests', 'rate_limit_window', 'ip_header', 'upload', 'max_upload_size', 'upload_folder', 'allowed_extensions', 'database_backup'];
+      const hasBasicChanges = changedFieldList.some((field) => {
+        const topLevel = field.split('.')[0];
+        return !nonBasicPrefixes.includes(topLevel);
+      });
+      if (hasBasicChanges) {
+        sectionsToUpdate.add('basic');
+      }
+
+      const sectionPayloads: Record<string, any> = {};
+
+      if (sectionsToUpdate.has('basic')) {
+        const {
+          smtp,
+          ai_analysis,
+          geetest,
+          database_backup,
+          logto,
+          audit_log,
+          hotlink_protection,
+          rate_limit,
+          upload,
+          max_upload_size,
+          upload_folder,
+          allowed_extensions,
+          _update_reason,
+          ...basicPayload
+        } = requestBody;
+        sectionPayloads.basic = basicPayload;
+      }
+
+      if (sectionsToUpdate.has('smtp')) {
+        sectionPayloads.smtp = requestBody.smtp || {};
+      }
+
+      if (sectionsToUpdate.has('ai-analysis')) {
+        sectionPayloads['ai-analysis'] = requestBody.ai_analysis || {};
+      }
+
+      if (sectionsToUpdate.has('security')) {
+        const securityPayload: Record<string, any> = {};
+
+        if ('secret_key' in requestBody) securityPayload.secret_key = requestBody.secret_key;
+        if ('ip_header' in requestBody) securityPayload.ip_header = requestBody.ip_header;
+        if ('geetest' in requestBody) securityPayload.geetest = requestBody.geetest;
+        if ('logto' in requestBody) securityPayload.logto = requestBody.logto;
+        if ('audit_log' in requestBody) securityPayload.audit_log = requestBody.audit_log;
+        if ('hotlink_protection' in requestBody) securityPayload.hotlink_protection = requestBody.hotlink_protection;
+        if ('rate_limit' in requestBody) securityPayload.rate_limit = requestBody.rate_limit;
+        if ('rate_limit_max_requests' in requestBody) securityPayload.rate_limit_max_requests = requestBody.rate_limit_max_requests;
+        if ('rate_limit_window' in requestBody) securityPayload.rate_limit_window = requestBody.rate_limit_window;
+
+        sectionPayloads.security = securityPayload;
+      }
+
+      if (sectionsToUpdate.has('file-upload')) {
+        const fileUploadPayload = requestBody.upload || {};
+        if ('max_upload_size' in requestBody) fileUploadPayload.max_upload_size = requestBody.max_upload_size;
+        if ('upload_folder' in requestBody) fileUploadPayload.upload_folder = requestBody.upload_folder;
+        if ('allowed_extensions' in requestBody) fileUploadPayload.allowed_extensions = requestBody.allowed_extensions;
+        sectionPayloads['file-upload'] = fileUploadPayload;
+      }
+
+      if (sectionsToUpdate.has('database-backup')) {
+        sectionPayloads['database-backup'] = requestBody.database_backup || {};
+      }
+
+      if (Object.keys(sectionPayloads).length === 0) {
+        toast.info('没有可提交的配置变更');
+        setUpdatingConfig(false);
+        return;
+      }
+
+      const updateResults = await Promise.all(
+        Object.entries(sectionPayloads).map(async ([section, payload]) => {
+          const payloadWithReason = updateReason.trim()
+            ? { ...payload, _update_reason: updateReason.trim() }
+            : payload;
+
+          const response = await fetch(`${API_BASE}/api/admin/config/${section}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': token,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payloadWithReason),
+          });
+
+          const data = await response.json();
+          return { section, success: data.success, message: data.message };
+        })
+      );
+
+      const failedResult = updateResults.find((result) => !result.success);
+      if (failedResult) {
+        toast.error(failedResult.message || `更新 ${failedResult.section} 配置失败`);
+        return;
+      }
+
+      toast.success('配置已更新，重启后生效');
+      fetchConfig();
+      setUpdateReason('');
+      setChangedFields(new Set());
     } catch (err) {
       toast.error('更新失败');
     } finally {
@@ -208,6 +314,47 @@ export function SettingsPage() {
   };
 
   const canEditSensitiveConfig = adminLevel >= 4;
+
+  const validateDatabaseBackupCron = async (cron: string) => {
+    if (!token) {
+      return { valid: false, message: '未登录，无法校验' };
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/config/database-backup/validate-cron`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cron }),
+      });
+
+      const data = await response.json();
+      if (response.status === 401 || response.status === 403) {
+        return { valid: false, message: '登录已过期，请重新登录' };
+      }
+
+      if (!data.success) {
+        return { valid: false, message: data.message || 'CRON 表达式无效' };
+      }
+
+      const payload = data.data || {};
+      const nextRuns = Array.isArray(payload.next_runs)
+        ? payload.next_runs
+        : payload.next_run
+          ? [payload.next_run]
+          : [];
+
+      return {
+        valid: payload.valid ?? true,
+        message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
+        nextRuns,
+      };
+    } catch {
+      return { valid: false, message: '校验请求失败，请稍后重试' };
+    }
+  };
 
   const renderConfigInput = (_key: string, value: any, onChange: (val: any) => void, type: string = 'text') => {
     if (typeof value === 'boolean') {
@@ -857,6 +1004,7 @@ export function SettingsPage() {
                     value={editConfig.database_backup?.cron || ''}
                     onChange={(value) => updateEditConfig('database_backup.cron', value)}
                     disabled={!canEditSensitiveConfig}
+                    onValidateCron={validateDatabaseBackupCron}
                   />
                 </div>
                 <div className="space-y-2">

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface CronEditorProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  onValidateCron?: (cron: string) => Promise<{ valid: boolean; message?: string; nextRuns?: string[] }>;
 }
 
 type CronTab = 'minute' | 'hour' | 'day' | 'month' | 'week';
@@ -199,13 +201,32 @@ const tabRanges: Record<CronTab, { min: number; max: number }> = {
 
 const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-export function CronEditor({ value, onChange, disabled }: CronEditorProps) {
+export function CronEditor({ value, onChange, disabled, onValidateCron }: CronEditorProps) {
   const [activeTab, setActiveTab] = useState<CronTab>('minute');
   const [states, setStates] = useState<Record<CronTab, CronPartState>>(() => parseCronToState(value));
+  const [validating, setValidating] = useState(false);
+  const [validateResult, setValidateResult] = useState<{ valid: boolean; message?: string; nextRuns?: string[] } | null>(null);
 
   useEffect(() => {
     setStates(parseCronToState(value));
+    setValidateResult(null);
   }, [value]);
+
+  const handleValidate = async () => {
+    if (!onValidateCron || !value.trim()) {
+      return;
+    }
+
+    setValidating(true);
+    try {
+      const result = await onValidateCron(value.trim());
+      setValidateResult(result);
+    } catch {
+      setValidateResult({ valid: false, message: '校验请求失败，请稍后重试' });
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const updateState = (tab: CronTab, updates: Partial<CronPartState>) => {
     const newStates = { ...states, [tab]: { ...states[tab], ...updates } };
@@ -381,13 +402,38 @@ export function CronEditor({ value, onChange, disabled }: CronEditorProps) {
       {/* Cron 表达式显示 */}
       <div className="space-y-2 pt-2 border-t border-border">
         <Label>Cron 表达式</Label>
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="bg-muted border-border font-mono"
-          placeholder="0 3 * * *"
-        />
+        <div className="flex flex-col gap-2 md:flex-row">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className="bg-muted border-border font-mono"
+            placeholder="0 3 * * *"
+          />
+          {onValidateCron && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleValidate}
+              disabled={disabled || validating || !value.trim()}
+              className="md:w-[120px]"
+            >
+              {validating ? '校验中...' : '验证 CRON'}
+            </Button>
+          )}
+        </div>
+        {validateResult && (
+          <div className={`rounded-md border px-3 py-2 text-xs ${
+            validateResult.valid
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+              : 'border-red-500/40 bg-red-500/10 text-red-600'
+          }`}>
+            <p>{validateResult.message || (validateResult.valid ? 'CRON 表达式有效' : 'CRON 表达式无效')}</p>
+            {validateResult.valid && validateResult.nextRuns && validateResult.nextRuns.length > 0 && (
+              <p className="mt-1 text-foreground/80">下次执行: {validateResult.nextRuns.slice(0, 3).join(' / ')}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 下次执行时间 */}

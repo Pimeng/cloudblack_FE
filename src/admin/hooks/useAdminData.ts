@@ -51,6 +51,8 @@ import type {
 } from '../types';
 import { API_BASE } from '../types';
 
+type ConfigSection = 'basic' | 'smtp' | 'ai-analysis' | 'security' | 'file-upload' | 'database-backup';
+
 // Type definition for the context provided by useAdminData
 export type AdminDataContext = ReturnType<typeof useAdminData>;
 
@@ -330,20 +332,58 @@ export function useAdminData() {
   const fetchConfig = useCallback(async (authToken: string) => {
     setConfigLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/config`, {
-        headers: { 'Authorization': authToken },
-      });
-      
-      if (response.status === 401 || response.status === 403) {
+      const sections: ConfigSection[] = ['basic', 'smtp', 'ai-analysis', 'security', 'file-upload', 'database-backup'];
+
+      const sectionResults = await Promise.all(
+        sections.map(async (section) => {
+          const response = await fetch(`${API_BASE}/api/admin/config/${section}`, {
+            headers: { 'Authorization': authToken },
+          });
+
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('AUTH_ERROR');
+          }
+
+          const data = await response.json();
+          return {
+            section,
+            success: data.success,
+            payload: data.data,
+          };
+        })
+      );
+
+      const basicConfig = sectionResults.find((item) => item.section === 'basic' && item.success)?.payload || {};
+      const smtpConfig = sectionResults.find((item) => item.section === 'smtp' && item.success)?.payload;
+      const aiAnalysisConfig = sectionResults.find((item) => item.section === 'ai-analysis' && item.success)?.payload;
+      const securityConfig = sectionResults.find((item) => item.section === 'security' && item.success)?.payload || {};
+      const fileUploadConfig = sectionResults.find((item) => item.section === 'file-upload' && item.success)?.payload || {};
+      const databaseBackupConfig = sectionResults.find((item) => item.section === 'database-backup' && item.success)?.payload;
+
+      const normalizedUploadConfig = fileUploadConfig.upload || fileUploadConfig;
+
+      const mergedConfig: SystemConfig = {
+        ...basicConfig,
+        ...securityConfig,
+        ...normalizedUploadConfig,
+        ...(smtpConfig ? { smtp: smtpConfig } : {}),
+        ...(aiAnalysisConfig ? { ai_analysis: aiAnalysisConfig } : {}),
+        ...(databaseBackupConfig ? { database_backup: databaseBackupConfig } : {}),
+      };
+
+      if (mergedConfig.rate_limit && !('rate_limit_max_requests' in mergedConfig)) {
+        mergedConfig.rate_limit_max_requests = mergedConfig.rate_limit.rate_limit_max_requests;
+      }
+      if (mergedConfig.rate_limit && !('rate_limit_window' in mergedConfig)) {
+        mergedConfig.rate_limit_window = mergedConfig.rate_limit.rate_limit_window;
+      }
+
+      setConfig(mergedConfig);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'AUTH_ERROR') {
         handleAuthError();
         return;
       }
-      
-      const data = await response.json();
-      if (data.success && data.data) {
-        setConfig(data.data);
-      }
-    } catch (err) {
       toast.error('获取系统配置失败');
     } finally {
       setConfigLoading(false);
@@ -352,7 +392,7 @@ export function useAdminData() {
 
   const fetchSystemInfo = useCallback(async (authToken: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/system-info`, {
+      const response = await fetch(`${API_BASE}/api/admin/config/server-status`, {
         headers: { 'Authorization': authToken },
       });
       const data = await response.json();
@@ -471,7 +511,7 @@ export function useAdminData() {
   const fetchBackupConfig = useCallback(async (authToken: string) => {
     setBackupConfigLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/backup/config`, {
+      const response = await fetch(`${API_BASE}/api/admin/config/database-backup`, {
         headers: { 'Authorization': authToken },
       });
       

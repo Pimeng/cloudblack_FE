@@ -3,7 +3,9 @@ import { useOutletContext } from 'react-router-dom';
 import { Database, RefreshCw, Plus, Trash2, Edit3, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AdminDataContext } from '../hooks/useAdminData';
-import type { BackupItem } from '../types';
+import { API_BASE, type BackupItem } from '../types';
+import { Label } from '@/components/ui/label';
+import { CronEditor } from '../components/CronEditor';
 
 import {
   LoadingSpinner,
@@ -134,7 +136,7 @@ export function BackupPage() {
 
   const updateBackupConfig = async () => {
     const result = await updateConfigMutate(
-      '/api/admin/backup/config',
+      '/api/admin/config/database-backup',
       { method: 'PUT' },
       editBackupConfig
     );
@@ -143,6 +145,47 @@ export function BackupPage() {
       setConfigDialogOpen(false);
       fetchBackupConfig();
       fetchBackupStatus();
+    }
+  };
+
+  const validateDatabaseBackupCron = async (cron: string) => {
+    if (!token) {
+      return { valid: false, message: '未登录，无法校验' };
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/config/database-backup/validate-cron`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cron }),
+      });
+
+      const data = await response.json();
+      if (response.status === 401 || response.status === 403) {
+        return { valid: false, message: '登录已过期，请重新登录' };
+      }
+
+      if (!data.success) {
+        return { valid: false, message: data.message || 'CRON 表达式无效' };
+      }
+
+      const payload = data.data || {};
+      const nextRuns = Array.isArray(payload.next_runs)
+        ? payload.next_runs
+        : payload.next_run
+          ? [payload.next_run]
+          : [];
+
+      return {
+        valid: payload.valid ?? true,
+        message: data.message || (payload.valid === false ? 'CRON 表达式无效' : 'CRON 表达式有效'),
+        nextRuns,
+      };
+    } catch {
+      return { valid: false, message: '校验请求失败，请稍后重试' };
     }
   };
 
@@ -363,13 +406,15 @@ export function BackupPage() {
               value={editBackupConfig.enabled}
               onChange={(value) => setEditBackupConfig({ ...editBackupConfig, enabled: value })}
             />
-            <FormInput
-              label="Cron 表达式"
-              value={editBackupConfig.cron}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditBackupConfig({ ...editBackupConfig, cron: e.target.value })}
-              placeholder="0 3 * * *"
-              hint="默认每天凌晨3点执行"
-            />
+            <div className="space-y-2">
+              <Label>Cron 表达式</Label>
+              <CronEditor
+                value={editBackupConfig.cron}
+                onChange={(value) => setEditBackupConfig({ ...editBackupConfig, cron: value })}
+                onValidateCron={validateDatabaseBackupCron}
+              />
+              <p className="text-xs text-muted-foreground">默认每天凌晨3点执行</p>
+            </div>
             <FormInput
               label="备份目录"
               value={editBackupConfig.backup_dir}
