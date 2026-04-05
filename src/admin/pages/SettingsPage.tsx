@@ -527,14 +527,6 @@ export function SettingsPage() {
                   </select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>IP Header</Label>
-                  <Input
-                    value={editConfig.ip_header || ''}
-                    onChange={(e) => updateEditConfig('ip_header', e.target.value)}
-                    className="bg-muted border-border"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
                   <Label>Public URL (后端 API 地址)</Label>
                   <Input
                     value={editConfig.public_url || ''}
@@ -553,17 +545,6 @@ export function SettingsPage() {
                     placeholder="https://example.com"
                   />
                   <p className="text-xs text-muted-foreground">用于 CORS 和登出跳转</p>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Secret Key (Session 密钥)</Label>
-                  <Input
-                    type={showSensitiveInfo ? 'text' : 'password'}
-                    value={editConfig.secret_key || ''}
-                    onChange={(e) => updateEditConfig('secret_key', e.target.value)}
-                    className="bg-muted border-border"
-                    disabled={!canEditSensitiveConfig}
-                  />
-                  {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
                 </div>
               </div>
             </div>
@@ -813,6 +794,37 @@ export function SettingsPage() {
             </div>
           ) : editConfig ? (
             <>
+              {/* Core Security */}
+              <div className="glass rounded-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-500" />
+                  核心安全配置
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>IP Header</Label>
+                    <Input
+                      value={editConfig.ip_header || ''}
+                      onChange={(e) => updateEditConfig('ip_header', e.target.value)}
+                      className="bg-muted border-border"
+                      disabled={!canEditSensitiveConfig}
+                    />
+                    {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Secret Key (Session 密钥)</Label>
+                    <Input
+                      type={showSensitiveInfo ? 'text' : 'password'}
+                      value={editConfig.secret_key || ''}
+                      onChange={(e) => updateEditConfig('secret_key', e.target.value)}
+                      className="bg-muted border-border"
+                      disabled={!canEditSensitiveConfig}
+                    />
+                    {!canEditSensitiveConfig && <p className="text-xs text-muted-foreground">需要超级管理员权限</p>}
+                  </div>
+                </div>
+              </div>
+
               {/* Geetest */}
               <div className="glass rounded-2xl p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">

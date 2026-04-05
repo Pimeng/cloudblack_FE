@@ -538,7 +538,8 @@ export function useAdminData() {
 
         const data = await tryParseJson(response);
         if (data?.success) {
-          setSystemInfo(normalizeSystemInfo(data.data));
+          const systemInfoPayload = data?.data?.config ?? data?.data;
+          setSystemInfo(normalizeSystemInfo(systemInfoPayload));
           if (url === legacyUrl) {
             setConfigApiMode('legacy');
           }
